@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能工作台</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="/res/fa/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 数据指标区 */
+        .metrics-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .metric-item {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .metric-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+       /* 导航区 */
+        .nav-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr); /* 每行 4 个 */
+          gap: 12px;
+          padding-top: 24px;
+        }
+
+        .nav-card {
+            position: relative; /* ✅ 添加这一句 */
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .nav-text {
+            color: #666;
+            font-size: 10px;
+        }
+
+          #venue-status.green {
+            color: green;
+          }
+        
+          #venue-status.orange {
+            color: orange;
+          }
+        
+          #venue-status.red {
+            color: red;
+          }
+          
+          #venue-status {
+            font-weight: bold !important;
+        }
+         .badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background-color: #ff3b3b;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+.hidden {
+    display: none !important;
+}
+    </style>
+</head>
+<body>
+    <div class="dashboard-card">
+        <!-- 数据区 -->
+        <div class="metrics-container">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <span id="venue-name">场地名称</span>
+    <span id="venue-status" style="font-weight: normal; margin-left: 10px;">(状态: 加载中)</span>
+  </div>
+  <div id="venue-id" style="font-size: 13px; color: #888;">场地ID: 加载中</div>
+</div>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">今日收益</div>
+                    <div class="metric-value" id="totalPayment">¥0.00</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">等待驾驶</div>
+                    <div class="metric-value" id="queue-length">0人</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">投诉待处理</div>
+                    <div class="metric-value" id="reservationCount">0人</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">订单数</div>
+                    <div class="metric-value" id="orderCount">0单</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航区 -->
+        <div class="nav-grid" id="nav-container"></div>
+
+    </div>   
+    <script>
+    
+       
+
+        // 发起请求获取数据并更新页面
+        fetch('/api/index/DailySummaryStats.php') 
+            .then(response => response.json()) 
+            .then(data => {
+                if (data.code  === 0) {
+                    // 赋值给页面元素
+                   const venueName = data.data.venue_name || '动物汽车城';
+                        document.getElementById('venue-name').childNodes[0].textContent = venueName + ' ';
+    
+                        document.getElementById('venue-id').textContent = `场地ID: ${data.data.venue_id}`;
+
+
+                      // 设置加载状态
+                    document.getElementById('totalPayment').textContent  = `¥${data.data.totalPayment}`; 
+                    if(data.data.queue_length == null){
+                        data.data.queue_length = 0;
+                    }
+                    document.getElementById('queue-length').textContent  = `${data.data.queue_length} 人`;
+                    
+                    const reportCount = data.data.reportCount; 
+                    document.getElementById('reservationCount').textContent  = `${reportCount}`;
+                    if (reportCount >= 1) {
+                        document.getElementById('reservationCount').style.color  = 'red';
+                    }
+                    document.getElementById('orderCount').textContent  = `${data.data.orderCount} 单`;
+                }
+            })
+            .catch(error => {
+                console.error(' 数据加载失败:', error);
+            });
+        function fetchVenueStatus() {
+            fetch('/api/index/get_venue_status.php') // 🔁 替换成真实接口
+              .then(res => res.json())
+              .then(data => {
+              const status = data.status; // 0=正常, 1=异常, 2=高危
+              const statusEl = document.getElementById("venue-status");
+            
+              let statusText = "";
+              let colorClass = "";
+            
+              switch (status) {
+                case 0:
+                  statusText = "正常";
+                  colorClass = "green";
+                  break;
+                case 1:
+                  statusText = "异常";
+                  colorClass = "orange";
+                  break;
+                case 2:
+                  statusText = "高危";
+                  colorClass = "red";
+                  break;
+                default:
+                  statusText = "未知";
+                  colorClass = "";
+              }
+            
+              statusEl.textContent = `(状态: ${statusText})`;
+              statusEl.classList.remove("green", "orange", "red");
+              if (colorClass) statusEl.classList.add(colorClass);
+            })
+
+              .catch(error => {
+                console.error("状态加载失败:", error);
+                const statusEl = document.getElementById("venue-status");
+                statusEl.textContent = "(状态: 获取失败)";
+                statusEl.className = "";
+              });
+          }
+        
+          // ✅ 页面加载完成后立即调用一次
+          fetchVenueStatus();
+        
+          // ✅ 每 30 分钟自动刷新一次
+          setInterval(fetchVenueStatus, 30 * 60 * 1000);
+    </script>
+<script>
+/**
+ * 渲染导航项
+ * @param {Array} navItems - 包含 id、icon、label、href、badge_id 的对象数组
+ * @param {String} containerId - 渲染的容器ID
+ */
+function renderNavGrid(navItems, containerId = 'nav-container') {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  navItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'nav-card';
+    card.id = item.id;
+
+    const badgeHTML = item.badge_id
+      ? `<span class="badge hidden" id="${item.badge_id}">0</span>` 
+      : '';
+
+    card.innerHTML = `
+      <i class="fas ${item.icon} nav-icon"></i>
+      <div class="nav-text">${item.label}</div>
+      ${badgeHTML}
+    `;
+
+    // card.addEventListener('click', () => {
+    //   window.location.href = item.href || `${item.id}.html`;
+    // });
+    card.addEventListener('click', () => {
+      const url = item.href || `${item.id}.html`;
+      window.location.href = url + '?_=' + Date.now(); // ⏰ 加上时间戳防缓存
+    });
+
+    container.appendChild(card);
+  });
+}
+
+/**
+ * 更新 badge 显示
+ * @param {String} badgeId - 徽章元素 ID
+ * @param {Number} count - 数量，小于等于0时隐藏
+ */
+function updateBadge(badgeId, count) {
+  const el = document.getElementById(badgeId);
+  if (!el) return;
+
+  if (count > 0) {
+    el.classList.remove('hidden');
+    el.textContent = count;
+  } else {
+    el.classList.add('hidden');
+    el.textContent = '';
+  }
+}
+
+// 加载导航项并渲染
+fetch('/res/navItems2.json')
+  .then(res => res.json())
+  .then(data => {
+    renderNavGrid(data);
+
+    // 渲染完成后更新徽章（可写多个接口）
+    fetch('/api/devMgr/getFaultDevices.php')
+      .then(res => res.json())
+      .then(resp => {
+        if (resp.code === 0) {
+          updateBadge('pending-count', resp.count); // 示例：故障审批红点
+        }
+      })
+      .catch(err => console.error('设备故障badge更新失败', err));
+
+    // 你也可以添加更多接口更新其他 badge
+    // fetch('/api/xxx').then(...).then(data => updateBadge('other-badge-id', data.count));
+  })
+  .catch(err => {
+    console.error('导航加载失败', err);
+  });
+</script>
+
+
+
+<script src="canvas-nest-colorful.js"></script>
+</body>
+</html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量上传图传序列号</title>
+    <!-- 使用与addDev.html相同的样式 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style> 
+        :root { 
+            --primary: #5b8cff; 
+            --secondary: #7f8fa4; 
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+            --background-gradient-start: #f8f9ff; 
+            --background-gradient-end: #f0f3ff; 
+            --card-bg: #ffffff; 
+            --border-color: #ddd; 
+            --text-color: #333; 
+            --hover-bg: #f9f9f9; 
+            --highlight-bg: #eff4ff; 
+            --transition: all 0.3s ease; 
+        } 
+ 
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: "PingFang SC", system-ui; 
+        } 
+ 
+        body { 
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+        } 
+ 
+        .container { 
+            max-width: 1200px; 
+            width: 100%; 
+        } 
+ 
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+            transition: var(--transition); 
+        } 
+ 
+        .card:hover { 
+            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16); 
+        } 
+ 
+        .card-title-container { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        } 
+ 
+        .card-title { 
+            font-size: 24px; 
+            color: var(--text-color); 
+            font-weight: 600; 
+            /*border-bottom: 2px solid var(--primary); */
+            padding-bottom: 10px; 
+            flex-grow: 1; 
+        } 
+ 
+        .form-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        } 
+ 
+        .form-group label { 
+            font-size: 14px; 
+            color: var(--text-color); 
+        } 
+ 
+        .form-group input, 
+        .form-group textarea, 
+        .form-group select { 
+            background-color: #f8f9ff; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd; 
+            width: 100%; 
+        } 
+ 
+        .action-button { 
+            background-color: var(--primary); 
+            color: #fff; 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            margin-right: 10px; 
+            transition: 0.3s; 
+        } 
+ 
+        .action-button:hover { 
+            background-color: #4a77e4; 
+        } 
+ 
+        @media (max-width: 768px) { 
+            .card { 
+                padding: 16px; 
+            } 
+ 
+            .form-group label { 
+                font-size: 12px; 
+            } 
+ 
+            .action-button { 
+                font-size: 12px; 
+            } 
+        } 
+    </style> 
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-title-container">
+                <h2 class="card-title">批量上传图传序列号</h2>
+                <button type="submit" form="uploadForm" class="action-button">开始上传</button>
+            </div>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label for="serial_numbers">图传序列号（每行一个）</label>
+                    <textarea id="serial_numbers" name="serial_numbers" rows="8" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="area">选择区域</label>
+                    <select id="area" name="area" required>
+                        <!-- A-Z区域选项将通过JavaScript动态生成 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="column">选择列号</label>
+                    <select id="column" name="column" required>
+                        <!-- 1-9列选项将通过JavaScript动态生成 -->
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 初始化区域和列号选择器
+        const areaSelect = document.getElementById('area');
+        const columnSelect = document.getElementById('column');
+
+        // 生成A-Z区域选项
+        for (let i = 65; i <= 90; i++) {
+            const option = document.createElement('option');
+            option.value = String.fromCharCode(i);
+            option.textContent = `${String.fromCharCode(i)}区`;
+            areaSelect.appendChild(option);
+        }
+
+        // 生成1-9列选项
+        for (let i = 1; i <= 9; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `第${i}列`;
+            columnSelect.appendChild(option);
+        }
+
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const serialNumbers = document.getElementById('serial_numbers').value.trim().split('\n');
+            const area = document.getElementById('area').value;
+            const column = document.getElementById('column').value;
+
+            if (!serialNumbers.length) {
+                alert('请输入图传序列号！');
+                return;
+            }
+
+            try {
+                // 获取OSS配置
+                const configResponse = await fetch('https://open.rcwulian.cn/api/operat/upload.php?get_config=1');
+                const configData = await configResponse.json();
+                if (configData.code !== 0) {
+                    throw new Error('获取OSS配置失败');
+                }
+
+                const ossConfig = configData.data;
+                
+                // 处理每个序列号
+                for (const serialNumber of serialNumbers) {
+                    if (!serialNumber.trim()) continue;
+                    
+                    const fileName = `${area}_${column}_${serialNumber.trim()}`;
+                    // 这里添加上传到OSS的逻辑
+                    // 使用ossConfig中的配置信息进行上传
+                    // ...
+
+                    console.log(`准备上传: ${fileName}`);
+                }
+
+                alert('上传完成！');
+            } catch (error) {
+                alert('上传失败：' + error.message);
+                console.error('上传错误:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>设备管理</title>
+
+  <!-- 本地 FontAwesome -->
+  <link rel="stylesheet" href="/res/fa/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --primary-dark: #4778ee;
+      --primary-light: #eef4ff;
+
+      --success: #16a34a;
+      --success-light: #ecfdf3;
+
+      --danger: #ef4444;
+      --danger-light: #fff1f0;
+
+      --warning: #f59e0b;
+      --warning-light: #fff7e6;
+
+      --text: #1f2937;
+      --muted: #64748b;
+      --light-muted: #94a3b8;
+
+      --border: #e6eaf2;
+      --page-start: #f8faff;
+      --page-end: #eef3ff;
+
+      --shadow: 0 10px 30px rgba(91, 140, 255, .10);
+      --soft-shadow: 0 4px 16px rgba(15, 23, 42, .05);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 18px;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--page-start) 0%, var(--page-end) 100%);
+      overflow-x: hidden;
+    }
+
+    button {
+      font-family: inherit;
+      user-select: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .card {
+      width: 100%;
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, .96);
+      border: 1px solid rgba(255, 255, 255, .75);
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      position: relative;
+      margin-bottom: 16px;
+      padding-left: 12px;
+      font-size: 22px;
+      line-height: 1.2;
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .card-title::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 4px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--primary);
+      transform: translateY(-50%);
+    }
+
+    #device-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    /* 整个设备卡片：左图 + 中间信息 + 右侧按钮 */
+.device-card {
+  display: grid;
+  grid-template-columns: 60px auto 92px;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 8px;
+  padding: 14px 16px;
+  border-radius: 24px;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: var(--soft-shadow);
+  transition: .18s ease;
+}
+
+    .device-card:hover {
+      transform: translateY(-1px);
+      border-color: #d7e1ff;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, .07);
+    }
+
+    /* 左侧车辆图片 */
+.device-img {
+  width: 52px;
+  height: 52px;
+  max-width: 52px;
+  max-height: 52px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #eef2ff;
+  border: 1px solid #edf1f7;
+  display: block;
+  flex-shrink: 0;
+}
+
+    /* 中间信息 */
+.device-main {
+  min-width: 0;
+  justify-self: start;
+  width: 100%;
+  max-width: 560px;
+}
+
+.device-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 6px;
+}
+
+    .device-name {
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-badge {
+      flex: 0 0 auto;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .status-badge.online {
+      color: #16a34a;
+      background: var(--success-light);
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-badge.offline {
+      color: #dc2626;
+      background: var(--danger-light);
+      border: 1px solid #fecaca;
+    }
+
+    .status-badge.busy {
+      color: #b26a00;
+      background: var(--warning-light);
+      border: 1px solid #ffe0a3;
+    }
+
+    /* 信息两列 */
+.device-meta {
+  display: grid;
+  grid-template-columns: 210px 260px;
+  justify-content: start;
+  gap: 4px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+    .device-line {
+      min-width: 0;
+      display: flex !important;
+      align-items: center;
+      gap: 4px;
+      line-height: 1.45;
+    }
+
+    .device-line b {
+      flex: 0 0 auto;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .device-line em {
+      min-width: 0;
+      color: var(--muted);
+      font-style: normal;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* 右侧按钮 */
+.device-actions {
+  width: 88px;
+  justify-self: end;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.modify-btn {
+  width: 88px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: .18s ease;
+}
+
+    .modify-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .modify-btn.secondary {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .modify-btn.secondary:hover {
+      background: #eaf0f8;
+    }
+
+    .empty {
+      padding: 28px 14px;
+      border-radius: 16px;
+      background: #f8fbff;
+      border: 1px dashed #d8e2f3;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .loading {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: #f8fbff;
+      border: 1px solid var(--border);
+      text-align: center;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* 手机端 */
+@media (max-width: 768px) {
+  .device-card {
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px;
+    border-radius: 18px;
+    align-items: flex-start;
+  }
+
+  .device-img {
+    width: 50px;
+    height: 50px;
+    max-width: 50px;
+    max-height: 50px;
+    border-radius: 12px;
+  }
+
+  .device-main {
+    max-width: 100%;
+  }
+
+  .device-head {
+    margin-bottom: 5px;
+    gap: 6px;
+  }
+
+  .device-name {
+    font-size: 14px;
+  }
+
+  .device-meta {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .device-line em {
+    white-space: normal;
+    word-break: break-all;
+  }
+
+  .device-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-self: stretch;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .modify-btn {
+    width: 100%;
+    height: 36px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+}
+
+    @media (max-width: 360px) {
+      body {
+        padding: 8px;
+      }
+
+      .card {
+        padding: 12px;
+      }
+
+      .device-card {
+        grid-template-columns: 54px minmax(0, 1fr);
+      }
+
+      .device-img {
+        width: 52px;
+        height: 52px;
+        max-width: 52px;
+        max-height: 52px;
+      }
+
+      .modify-btn {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">设备管理</div>
+
+      <div id="device-list">
+        <!-- 设备信息将动态加载 -->
+      </div>
+
+      <div id="loading" class="loading" style="display:none;">正在加载...</div>
+    </div>
+  </div>
+
+  <script>
+    let currentPage = 1;
+    const limit = 10;
+    const accessToken = 'df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4';
+
+    let isLoading = false;
+    let noMoreData = false;
+
+    const FALLBACK_IMG = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2296%22 height=%2296%22 viewBox=%220 0 96 96%22%3E%3Crect width=%2296%22 height=%2296%22 rx=%2214%22 fill=%22%23eef2ff%22/%3E%3Ctext x=%2248%22 y=%2252%22 text-anchor=%22middle%22 font-size=%2212%22 fill=%22%2364748b%22%3E暂无图片%3C/text%3E%3C/svg%3E';
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function safeText(value, fallback = '-') {
+      const text = value === null || value === undefined || value === '' ? fallback : value;
+      return escapeHtml(text);
+    }
+
+    function buildQueryString(obj) {
+      return Object.keys(obj)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(obj[key] ?? '')}`)
+        .join('&');
+    }
+
+    function getStatusClass(status) {
+      if (status === '在线') return 'online';
+      if (status === '占有') return 'busy';
+      return 'offline';
+    }
+
+    function showLoading(text = '正在加载...') {
+      const loadingEl = document.getElementById('loading');
+      loadingEl.textContent = text;
+      loadingEl.style.display = 'block';
+    }
+
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function loadDeviceData(page) {
+      if (isLoading || noMoreData) return;
+
+      isLoading = true;
+      showLoading('正在加载...');
+
+      const url = `https://open.rcwulian.cn/api/vehicle/getVehicleList.php?page=${page}&limit=${limit}&access_token=${accessToken}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
+            displayDevices(data.data);
+            currentPage++;
+            hideLoading();
+
+            setTimeout(checkNeedAutoLoadMore, 100);
+          } else {
+            noMoreData = true;
+
+            if (currentPage === 1) {
+              document.getElementById('device-list').innerHTML = '<div class="empty">暂无设备数据</div>';
+              hideLoading();
+            } else {
+              showLoading('没有更多数据了');
+            }
+          }
+        })
+        .catch(error => {
+          console.error('数据加载失败:', error);
+          showLoading('加载失败，请重试');
+
+          setTimeout(() => {
+            hideLoading();
+          }, 2000);
+        })
+        .finally(() => {
+          isLoading = false;
+        });
+    }
+
+    function displayDevices(devices) {
+      const deviceList = document.getElementById('device-list');
+
+      devices.forEach(device => {
+        const card = document.createElement('div');
+        card.classList.add('device-card');
+
+        card.setAttribute('data-device', JSON.stringify(device));
+        card.setAttribute('data-device-cfg', JSON.stringify(device));
+
+        const photoUrl = device.photo_url || FALLBACK_IMG;
+
+        card.innerHTML = `
+          <img
+            class="device-img"
+            src="${escapeHtml(photoUrl)}"
+            alt="设备图片"
+            onerror="this.onerror=null;this.src='${FALLBACK_IMG}';"
+          >
+
+          <div class="device-main">
+            <div class="device-head">
+              <span class="status-badge ${getStatusClass(device.status)}">
+                ${safeText(device.status)}
+              </span>
+              <span class="device-name">${safeText(device.name)}</span>
+            </div>
+
+            <div class="device-meta">
+              <span class="device-line">
+                <b>序列号:</b>
+                <em>${safeText(device.serial_number)}</em>
+              </span>
+
+              <span class="device-line">
+                <b>前图传:</b>
+                <em>${safeText(device.image_device_serial)}</em>
+              </span>
+
+              <span class="device-line">
+                <b>车辆状态:</b>
+                <em>${safeText(device.vehicle_status)}</em>
+              </span>
+
+              <span class="device-line">
+                <b>分享标题:</b>
+                <em>${safeText(device.share_name)}</em>
+              </span>
+
+              <span class="device-line">
+                <b>共享状态:</b>
+                <em>${safeText(device.sharing_status)}</em>
+              </span>
+
+              ${
+                device.bk_image_device_serial
+                  ? `<span class="device-line">
+                      <b>后图传:</b>
+                      <em>${safeText(device.bk_image_device_serial)}</em>
+                    </span>`
+                  : ''
+              }
+            </div>
+          </div>
+
+          <div class="device-actions">
+            <button class="modify-btn" onclick="modifyDevice(this)">
+              <i class="fas fa-edit"></i>
+              修改信息
+            </button>
+
+            <button class="modify-btn secondary" onclick="modifyDeviceCfg(this)">
+              <i class="fas fa-cogs"></i>
+              修改配置
+            </button>
+          </div>
+        `;
+
+        deviceList.appendChild(card);
+      });
+    }
+
+    function modifyDevice(button) {
+      const card = button.closest('.device-card');
+      const deviceData = card.getAttribute('data-device');
+      const device = JSON.parse(deviceData);
+      const queryString = buildQueryString(device);
+
+      window.location.href = `modify-device.html?${queryString}`;
+    }
+
+    function modifyDeviceCfg(button) {
+      const card = button.closest('.device-card');
+      const deviceDataCfg = card.getAttribute('data-device-cfg');
+      const device = JSON.parse(deviceDataCfg);
+      const queryString = buildQueryString(device);
+
+      window.location.href = `modify-deviceCfgTest.html?${queryString}`;
+    }
+
+    function checkNeedAutoLoadMore() {
+      if (isLoading || noMoreData) return;
+
+      const pageHeight = document.documentElement.scrollHeight;
+      const viewportHeight = window.innerHeight;
+
+      if (pageHeight <= viewportHeight + 80) {
+        loadDeviceData(currentPage);
+      }
+    }
+
+    window.addEventListener('scroll', () => {
+      if (isLoading || noMoreData) return;
+
+      const scrollBottom = window.scrollY + window.innerHeight;
+      const pageHeight = document.documentElement.scrollHeight;
+
+      if (scrollBottom >= pageHeight - 80) {
+        loadDeviceData(currentPage);
+      }
+    });
+
+    loadDeviceData(currentPage);
+  </script>
+</body>
+
+</html>

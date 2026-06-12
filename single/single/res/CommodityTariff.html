@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>资费商品</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pricing-item {
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+
+        .pricing-item .label {
+            color: var(--secondary);
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .pricing-item .value {
+            color: #333;
+            font-size: 16px;
+            text-align: right;
+        }
+
+        .edit-btn,
+        .save-btn,
+        .delete-btn,
+        .add-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 16px;
+            margin-right: 10px;
+        }
+
+        /* 编辑、保存和添加按钮样式 */
+        .edit-btn,
+        .save-btn,
+        .add-btn {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* 删除按钮样式 */
+        .delete-btn {
+            background-color: #ff4d4f;
+            /* 红色背景 */
+            color: white;
+        }
+
+        .edit-btn:hover,
+        .save-btn:hover,
+        .add-btn:hover {
+            background-color: #4c6ef5;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff7875;
+            /* 悬停时颜色变浅 */
+        }
+
+        .form-group {
+          /*display: flex;*/
+          flex-direction: column;
+          gap: 6px;
+          margin-top: 10px;
+        }
+        
+        .form-group label {
+          font-weight: bold;
+          color: #333;
+          font-size: 14px;
+        }
+        
+        .edit-input {
+          background-color: #f8f9ff;
+          padding: 10px 14px;
+          border-radius: 8px;
+          border: 1px solid #ddd;
+          font-size: 14px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 12px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script>
+        function fetchProducts() {
+            fetch('https://open.rcwulian.cn/api/tariffPlan/CommodityTariff.php') 
+              .then(response => response.json()) 
+              .then(data => {
+                    const productList = document.getElementById('product-list'); 
+                    productList.innerHTML  = '';
+                    if (data.data.length  > 0) {
+                        data.data.forEach(product  => {
+                            const item = document.createElement('div'); 
+                            item.classList.add('pricing-item'); 
+                            item.innerHTML  = `
+                                <div class="label">商品唯一标识</div>
+                                <div class="value" id="id-${product.id}">${product.id}</div> 
+                                <div class="label">标题</div>
+                                <div class="value" id="title-${product.id}">${product.title}</div> 
+                                <div class="label">价格</div>
+                                <div class="value" id="price-${product.id}">${product.price}</div> 
+                                <div class="label">价值</div>
+                                <div class="value" id="value-${product.id}">${product.value}</div> 
+                                <div class="label">额外价值</div>
+                                <div class="value" id="extra_value-${product.id}">${product.extra_value}</div> 
+                                <button class="edit-btn" onclick="editProduct(${product.id})">   编辑</button>
+                                <button class="delete-btn" onclick="deleteProduct(${product.id})">   删除</button>
+                            `;
+                            productList.appendChild(item); 
+                        });
+                    } else {
+                        productList.innerHTML  = '<p>没有找到产品</p>';
+                    }
+                })
+              .catch(error => console.error('Error:',  error));
+        }
+
+        function editProduct(productId) {
+            const title = document.getElementById(`title-${productId}`); 
+            const price = document.getElementById(`price-${productId}`); 
+            const value = document.getElementById(`value-${productId}`); 
+            const extra_value = document.getElementById(`extra_value-${productId}`); 
+
+            // 创建输入框
+            const titleInput = document.createElement('input'); 
+            titleInput.classList.add('edit-input'); 
+            titleInput.value  = title.textContent; 
+            titleInput.setAttribute('data-product-id',  productId);
+            titleInput.setAttribute('data-field',  'title');
+
+            const priceInput = document.createElement('input'); 
+            priceInput.classList.add('edit-input'); 
+            priceInput.value  = price.textContent; 
+            priceInput.setAttribute('data-product-id',  productId);
+            priceInput.setAttribute('data-field',  'price');
+
+            const valueInput = document.createElement('input'); 
+            valueInput.classList.add('edit-input'); 
+            valueInput.value  = value.textContent; 
+            valueInput.setAttribute('data-product-id',  productId);
+            valueInput.setAttribute('data-field',  'value');
+
+            const extraValueInput = document.createElement('input'); 
+            extraValueInput.classList.add('edit-input'); 
+            extraValueInput.value  = extra_value.textContent; 
+            extraValueInput.setAttribute('data-product-id',  productId);
+            extraValueInput.setAttribute('data-field',  'extra_value');
+
+            // 替换原文本内容为输入框
+            title.parentNode.replaceChild(titleInput,  title);
+            price.parentNode.replaceChild(priceInput,  price);
+            value.parentNode.replaceChild(valueInput,  value);
+            extra_value.parentNode.replaceChild(extraValueInput,  extra_value);
+
+            const editButton = document.querySelector(`[onclick="editProduct(${productId})"]`); 
+            editButton.textContent  = '保存';
+            editButton.setAttribute('onclick',  `saveProduct(${productId})`);
+        }
+
+        function saveProduct(productId) {
+            const titleInput = document.querySelector(`.edit-input[data-product-id="${productId}"][data-field="title"]`); 
+            const priceInput = document.querySelector(`.edit-input[data-product-id="${productId}"][data-field="price"]`); 
+            const valueInput = document.querySelector(`.edit-input[data-product-id="${productId}"][data-field="value"]`); 
+            const extraValueInput = document.querySelector(`.edit-input[data-product-id="${productId}"][data-field="extra_value"]`); 
+
+            // 确保获取到值
+            const formData = new FormData();
+            formData.append('update-btn',  'true');
+            formData.append('product_id',  productId);
+            formData.append('title',  titleInput.value); 
+            formData.append('price',  priceInput.value); 
+            formData.append('value',  valueInput.value); 
+            formData.append('extra_value',  extraValueInput.value); 
+
+            fetch('https://open.rcwulian.cn/api/tariffPlan/CommodityTariff.php',  {
+                method: 'POST',
+                body: formData
+            })
+              .then(response => response.json()) 
+              .then(data => {
+                    alert(data.msg); 
+                    fetchProducts(); // 重新加载数据
+                })
+              .catch(error => console.error('Error:',  error));
+        }
+
+        function deleteProduct(productId) {
+            if (confirm('确定要删除该产品吗？')) {
+                const formData = new FormData();
+                formData.append('delete-btn',  'true');
+                formData.append('product_id',  productId);
+
+                fetch('https://open.rcwulian.cn/api/tariffPlan/CommodityTariff.php',  {
+                    method: 'POST',
+                    body: formData
+                })
+                  .then(response => response.json()) 
+                  .then(data => {
+                        alert(data.msg); 
+                        fetchProducts();
+                    })
+                  .catch(error => console.error('Error:',  error));
+            }
+        }
+
+        function openAddModal() {
+            const modal = document.getElementById('add-modal'); 
+            modal.style.display  = 'block';
+        }
+
+        function closeAddModal() {
+            const modal = document.getElementById('add-modal'); 
+            modal.style.display  = 'none';
+        }
+
+        function addProduct() {
+            const titleInput = document.getElementById('add-title'); 
+            const priceInput = document.getElementById('add-price'); 
+            const valueInput = document.getElementById('add-value'); 
+            const extraValueInput = document.getElementById('add-extra-value'); 
+
+            const formData = new FormData();
+            formData.append('add-btn',  'true');
+            formData.append('title',  titleInput.value); 
+            formData.append('price',  priceInput.value); 
+            formData.append('value',  valueInput.value); 
+            formData.append('extra_value',  extraValueInput.value); 
+
+            fetch('https://open.rcwulian.cn/api/tariffPlan/CommodityTariff.php',  {
+                method: 'POST',
+                body: formData
+            })
+              .then(response => response.json()) 
+              .then(data => {
+                    alert(data.msg); 
+                    if (data.code  === 200) {
+                        titleInput.value  = '';
+                        priceInput.value  = '';
+                        valueInput.value  = '';
+                        extraValueInput.value  = '';
+                    }
+                    closeAddModal();
+                    fetchProducts();
+                })
+              .catch(error => console.error('Error:',  error));
+        }
+
+        window.onload  = fetchProducts;
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-title">
+                资费商品
+                <button class="add-btn" onclick="openAddModal()">添加商品</button>
+            </div>
+            <div id="product-list"></div>
+        </div>
+    </div>
+    <!-- 模态框 -->
+    <!-- 添加商品模态框 -->
+<div id="add-modal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeAddModal()">&times;</span>
+    <h2>添加商品</h2>
+
+    <div class="form-group">
+      <label for="add-title">标题</label>
+      <input type="text" id="add-title" class="edit-input" />
+    </div>
+
+    <div class="form-group">
+      <label for="add-price">价格</label>
+      <input type="number" id="add-price" class="edit-input" value="0.00" />
+    </div>
+
+    <div class="form-group">
+      <label for="add-value">价值</label>
+      <input type="number" id="add-value" class="edit-input" value="0.00" />
+    </div>
+
+    <div class="form-group">
+      <label for="add-extra-value">额外价值</label>
+      <input type="number" id="add-extra-value" class="edit-input" value="0.00" />
+    </div>
+
+    <button class="add-btn" onclick="addProduct()">添加</button>
+  </div>
+</div>
+
+</body>
+
+</html>

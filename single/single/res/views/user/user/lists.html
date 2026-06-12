@@ -1,0 +1,181 @@
+
+
+<title>网站用户</title>
+  
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>用户</cite></a>
+    <a><cite>app用户</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="layadmin-userfront-formlist">
+      <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label">ID</label>
+          <div class="layui-input-block">
+            <input type="text" name="id" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">用户名</label>
+          <div class="layui-input-block">
+            <input type="text" name="username" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">手机号</label>
+          <div class="layui-input-block">
+            <input type="text" name="phone" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+      
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-useradmin" lay-submit lay-filter="LAY-user-front-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="layui-card-body">
+      <script type="text/html" id="table-useradmin-webuser">
+         <a class="layui-btn layui-btn-warm layui-btn-xs" lay-event="recharge"><i class="layui-icon layui-icon-rmb"></i>充值能量</a>
+      </script>
+
+      
+      <table id="LAY-user-manage" lay-filter="LAY-user-manage"></table>
+      <script type="text/html" id="imgTpl"> 
+        <img style="display: inline-block; width: 50%; height: 100%;" src= {{ d.avatar }}>
+      </script> 
+      
+    </div>
+  </div>
+</div>
+
+<script>
+layui.use('admin', layui.factory('useradmin')).use(['admin', 'table', 'form', 'layer'], function(){
+  var $ = layui.$
+  ,admin = layui.admin
+  ,view = layui.view
+  ,table = layui.table
+  ,form = layui.form
+  ,layer = layui.layer;
+  
+   table.render({
+      elem: '#LAY-user-manage',
+      url: '/api/user/getUserList.php', // 替换为您的实际API地址
+      cols: [[
+        {type: 'checkbox', fixed: 'left'},
+        {field: 'id', width: 100, title: 'ID', sort: true},
+        {field: 'username', title: '用户名', minWidth: 100},
+        {field: 'avatar', title: '头像', width: 100, templet: '#imgTpl'},
+        {field: 'energy', title: '场地能量', width: 100},
+        {field: 'wallet', title: '用户余额', width: 100},
+      
+        {field: 'created_at', title: '注册时间', sort: true},
+        {field: 'jointime', title: '最后登录时间', sort: true},
+        {title: '操作', width: 120, align: 'center', fixed: 'right', toolbar: '#table-useradmin-webuser'}
+      ]],
+      page: true,
+      limit: 20,
+      height: 'full-320',
+      text: '对不起，加载出现异常！'
+    });
+  
+  // 搜索功能
+  form.on('submit(LAY-user-front-search)', function(data){
+    var field = data.field;
+
+    table.reload('LAY-user-manage', {
+      where: field
+    });
+  });
+
+  // 监听工具条
+  table.on('tool(LAY-user-manage)', function(obj){
+    var data = obj.data;
+    var event = obj.event;
+    
+    if(event === 'edit') {
+      // 编辑事件处理
+    } else if(event === 'del') {
+      // 删除事件处理
+    } else if(event === 'recharge') {
+      // 充值事件处理
+      layer.prompt({
+        formType: 0,
+        title: '请输入充值能量【只可用作新人体验】',
+        btn: ['确认', '取消']
+      }, function(value, index, elem){
+        // 此处可以对输入的充值金额 `value` 进行进一步处理
+        layer.close(index);
+
+        // 模拟向后端提交充值金额的 Ajax 请求
+        $.ajax({
+          url: '/api/user/recharges.php', // 替换为实际的充值接口地址
+          type: 'POST',
+          data: {
+            uid: data.id, // 用户ID
+            amount: value  // 充值金额
+          },
+          success: function(res){
+            if(res.success) {
+              layer.msg(res.message);
+              table.reload('LAY-user-manage'); // 重载表格
+            } else {
+              layer.msg('充值失败: ' + res.message);
+            }
+          },
+          error: function(){
+            layer.msg('请求失败，请稍后重试');
+          }
+        });
+      });
+    }
+  });
+
+  // 批量删除和添加功能
+  var active = {
+    batchdel: function(){
+      var checkStatus = table.checkStatus('LAY-user-manage')
+      ,checkData = checkStatus.data;
+      if(checkData.length === 0){
+        return layer.msg('请选择数据');
+      }
+
+      layer.confirm('确定删除吗？', function(index) {
+        table.reload('LAY-user-manage');
+        layer.msg('已删除');
+      });
+    },
+    add: function(){
+      admin.popup({
+        title: '添加用户',
+        area: ['500px', '450px'],
+        id: 'LAY-popup-user-add',
+        success: function(layero, index){
+          view(this.id).render('user/user/userform').done(function(){
+            form.render(null, 'layuiadmin-form-useradmin');
+
+            form.on('submit(LAY-user-front-submit)', function(data){
+              layui.table.reload('LAY-user-manage');
+              layer.close(index);
+            });
+          });
+        }
+      });
+    }
+  };
+
+  $('.layui-btn.layuiadmin-btn-useradmin').on('click', function(){
+    var type = $(this).data('type');
+    active[type] ? active[type].call(this) : '';
+  });
+});
+
+
+</script>

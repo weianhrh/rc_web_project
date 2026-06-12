@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!-- GiftPaymentDisbursement.html -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>礼物提现申请</title>
+  <link rel="stylesheet" href="/res/fa/css/all.min.css">
+  <style>
+    :root {
+      --primary: #8b5cf6;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #fbf7ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(139, 92, 246, 0.10);
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.18);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 10px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+
+    .tips {
+      background: #faf5ff;
+      color: #6d28d9;
+      border: 1px solid #eadcff;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .account-info {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+
+    .label {
+      color: var(--secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .value {
+      color: var(--text-color);
+      font-size: 14px;
+      font-weight: 400;
+      text-align: right;
+    }
+
+    .amount-card {
+      background-color: #f7f2ff;
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.12);
+    }
+
+    .amount-card .field {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .amount-card .value {
+      font-weight: 600;
+      color: #7c3aed;
+    }
+
+    .input-label {
+      font-size: 16px;
+      color: var(--text-color);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .withdraw-input {
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .withdraw-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .withdraw-button {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      transition: 0.3s;
+      margin-top: 20px;
+    }
+
+    .withdraw-button:hover {
+      background-color: #7c3aed;
+    }
+
+    .withdraw-button:disabled {
+      background-color: #d0d0d0;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      color: var(--primary);
+      text-align: center;
+      font-size: 16px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .record-list {
+      margin-top: 30px;
+    }
+
+    .record-item {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .record-item span {
+      display: block;
+    }
+
+    .record-title {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+      .card {
+        padding: 16px;
+      }
+
+      .field {
+        font-size: 12px;
+      }
+
+      .withdraw-button,
+      .withdraw-input {
+        font-size: 14px;
+      }
+
+      .record-item {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">礼物提现申请</div>
+
+      <div class="tips">
+        礼物余额来源于场地/语音房礼物收益，送礼入账时已按“金币 ÷ 10 × 60%”计入。
+      </div>
+
+      <div class="account-info" id="account-info"></div>
+
+      <div class="amount-card" id="amount-info"></div>
+
+      <div>
+        <div class="input-label">本次礼物提现金额</div>
+        <input type="number" id="withdraw-amount" class="withdraw-input" placeholder="请输入礼物提现金额" step="0.01" min="0" />
+      </div>
+
+      <button class="withdraw-button" id="withdraw-button" onclick="applyWithdrawal()">立即申请礼物提现</button>
+
+      <div id="status-message" class="loading" style="display: none;">正在申请礼物提现...</div>
+
+      <div id="withdrawal-records" class="record-list"></div>
+    </div>
+  </div>
+
+  <script>
+    function money(value) {
+      const n = Number(value || 0);
+      return n.toFixed(2);
+    }
+
+    function loadAccountInfo() {
+      const url = 'https://open.rcwulian.cn/api/pay/CalculateSettlements.php?withdraw_type=gift&access_token=df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4';
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 0) {
+            document.getElementById('account-info').innerHTML = `
+              <div class="field">
+                <div class="label">收款账号:</div>
+                <div class="value">${data.account_number || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="label">账户姓名:</div>
+                <div class="value">${data.account_name || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="label">账户类型:</div>
+                <div class="value">${data.account_pay || '-'}</div>
+              </div>
+            `;
+
+            document.getElementById('amount-info').innerHTML = `
+              <div class="field">
+                <div class="label">礼物余额:</div>
+                <div class="value">${money(data.gift_balance)} 元</div>
+              </div>
+              <div class="field">
+                <div class="label">当前可提现:</div>
+                <div class="value" id="available-balance">${money(data.available_balance)} 元</div>
+              </div>
+            `;
+
+            const input = document.getElementById('withdraw-amount');
+            input.value = money(data.available_balance);
+            updateWithdrawButtonState();
+
+          } else if (data.code === 1002) {
+            if (confirm('需要先绑定收款账号才可以提现，是否立即绑定？')) {
+              window.location.href = 'https://open.rcwulian.cn/res/paybind.html';
+            } else {
+              window.history.back();
+            }
+          } else {
+            alert(data.msg || '加载礼物余额失败，请稍后再试');
+          }
+        })
+        .catch(error => {
+          console.error('请求失败:', error);
+          alert('加载礼物余额失败，请重试');
+        });
+    }
+
+    function updateWithdrawButtonState() {
+      const withdrawAmount = parseFloat(document.getElementById('withdraw-amount').value);
+      const maxText = document.getElementById('available-balance')?.textContent || '0';
+      const maxWithdrawAmount = parseFloat(maxText.replace(' 元', '')) || 0;
+
+      const btn = document.getElementById('withdraw-button');
+      btn.disabled = !(withdrawAmount > 0 && withdrawAmount <= maxWithdrawAmount);
+    }
+
+    function applyWithdrawal() {
+      const withdrawButton = document.getElementById('withdraw-button');
+      const statusMessage = document.getElementById('status-message');
+
+      statusMessage.style.display = 'block';
+      withdrawButton.disabled = true;
+
+      const withdrawAmount = parseFloat(document.getElementById('withdraw-amount').value);
+      if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+        alert('请输入有效的礼物提现金额');
+        withdrawButton.disabled = false;
+        statusMessage.style.display = 'none';
+        return;
+      }
+
+      const url = 'https://open.rcwulian.cn/api/pay/ApplyWithdrawal.php';
+      const data = {
+        amount: withdrawAmount,
+        withdraw_type: 'gift'
+      };
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: new URLSearchParams(data).toString()
+      })
+      .then(response => response.json())
+      .then(data => {
+        statusMessage.style.display = 'none';
+
+        if (data.code === 0) {
+          alert('礼物提现申请成功');
+          loadAccountInfo();
+          loadWithdrawalRecords();
+        } else if (data.code === 1002) {
+          if (confirm('需要先绑定收款账号才可以提现，是否立即绑定？')) {
+            window.location.href = 'https://open.rcwulian.cn/res/paybind.html';
+          }
+        } else if (data.code === 1008) {
+          alert(`超过礼物可提现额度：\n礼物余额：${money(data.data?.gift_balance)} 元\n可提现：${money(data.data?.available_balance)} 元`);
+          withdrawButton.disabled = false;
+        } else {
+          alert(data.msg || '礼物提现申请失败，请稍后重试');
+          withdrawButton.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('礼物提现申请失败:', error);
+        statusMessage.style.display = 'none';
+        withdrawButton.disabled = false;
+        alert('礼物提现申请失败，请重试');
+      });
+    }
+
+    function loadWithdrawalRecords() {
+      const url = 'https://open.rcwulian.cn/api/pay/getWithdrawalRecords.php?withdraw_type=gift';
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 0 && data.data && data.data.length > 0) {
+            displayWithdrawalRecords(data.data);
+          } else {
+            document.getElementById('withdrawal-records').innerHTML = '<p style="text-align:center;">暂无礼物提现记录</p>';
+          }
+        })
+        .catch(error => {
+          console.error('礼物提现记录加载失败:', error);
+        });
+    }
+
+    function displayWithdrawalRecords(records) {
+      const container = document.getElementById('withdrawal-records');
+      container.innerHTML = '';
+
+      records.forEach(record => {
+        const item = document.createElement('div');
+        item.classList.add('record-item');
+
+        item.innerHTML = `
+          <span class="record-title">礼物提现编号：${record.id}</span>
+          <span>账户姓名：${record.account_name || '-'}</span>
+          <span>提现金额：${money(record.withdrawal_amount)} 元</span>
+          <span>技术服务费：${money(record.technical_service_fee)} 元</span>
+          <span>提现手续费：${money(record.withdrawal_fee)} 元</span>
+          <span>实际打款：${money(record.actual_amount)} 元</span>
+          <span>申请时间：${record.application_time || '-'}</span>
+          <span>打款状态：${Number(record.payout_status) === 1 ? '已打款' : '未打款'}</span>
+          <span>申请状态：${record.application_status == 0 ? '待处理' : (record.application_status == 1 ? '已处理' : (record.application_status == 2 ? '已打款' : '拒绝'))}</span>
+        `;
+
+        container.appendChild(item);
+      });
+    }
+
+    document.getElementById('withdraw-amount').addEventListener('input', updateWithdrawButtonState);
+
+    loadAccountInfo();
+    loadWithdrawalRecords();
+  </script>
+</body>
+</html>

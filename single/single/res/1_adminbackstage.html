@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能工作台</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!--<script src="color.js"></script>-->
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 数据指标区 */
+        .metrics-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .metric-item {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .metric-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        /* 导航区 */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding-top: 24px;
+        }
+
+        .nav-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .nav-text {
+            color: #666;
+            font-size: 10px;
+        }
+        /*body, html {*/
+        /*    height: 100%;*/
+        /*    margin: 0;*/
+        /*    overflow: hidden;*/
+        /*    cursor: none; */
+        /*}*/
+        /*.custom-cursor {*/
+        /*    position: absolute;*/
+        /*    width: 15px; */
+        /*    height: 15px;*/
+        /*    pointer-events: none; */
+        /*    background: url('https://rcwulian.cn/app/img/huaji.png') no-repeat center center;*/
+        /*    background-size: contain; */
+        /*}*/
+		
+        /* 日历组件样式 */
+        .calendar-widget {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            position: fixed;
+            right: 24px;
+            top: -100%;
+            width: 280px;
+            box-shadow: var(--shadow);
+            transition: top 0.3s ease;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .calendar-widget.show {
+            top: 24px;  /* 显示时的位置 */
+        }
+
+        /* 触发按钮样式 */
+        .calendar-trigger {
+            position: fixed;
+            right: 24px;
+            top: 24px;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+
+        .calendar-trigger:hover {
+            transform: scale(1.1);
+        }
+
+        .calendar-trigger i {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .calendar-date {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .calendar-solar {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            white-space: nowrap;  /* 防止换行 */
+        }
+
+        .calendar-lunar {
+            font-size: 14px;
+            color: var(--secondary);
+            margin-top: 8px;
+            white-space: nowrap;  /* 防止换行 */
+        }
+
+        .calendar-info {
+            font-size: 14px;
+            color: var(--secondary);
+            padding-top: 12px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex;  /* 使用flex布局 */
+            flex-wrap: wrap;  /* 允许换行 */
+            gap: 8px;  /* 元素之间的间距 */
+        }
+
+        .calendar-info div {
+            flex: 1;  /* 平均分配空间 */
+            min-width: 45%;  /* 最小宽度 */
+            text-align: center;  /* 文字居中 */
+            padding: 4px;  /* 内边距 */
+        }
+        
+        /* 点击波纹样式 */
+        .ripple {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(100, 200, 255, 0.5);
+            animation: rippleExpand 1s ease-out;
+            pointer-events: none;
+            z-index: 9999;
+        }
+ 
+        @keyframes rippleExpand {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(6); opacity: 0; }
+        }
+ 
+        /* 背景跟随波纹 */
+        #waveCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 9998;
+        }
+        .nav-card {
+    position: relative;
+    display: inline-block;
+}
+
+.badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background-color: #ff3b3b;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+    </style>
+</head>
+<body>
+    <canvas id="waveCanvas"></canvas>
+    <div id="cursor" class="custom-cursor"></div>
+    
+    <!-- 添加触发按钮 -->
+    <div class="calendar-trigger" id="calendarTrigger">
+        <i class="fas fa-calendar-alt"></i>
+    </div>
+    
+    <!-- 修改日历挂件 -->
+    <div class="calendar-widget" id="calendarWidget">
+        <div class="calendar-date">
+            <div class="calendar-solar">
+                <span id="solar-year"></span>年<span id="solar-month"></span>月<span id="solar-day"></span>日
+            </div>
+            <div class="calendar-lunar">
+                农历 <span id="lunar-month"></span><span id="lunar-day"></span>
+            </div>
+        </div>
+        <div class="calendar-info">
+            <div><span id="ganzhi-year"></span></div>
+            <div><span id="ganzhi-month"></span></div>
+            <div><span id="ganzhi-day"></span></div>
+            <div><span id="weekday"></span></div>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <!-- 数据区 -->
+        <div class="metrics-container">
+            <div class="card-title" id="venue-name">加载中...</div>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">今日APP注册用户</div>
+                    <div class="metric-value" id="registerCount">0人</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">今日活跃用户数</div>
+                    <div class="metric-value" id="ActiveUsers">0人</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">今日平台总收益</div>
+                    <div class="metric-value" id="totalRechargeFromBalanceChanges">¥0.00</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">今日用户实际总消费</div>
+                    <div class="metric-value" id="totalUserConsumption">¥0.00</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">待提现批审数</div>
+                    <div class="metric-value" id="totalPendingwithdrawalapproval">0</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">投诉待处理</div>
+                    <div class="metric-value" id="reservationCount">0人</div> 
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航区 -->
+        <div class="nav-grid">
+            <!-- 审批与处理类 -->
+            <div class="nav-card" id="Performance-ranking">
+                <i class="fas fa-trophy nav-icon"></i>
+                <div class="nav-text">业绩排行</div>
+            </div>
+            <div class="nav-card" id="Withdrawal-approval">
+                <i class="fas fa-file-invoice-dollar nav-icon"></i>
+                <div class="nav-text">提现审批</div>
+            </div>
+            <div class="nav-card" id="Reporthand">
+                <i class="fas fa-headset nav-icon"></i>
+                <div class="nav-text">投诉处理</div>
+            </div>
+            
+             <div class="nav-card" id="xls">
+                <i class="fas fa-wrench nav-icon"></i>
+                <div class="nav-text">订单申诉</div>
+            </div>
+           
+        </div>
+
+        <div class="nav-grid">
+            <!-- 财务相关 -->
+            <div class="nav-card" id="CommodityTariff">
+                <i class="fas fa-shopping-cart nav-icon"></i>
+                <div class="nav-text">资费商品</div>
+            </div>
+            <div class="nav-card" id="Balancerecharge">
+                <i class="fas fa-coins nav-icon"></i>
+                <div class="nav-text">余额充值</div>
+            </div>
+            <div class="nav-card" id="ComsumQuery">
+                <i class="fas fa-money-bill-wave nav-icon"></i>
+                <div class="nav-text">消费查询</div>
+            </div>
+            <div class="nav-card" id="OrderSelect">
+                <i class="fas fa-search nav-icon"></i>
+                <div class="nav-text">订单查询</div>
+            </div>
+        </div>
+
+        <div class="nav-grid">
+            <!-- 管理类 -->
+            <div class="nav-card" id="VenuesManagement">
+                <i class="fas fa-map-marked-alt nav-icon"></i>
+                <div class="nav-text">场地管理</div>
+            </div>
+            <div class="nav-card" id="vehicleslite">
+                <i class="fas fa-cogs nav-icon"></i>
+                <div class="nav-text">设备管理</div>
+            </div>
+            <div class="nav-card" id="FranchiseManagement">
+                <i class="fas fa-users nav-icon"></i>
+                <div class="nav-text">加盟管理</div>
+                <span class="badge" id="franchise-count">0</span> <!-- 新增徽章 -->
+            </div>
+            <div class="nav-card" id="MessageMgmt">
+                <i class="fas fa-comment-dots nav-icon"></i>
+                <div class="nav-text">消息管理</div>
+            </div>
+        </div>
+
+        <div class="nav-grid">
+            <!-- 运营与数据 -->
+            <div class="nav-card" id="ViolationRcordQuery">
+                <i class="fas fa-ban nav-icon"></i>
+                <div class="nav-text">违规查询</div>
+            </div>
+            <div class="nav-card" id="CompensationEnergy">
+                <i class="fas fa-battery-full nav-icon"></i>
+                <div class="nav-text">补偿能量</div>
+            </div>
+            <div class="nav-card" id="OSSImgUpload">
+                <i class="fas fa-images nav-icon"></i>
+                <div class="nav-text">图床管理</div>
+            </div>
+            <div class="nav-card" id="ImgNumberMgmt">
+                <i class="fas fa-upload nav-icon"></i>
+                <div class="nav-text">图传管理</div>
+            </div>
+        </div>
+
+        <div class="nav-grid">
+            <!-- 系统工具 -->
+            <div class="nav-card" id="pendImageAtext">
+                <i class="fas fa-shield-alt nav-icon"></i>
+                <div class="nav-text">图文审核</div>
+                <span class="badge" id="pending-count">0</span> <!-- 新增徽章 -->
+            </div>
+            <div class="nav-card" id="ZoneMgt">
+                <i class="fas fa-layer-group nav-icon"></i>
+                <div class="nav-text">专区管理</div>
+            </div>
+             <div class="nav-card" id="global_config_api">
+                <i class="fas fa-sliders-h nav-icon"></i>
+                <div class="nav-text">全局配置</div>
+            </div>
+            
+            <div class="nav-card" id="RefundQequest">
+                <i class="fas fa-undo-alt nav-icon"></i>
+                <div class="nav-text">退款申请</div>
+            </div>
+        </div>
+    </div>
+           
+    <iframe src="https://open.rcwulian.cn/res/devMgtV2.html" style="display: none;" id="hidden-timer-frame"></iframe>
+
+  
+    <script>
+        let pic_count = null;
+		    document.addEventListener('mousemove', function(e) {
+		        var cursor = document.getElementById('cursor');
+		        cursor.style.left = e.pageX + 'px';
+		        cursor.style.top = e.pageY + 'px';
+		    });
+		fetch('https://open.rcwulian.cn/api/venue/getPendingImages.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    const badge = document.getElementById('pending-count');
+                    badge.textContent = data.count;
+                    pic_count = data.count;
+        
+                    // 正确地设置是否显示
+                    badge.style.display = data.count > 0 ? 'inline-block' : 'none';
+                }
+            })
+            .catch(err => {
+                console.error('获取待审核数量失败', err);
+            });
+        //  franchise-count
+        let fran_count = null;
+        	fetch('https://open.rcwulian.cn/api/franchise/FranchiesList.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 200 && Array.isArray(data.data)) {
+                    const badge = document.getElementById('franchise-count');
+                    const count = data.data.length;
+                    badge.textContent = count;
+                    fran_count = count;
+            
+                    badge.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+            })
+
+            .catch(err => {
+                console.error('获取加盟待处理数量失败', err);
+            });
+
+        // 发起请求获取数据并更新页面
+        fetch('https://open.rcwulian.cn/api/index/adminbackstage.php')
+            .then(response => response.json())
+            .then(data => { 
+                if (data.code === 0) {
+                    // 赋值给页面元素
+                    document.getElementById('venue-name').textContent = data.data.venue_name || '';
+                    document.getElementById('registerCount').textContent = `${data.data.registerCount}人`;
+                    document.getElementById('totalRechargeFromBalanceChanges').textContent = `¥${data.data.totalRechargeFromBalanceChanges}`;
+                    document.getElementById('totalUserConsumption').textContent = `¥${data.data.totalUserConsumption}`;
+                    document.getElementById('ActiveUsers').textContent = `${data.data.activeUserCount}人`;
+                    const reportCount = data.data.reportCount; 
+                    document.getElementById('reservationCount').textContent  = `${reportCount}`;
+                    if (reportCount >= 1) {
+                        document.getElementById('reservationCount').style.color  = 'red';
+                    }
+                    const totalPendingwithdrawalapproval = data.data.totalPendingwithdrawalapproval;
+                    document.getElementById('totalPendingwithdrawalapproval').textContent  = `${totalPendingwithdrawalapproval}`;
+                    // console.log(totalPendingwithdrawalapproval);
+                    if (totalPendingwithdrawalapproval >= 1) {
+                        document.getElementById('totalPendingwithdrawalapproval').style.color  = 'forestgreen';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('数据加载失败:', error);
+            });
+
+        // 添加导航点击效果
+        document.querySelectorAll('.nav-card').forEach(item => {
+            item.addEventListener('click', function() {
+                // 移除所有激活状态
+                document.querySelectorAll('.nav-card').forEach(el => {
+                    el.style.background = '#fff';
+                });
+                // 设置当前激活状态
+                this.style.background = '#f5f7ff';
+            });
+        });
+        document.getElementById('Withdrawal-approval').addEventListener('click', function() {
+            window.location.href = 'paylist.html';  // 这里是你想跳转到的页面
+        });
+        document.getElementById('totalPendingwithdrawalapproval').addEventListener('click',  function() {
+            window.location.href  = 'paylist.html';   // 这里是你想跳转到的页面
+        });
+         document.getElementById('Reporthand').addEventListener('click', function() {
+            window.location.href = 'reporthand.html';  // 这里是你想跳转到的页面
+        });
+        document.getElementById('reservationCount').addEventListener('click', function() {
+            window.location.href = 'reporthand.html';  // 这里是你想跳转到的页面
+        });
+        
+        document.getElementById('Performance-ranking').addEventListener('click', function() {
+            window.location.href = 'top.html';  // 这里是你想跳转到的页面
+        });
+        document.getElementById('OrderSelect').addEventListener('click', function() {
+            window.location.href = 'views/venues/AdminDrivingOrders.html';  // 这里是你想跳转到的页面
+        });
+        document.getElementById('CompensationEnergy').addEventListener('click', function() {
+            window.location.href = 'energygift.html';  // 这里是你想跳转到的页面
+        });
+        // document.getElementById('FranchiseList').addEventListener('click', function() {
+        //     window.location.href = 'FranchiseList.html';  // 这里是你想跳转到的页面
+        // });
+        //为后续复用留的注释
+        document.getElementById('CommodityTariff').addEventListener('click', function() {
+            window.location.href = 'pricing_options.html';  // 这里是你想跳转到的页面
+        });
+        
+        document.getElementById('vehicleslite').addEventListener('click',  function() {
+            window.location.href  = 'devMgtV2.html';//'Testvehicleslite.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('FranchiseManagement').addEventListener('click', function() {
+            window.location.href = 'FranchiseManagement.html';  // 这里是你想跳转到的页面
+        });
+        
+        
+        document.getElementById('VenuesManagement').addEventListener('click', function() {
+            window.location.href = 'VenuesManagement.html';  // 这里是你想跳转到的页面
+        });
+        document.getElementById('Balancerecharge').addEventListener('click', function() {
+            window.location.href = 'Balancerecharge.html';  // 这里是你想跳转到的页面
+        });
+        // document.getElementById('AddDev').addEventListener('click', function() {
+        //     window.location.href = 'addDev.html';  // 这里是你想跳转到的页面
+        // });
+        document.getElementById('ComsumQuery').addEventListener('click', function() {
+            window.location.href = 'ComsumQuery.html';  // 这里是你想跳转到的页面
+        });
+        
+        document.getElementById('OSSImgUpload').addEventListener('click', function() {
+            window.location.href = 'ossImgGetlist.html';  // 这里是你想跳转到的页面ossImgUpload
+        });
+        
+        document.getElementById('MessageMgmt').addEventListener('click', function() {
+            window.location.href = 'MessageMgmt.html';  // 这里是你想跳转到的页面ossImgUpload
+        });
+        
+        document.getElementById('RefundQequest').addEventListener('click', function() {
+            window.location.href = 'RefundQequest.html';  // 这里是你想跳转到的页面ossImgUpload
+        });
+        document.getElementById('ImgNumberMgmt').addEventListener('click', function() {
+            window.location.href = 'ImgNumberMgmt.html';  // 这里是你想跳转到的页面ossImgUpload
+        });
+        document.getElementById('ViolationRcordQuery').addEventListener('click', function() {
+            window.location.href = 'ban_Record.html?dropdown=1';
+        });
+       
+        document.getElementById('pendImageAtext').addEventListener('click', function() {
+            window.location.href = 'peddingMain.html';
+        });
+        document.getElementById('ZoneMgt').addEventListener('click', function() {
+            window.location.href = 'zone.html';
+        });
+        document.getElementById('global_config_api').addEventListener('click', function() {
+            window.location.href = 'global_config_api.html';
+        });
+       document.getElementById('xls').addEventListener('click', function() {
+            window.location.href = 'order_report.html';
+        });
+        
+        //  https://open.rcwulian.cn/res/wechatkfpanel.html
+    </script>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+<script>
+        /**********************
+         * 点击水波纹效果 
+         **********************/
+        class RippleEffect {
+            constructor() {
+                this.pool  = [];
+                this.initPool(10);  // 初始化对象池 
+                document.addEventListener('click',  this.handleClick.bind(this)); 
+            }
+ 
+            // 创建对象池优化性能 
+            initPool(count) {
+                for(let i=0; i<count; i++){
+                    const ripple = document.createElement('div'); 
+                    ripple.className  = 'ripple';
+                    document.body.appendChild(ripple); 
+                    this.pool.push(ripple); 
+                }
+            }
+ 
+            handleClick(e) {
+                const ripple = this.pool.shift() || document.createElement('div');
+                ripple.className = 'ripple';
+                ripple.style.left = `${e.clientX - 20}px`;
+                ripple.style.top = `${e.clientY - 20}px`;
+                ripple.style.display = 'block'; // 显示
+            
+                // 触发重绘（重新启动动画）
+                void ripple.offsetWidth;
+            
+                document.body.appendChild(ripple);
+            
+                setTimeout(() => {
+                    ripple.style.display = 'none'; // 不再用 remove()
+                    this.pool.push(ripple);
+                }, 1000);
+            }
+
+        }
+ 
+        /**********************
+         * 鼠标跟随水波效果 
+         **********************/
+        class WaveEffect {
+            constructor() {
+                this.canvas  = document.getElementById('waveCanvas'); 
+                this.ctx  = this.canvas.getContext('2d'); 
+                this.resize(); 
+                window.addEventListener('resize',  this.resize.bind(this)); 
+                
+                this.mousePos  = {x:0, y:0};
+                this.waves  = [];
+                
+                document.addEventListener('mousemove',  (e) => {
+                    this.mousePos  = {x: e.clientX,  y: e.clientY}; 
+                });
+                
+                this.animate(); 
+            }
+ 
+            resize() {
+                this.canvas.width  = window.innerWidth; 
+                this.canvas.height  = window.innerHeight; 
+            }
+ 
+            animate() {
+                this.ctx.clearRect(0,  0, this.canvas.width,  this.canvas.height); 
+                
+                // 生成新波纹 
+                this.waves.push({ 
+                    x: this.mousePos.x, 
+                    y: this.mousePos.y, 
+                    radius: 0,
+                    alpha: 0.5 
+                });
+ 
+                // 绘制所有波纹 
+                this.waves.forEach((wave,  index) => {
+                    wave.radius  += 2;
+                    wave.alpha  -= 0.02;
+                    
+                    this.ctx.beginPath(); 
+                    this.ctx.arc(wave.x,  wave.y, wave.radius,  0, Math.PI*2);
+                    this.ctx.strokeStyle  = `rgba(100,200,255,${wave.alpha})`; 
+                    this.ctx.lineWidth  = 2;
+                    this.ctx.stroke(); 
+                    
+                    if(wave.alpha  <= 0) this.waves.splice(index,  1);
+                });
+ 
+                requestAnimationFrame(this.animate.bind(this)); 
+            }
+        }
+ 
+        /**********************
+         * 初始化效果 
+         **********************/
+        // new RippleEffect(); // 初始化点击效果 
+        new WaveEffect();   // 初始化跟随效果 
+    </script>
+    <script>
+        // 获取日历数据
+        function updateCalendar() {
+            fetch('https://cn.apihz.cn/api/time/getday.php?id=88888888&key=88888888')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        // 更新阳历
+                        document.getElementById('solar-year').textContent = data.ynian;
+                        document.getElementById('solar-month').textContent = data.yyue;
+                        document.getElementById('solar-day').textContent = data.yri;
+                        
+                        // 更新农历
+                        document.getElementById('lunar-month').textContent = data.nyue;
+                        document.getElementById('lunar-day').textContent = data.nri;
+                        
+                        // 更新干支
+                        document.getElementById('ganzhi-year').textContent = data.ganzhinian;
+                        document.getElementById('ganzhi-month').textContent = data.ganzhiyue;
+                        document.getElementById('ganzhi-day').textContent = data.ganzhiri;
+                        
+                        // 更新星期
+                        document.getElementById('weekday').textContent = data.xingqi;
+                    }
+                })
+                .catch(error => {
+                    console.error('日历数据加载失败:', error);
+                });
+        }
+
+        // 页面加载时更新日历
+        updateCalendar();
+        
+        // 每隔1小时更新一次日历数据
+        setInterval(updateCalendar, 3600000);
+    </script>
+
+    <script>
+        // 日历显示/隐藏功能
+        const calendarWidget = document.getElementById('calendarWidget');
+        const calendarTrigger = document.getElementById('calendarTrigger');
+        let isCalendarVisible = false;
+
+        function toggleCalendar() {
+            if (isCalendarVisible) {
+                calendarWidget.classList.remove('show');
+            } else {
+                calendarWidget.classList.add('show');
+                updateCalendar(); // 显示时更新日历数据
+            }
+            isCalendarVisible = !isCalendarVisible;
+        }
+
+        // 点击触发按钮显示/隐藏日历
+        calendarTrigger.addEventListener('click', toggleCalendar);
+
+        // 点击日历本身时隐藏
+        calendarWidget.addEventListener('click', function(e) {
+            if (e.target === this || this.contains(e.target)) {
+                toggleCalendar();
+            }
+        });
+
+        // 点击页面其他地方时隐藏日历
+        document.addEventListener('click', function(e) {
+            if (!calendarWidget.contains(e.target) && !calendarTrigger.contains(e.target) && isCalendarVisible) {
+                toggleCalendar();
+            }
+        });
+    </script>
+<script src="canvas-nest-colorful.js"></script>
+</body>
+</html>

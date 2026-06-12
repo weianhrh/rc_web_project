@@ -1,0 +1,6 @@
+{
+    "require": {
+        "vlucas/phpdotenv": "^5.6",
+        "alibabacloud/cloudauth-20190307": "^3.13"
+    }
+}

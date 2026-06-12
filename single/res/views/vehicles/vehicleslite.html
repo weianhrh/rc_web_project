@@ -1,0 +1,170 @@
+<title>车辆列表</title>
+
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>车辆</cite></a>
+    <a><cite>车辆列表</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="layadmin-vehicle-formlist">
+      <div class="layui-form-item">
+        <!-- 查询车辆 -->
+        <div class="layui-inline">
+          <label class="layui-form-label">车辆名称</label>
+          <div class="layui-input-block">
+            <input type="text" name="name" placeholder="请输入车辆名称" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-list" id="LAY-vehicle-add">
+            <i class="layui-icon layui-icon-add-circle layuiadmin-button-btn"></i> 添加设备
+          </button>
+        </div>
+
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-vehicle-front-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    
+    <div class="layui-card-body">
+      <table id="LAY-vehicle-manage" lay-filter="LAY-vehicle-manage"></table>
+      <script type="text/html" id="table-vehicle-list">
+          <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+          <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="config"><i class="layui-icon layui-icon-edit"></i>设备配置</a>
+          <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon layui-icon-delete"></i>删除</a>
+        </script>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+layui.use(['admin','table', 'form', 'layer', 'view'], function(){
+    var $ = layui.$,
+      admin = layui.admin,
+      table = layui.table,
+      form = layui.form,
+      view = layui.view,
+      layer = layui.layer;
+
+  // 渲染表格
+  table.render({
+    elem: '#LAY-vehicle-manage',
+    url: '/api/vehicle/getVehicleList.php', // 后端接口
+    cols: [[
+      {type: 'checkbox', fixed: 'left'},
+      {field: 'id', width: 50, title: 'ID', sort: true},
+      {field: 'serial_number', title: '序列号', minWidth: 140},
+      {field: 'photo_url', title: '图片', width: 80, templet: '<div><img src="{{d.photo_url}}" alt="{{d.name}}" style="height: 100%; width: auto; max-width: 90px;"></div>'},
+      {field: 'name', title: '名称', minWidth: 100},
+      {field: 'status', title: '状态', width: 70},
+      {field: 'battery_level', title: '电量', width: 70},
+      {field: 'voltage', title: '电压', width: 70},
+      {field: 'driver', title: '驾驶人', width: 150},
+      {field: 'vehicle_status', title: '车辆状态', width: 100},
+      {
+        field: 'sharing_status', 
+        title: '分享状态', 
+        width: 100, 
+        templet: function(d) {
+          return d.sharing_status === '正在共享' ? '<span class="layui-badge layui-bg-blue">已分享</span>' : '<span class="layui-badge layui-bg-gray">私有</span>';
+        }
+      },
+      {field: 'image_device_serial', title: '前图传', minWidth: 80},
+      {field: 'bk_image_device_serial', title: '后图传', minWidth: 80},
+      {field: 'updated_at', title: '最后在线时间', width: 180, sort: true},
+      {title: '操作', width: 250, align: 'center', fixed: 'right', toolbar: '#table-vehicle-list'}
+    ]],
+    page: true,
+    limit: 10,
+    height: 'full-220',
+    text: '对不起，加载出现异常！'
+  });
+  // 点击"添加设备"按钮
+    $('#LAY-vehicle-add').on('click', function(){
+        admin.popup({
+            title: '添加设备',
+            area: ['600px', '750px'],  // 弹窗大小
+            id: 'LAY-popup-vehicle-add',  // 弹窗ID
+            success: function(layero, index) {
+                // 渲染表单
+                view(this.id).render('vehicles/vehicleform_add').done(function(){
+                    form.render(null, 'layuiadmin-form-vehicleadd');  // 渲染表单元素
+
+                    // 提交表单
+                    form.on('submit(LAY-vehicle-add-submit)', function(submitData) {
+                        var field = submitData.field;  // 获取表单数据
+                        
+                        // 在这里可以用 Ajax 发送数据到后端，添加设备
+                        // $.ajax({...});
+                        
+                        // 关闭弹窗并重载表格
+                        layui.table.reload('LAY-vehicle-manage');
+                        layer.close(index);
+                    });
+                    
+                });
+            }
+        });
+    });
+
+  // 监听编辑按钮
+  table.on('tool(LAY-vehicle-manage)', function(obj){
+    var data = obj.data;
+    if(obj.event === 'del'){
+      layer.confirm('真的删除行么', function(index){
+        obj.del();
+        layer.close(index);
+      });
+    } else if (obj.event === 'edit') {
+      admin.popup({
+        title: '编辑车辆信息',  // 弹窗标题
+        area: ['500px', '450px'],  // 弹窗区域
+        id: 'LAY-popup-vehicle-edit',  // 弹窗ID
+        success: function(layero, index) {
+          // 渲染表单
+          view(this.id).render('vehicles/vehicleform', data).done(function(){
+            form.render(null, 'layuiadmin-form-vehicleadmin');  // 渲染表单元素
+    
+            // 提交表单
+            form.on('submit(LAY-vehicle-front-submit)', function(submitData) {
+              var field = submitData.field;  // 获取提交的表单数据
+              
+              // 在这里你可以通过 Ajax 将数据提交给服务器
+              // $.ajax({...});
+    
+              // 重载表格
+              layui.table.reload('LAY-vehicle-manage');
+              
+              // 关闭弹窗
+              layer.close(index);
+            });
+          });
+        }
+      });
+    }
+
+  });
+
+ 
+
+  // 搜索功能
+  form.on('submit(LAY-vehicle-front-search)', function(data){
+    var field = data.field;
+    table.reload('LAY-vehicle-manage', {
+      where: field
+    });
+  });
+});
+
+</script>

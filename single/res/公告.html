@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>高消费套餐监管及处罚告知书</title>
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --danger: #ef4444;
+      --success: #059669;
+      --warning: #d97706;
+      --border: #e5e7eb;
+    }
+    html,body{height:100%}
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 10% -10%, #eaf1ff 0, rgba(234,241,255,.0) 50%),
+                  radial-gradient(900px 600px at 110% 10%, #e9fbf3 0, rgba(233,251,243,0) 50%),
+                  var(--bg);
+    }
+    .wrap { max-width: 940px; margin: 28px auto 80px; padding: 0 16px; }
+
+    header.hero {
+      background: linear-gradient(135deg, #fff, #f6f9ff 70%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(37, 99, 235, 0.08);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    header.hero:before{
+      content:""; position:absolute; right:-40px; top:-40px; width:180px; height:180px;
+      background: conic-gradient(from 180deg, #dbeafe, #bfdbfe, #e0e7ff, #dbeafe);
+      filter: blur(18px); opacity:.35; border-radius:50%;
+    }
+    .brandline { display:flex; align-items:center; gap:14px; margin-bottom: 8px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), #60a5fa);
+      display:grid; place-items:center; color:#fff; font-weight: 700; box-shadow: 0 6px 18px rgba(37,99,235,.25);
+    }
+    .hero h1 { margin: 6px 0 8px; font-size: clamp(20px, 3.6vw, 28px); }
+    .meta { color: var(--muted); font-size: 14px; }
+
+    .toolbar { display:flex; flex-wrap:wrap; gap:10px; margin-top: 14px; }
+    .btn {
+      appearance: none; border:1px solid var(--border); background:#fff; color:var(--text);
+      padding:10px 14px; border-radius: 10px; cursor:pointer; font-size:14px;
+      transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .btn.primary{ background: var(--primary); color:#fff; border-color: transparent; }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.06); }
+
+    section.card{
+      background: var(--card); border:1px solid var(--border); border-radius: 16px; padding: 22px 22px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.04); margin-top: 18px;
+    }
+    h2 { font-size: 18px; margin: 0 0 12px; display:flex; align-items:center; gap:8px; }
+    h2 .tag{ font-size:12px; color:#fff; background: var(--primary); padding:2px 8px; border-radius: 999px; }
+    p { line-height: 1.8; margin: 10px 0; }
+    ul { margin: 10px 0 10px 1.2em; padding-left: .4em; }
+    li { margin: 6px 0; line-height: 1.8; }
+
+    .note { background: #f9fafb; border:1px dashed var(--border); border-radius: 12px; padding: 12px 12px; color: var(--muted); }
+    .warn { background: #fff7ed; border:1px solid #fed7aa; color:#9a3412; }
+    .danger { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
+    details { background:#fbfdff; border:1px solid #e5efff; padding: 14px; border-radius: 12px; }
+    summary { cursor: pointer; color: var(--primary); font-weight: 600; }
+
+    .grid { display:grid; gap: 14px; }
+    @media (min-width: 880px){ .grid.two { grid-template-columns: 1fr 1fr; }}
+
+    .sign {
+      display:grid; gap:10px; grid-template-columns: 1fr; margin-top: 8px;
+    }
+    @media (min-width: 720px){ .sign { grid-template-columns: 1fr 1fr; }}
+    .sign .blk { background:#fff; border:1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .sign label { font-size: 12px; color: var(--muted); }
+
+    footer { color: var(--muted); font-size: 12px; text-align:center; margin-top: 20px; }
+
+    /* Print */
+    @media print {
+      .btn, .toolbar { display: none !important; }
+      body { background: #fff; }
+      header.hero { box-shadow: none; }
+      .card { break-inside: avoid; }
+    }
+      .hl { background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:6px; padding:0 6px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="brandline">
+        <div class="logo" aria-hidden>RC</div>
+        <div>
+          <div class="meta">Rc 物联平台 · 合规运营</div>
+          <h1>高消费套餐监管及处罚告知书</h1>
+        </div>
+      </div>
+      <p class="meta">感谢一直以来对平台和监管工作的支持。为维护平台公平健康的交易环境，保障消费者合法权益，提升整体服务品质，平台将针对「高消费套餐」（即单价或总额显著高于常规标准的套餐产品）实施更为严格的监管措施。特此告知。</p>
+      <div class="toolbar">
+        <button class="btn primary" onclick="window.print()">打印 / 导出 PDF</button>
+        <button class="btn" onclick="scrollToSection('scope')">监管范围</button>
+        <button class="btn" onclick="scrollToSection('focus')">重点内容</button>
+        <button class="btn" onclick="scrollToSection('penalty')">违规处罚</button>
+        <button class="btn" onclick="scrollToSection('sign')">签收确认</button>
+      </div>
+      <div class="meta" style="margin-top:10px">生效日期：<span id="eff">2025-09-17</span>　版本：v1.0</div>
+    </header>
+
+    <section id="scope" class="card">
+      <h2><span class="tag">一</span> 监管背景与范围</h2>
+      <p>高消费套餐因其交易金额较大、消费者期待值高，易引发潜在的消费争议与风险。为防范<span class="hl">虚假宣传</span>、<span class="hl">价格欺诈</span>、<span class="hl">服务质量缩水</span>等违规行为，平台将依据相关法律法规及合作协议，对高消费套餐实行<strong>重点监管</strong>，坚持「合规经营、诚信服务、从严查处」原则，确保平台秩序稳定。</p>
+      <div class="note">注：加盟商应在商品/服务上架前充分理解本告知书内容，并对自身合规经营负责。</div>
+    </section>
+
+    <section id="focus" class="card">
+      <h2><span class="tag">二</span> 重点监管内容</h2>
+      <ul>
+        <li><strong>资质与备案要求：</strong>所有高消费套餐须提前向平台报备，提供详细的服务内容、价格构成、限制条件等说明，确保信息真实、准确、完整。<em>（向 Rc 物联运营提交明确服务展示内容，内容需积极健康、正向）</em></li>
+        <li><strong>宣传合规性：</strong>套餐宣传不得含有虚假或误导性信息（如夸大效果、模糊计价单位、隐瞒附加费用等）。一旦出现用户举报、投诉、退款等情况，审核监管/平台运营将默认优先处理用户问题，并保留对加盟商后续追查审核。</li>
+        <li><strong>服务质量监控：</strong>平台将通过消费者反馈、不定时抽检、数据巡查等方式，对高消费套餐的实际履约情况加强监督，重点核查服务标准与承诺的一致性。</li>
+        <li><strong>交易安全与透明度：</strong>需确保交易流程规范，费用明细清晰，无强制捆绑消费、中途加价等行为，并妥善保存相关服务凭证备查。</li>
+        <li><strong>严禁引流私域消费：</strong>一经核实发现，当即对<span style="color:var(--danger);font-weight:700">七天内场地收益冻结</span>处理。<em>（主播展示添加二维码，设备一律封禁 12 小时）</em></li>
+        <li><strong>未成年人保护：</strong>不得诱导未成年人消费；未成年人信息一经核实，一律退款。</li>
+      </ul>
+      <details open>
+        <summary>审核监管重点（展开查看）</summary>
+        <div class="danger" style="margin-top:10px; padding:12px; border-radius:10px;">
+          <p style="margin:0 0 8px"><strong>严禁违规低俗、色情导向内容</strong></p>
+          <p style="margin:0">完全裸漏胸部，男女性生殖器裸漏，刻意向用户展示胸部、乳沟、胸部凸点，裆部内裤、内裤褶皱，内衣、胸衣、情趣内衣；刻意张揭上衣、裙底；以及色情道具互动（如：跳蛋、黄瓜、茄子等男女性自慰用品）。</p>
+          <p style="margin:8px 0 0"><strong>严格禁止以下内容作为营销口号：</strong>深夜大秀、全裸、脱衣舞、可使用道具、看流水、女同、自慰、口爆、淫叫、娇喘等严重色情低俗内容。</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="penalty" class="card">
+      <h2><span class="tag">三</span> 违规处罚标准</h2>
+      <p>凡违反平台规则或网络信息安全相关内容，平台将一律顶格处理，措施包括但不限于：</p>
+      <ul>
+        <li>立即下架违规套餐；</li>
+        <li>视情节决定是否全额退还消费者受影响金额；</li>
+        <li>降低场地评级，限制流量推送、活动、福利参与资格；</li>
+        <li>情节严重的，终止合作，并依法追究法律责任。</li>
+      </ul>
+      <div class="note warn">提示：平台将持续优化监管机制，为诚信经营提供更多支持。</div>
+    </section>
+
+    <section class="card">
+      <h2><span class="tag">四</span> 共建健康生态</h2>
+      <p>我们呼吁所有加盟商严格遵守规则，共同维护平台声誉与消费者信任。请务必开展自查自纠，确保高消费套餐合规上线运营。感谢您的理解与配合！</p>
+    </section>
+
+    <section id="sign" class="card">
+      <h2><span class="tag">签收</span> 告知书收悉与承诺</h2>
+      <div class="grid two">
+        <div class="blk">
+          <label>加盟商主体（盖章）：</label>
+          <div style="height:48px; border-bottom:1px dashed var(--border);"></div>
+          <div style="display:flex; gap:10px; margin-top:8px">
+            <div style="flex:1">
+              <label>签署人：</label>
+              <div style="height:36px; border-bottom:1px dashed var(--border);"></div>
+            </div>
+            <div style="width:180px">
+              <label>签署日期：</label>
+              <div style="height:36px; border-bottom:1px dashed var(--border);"></div>
+            </div>
+          </div>
+        </div>
+        <div class="blk">
+          <label>平台运营主体（盖章）：</label>
+          <div style="height:48px; border-bottom:1px dashed var(--border);"></div>
+          <div style="display:flex; gap:10px; margin-top:8px">
+            <div style="flex:1">
+              <label>经办人：</label>
+              <div style="height:36px; border-bottom:1px dashed var(--border);"></div>
+            </div>
+            <div style="width:180px">
+              <label>签署日期：</label>
+              <div style="height:36px; border-bottom:1px dashed var(--border);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px" class="note">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+          <input type="checkbox" /> 我已阅读、理解并承诺遵守《高消费套餐监管及处罚告知书》全部条款。
+        </label>
+      </div>
+    </section>
+
+    <footer>
+      <div>咨询与备案通道：<a href="mailto:ops@rcwulian.cn">ops@rcwulian.cn</a>　|　客服：400-000-0000（示例）</div>
+      <div style="margin-top:6px">© <span id="year"></span> Rc 物联平台。本文档的最终解释权归平台所有。</div>
+    </footer>
+  </div>
+
+  <script>
+    // 小工具：快速滚动到指定区块
+    function scrollToSection(id){
+      const el = document.getElementById(id);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+    // 年份与生效日
+    document.getElementById('year').textContent = new Date().getFullYear();
+    // 如需自动填今天为生效日，解开下一行：
+    // document.getElementById('eff').textContent = new Date().toISOString().slice(0,10);
+  </script>
+</body>
+</html>

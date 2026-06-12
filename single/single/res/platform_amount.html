@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>平台金额查询</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .form-container {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .form-item {
+            display: inline-block;
+            margin-right: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-input {
+            background-color: #f8f9ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 150px;
+        }
+
+        .form-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .form-button:hover {
+            background-color: #4c6ef5;
+        }
+
+        .amount-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid rgba(91, 140, 255, 0.2);
+        }
+
+        .amount-title {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .amount-value {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .form-item {
+                display: block;
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2 class="card-title">平台金额统计</h2>
+            
+            <div class="form-container">
+                <form id="queryForm">
+                    <div class="form-item">
+                        <label class="form-label">开始日期</label>
+                        <input type="date" class="form-input" id="startDate" name="start_date">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">结束日期</label>
+                        <input type="date" class="form-input" id="endDate" name="end_date">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="submit" class="form-button">
+                            <i class="fas fa-search"></i> 查询
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="amount-card">
+                <div class="amount-title" id="amountTitle">近7天总充值金额</div>
+                <div class="amount-value" id="totalAmount">¥ 0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 格式化日期函数
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        // 计算两个日期之间的天数差
+        function getDaysDifference(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const diffTime = Math.abs(end - start);
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 因为包含起始日期
+        }
+
+        // 查询数据函数
+        async function queryAmount() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // 计算天数并更新标题
+            const days = getDaysDifference(startDate, endDate);
+            document.getElementById('amountTitle').textContent = `近${days}天总充值金额`;
+            
+            try {
+                const response = await fetch(`https://open.rcwulian.cn/api/finance/platform_amount.php?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+                
+                if (data.code === 0) {
+                    const formattedAmount = new Intl.NumberFormat('zh-CN', {
+                        style: 'currency',
+                        currency: 'CNY'
+                    }).format(data.data.total_payment || 0);
+                    
+                    document.getElementById('totalAmount').textContent = formattedAmount;
+                } else {
+                    alert(data.msg);
+                }
+            } catch (error) {
+                console.error('查询失败:', error);
+                alert('查询失败，请稍后重试');
+            }
+        }
+
+        // 设置默认日期范围为最近7天
+        window.addEventListener('load', function() {
+            const today = new Date();
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 6);
+            
+            document.getElementById('startDate').value = formatDate(sevenDaysAgo);
+            document.getElementById('endDate').value = formatDate(today);
+
+            // 页面加载时自动查询
+            queryAmount();
+        });
+
+        // 表单提交事件
+        document.getElementById('queryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            queryAmount();
+        });
+    </script>
+</body>
+</html> 

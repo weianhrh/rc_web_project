@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>今日新注册用户核对</title>
+
+  <style>
+    /* ===== 你的风格变量 & 基础样式（按你给的） ===== */
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+
+      --danger: #ef4444;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --muted: #6b7280;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      color: var(--text-color);
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      transition: var(--transition);
+      border: 1px solid rgba(0,0,0,0.04);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 16px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      text-align: left;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .sub-title {
+      font-size: 12px;
+      color: var(--secondary);
+      font-weight: 500;
+      border: 0;
+      padding: 0;
+      margin: 0;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      color: var(--primary);
+      padding: 20px;
+    }
+
+    /* ===== 这个页面新增的 UI 组件（延续你风格） ===== */
+
+    .toolbar {
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-top: 6px;
+    }
+
+    .left-tools, .right-tools{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .input, .select {
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      outline: none;
+      transition: var(--transition);
+      background: #fff;
+      font-size: 14px;
+      min-width: 220px;
+    }
+    .select { min-width: 220px; }
+    .input:focus, .select:focus { border-color: var(--primary); }
+
+    .toggle {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background:#fff;
+      cursor:pointer;
+      user-select:none;
+    }
+    .toggle input{ transform: translateY(1px); }
+
+    .btn {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+      font-weight: 600;
+    }
+    .btn.primary{
+      background: var(--primary);
+      color:#fff;
+    }
+    .btn.primary:hover{ background: #4a77e4; }
+    .btn.ghost{
+      background:#fff;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+    .btn.ghost:hover{ background: var(--hover-bg); }
+
+    .hint {
+      font-size: 12px;
+      color: var(--secondary);
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 980px){
+      .kpi-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .input, .select{ min-width: 160px; }
+    }
+
+    .kpi{
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 10px;
+      padding: 14px;
+      background:#fff;
+      transition: var(--transition);
+    }
+    .kpi:hover{ background: var(--hover-bg); }
+    .kpi .label{ font-size: 12px; color: var(--secondary); margin-bottom: 8px; }
+    .kpi .value{ font-size: 22px; font-weight: 800; letter-spacing: .2px; }
+    .kpi .value.money{ font-variant-numeric: tabular-nums; }
+    .kpi .sub{ font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow:hidden;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    thead th{
+      text-align:left;
+      padding: 12px 12px;
+      font-size: 12px;
+      color: var(--secondary);
+      font-weight: 700;
+      background: #fbfbff;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    tbody td{
+      padding: 12px 12px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      vertical-align: middle;
+    }
+    tbody tr{
+      background:#fff;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+    tbody tr:hover{ background: var(--hover-bg); }
+    tbody tr:last-child td{ border-bottom: 0; }
+
+    .money{ font-variant-numeric: tabular-nums; }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid rgba(0,0,0,0.08);
+      background:#fff;
+    }
+    .badge.ok{ color: var(--ok); border-color: rgba(16,185,129,.35); background: rgba(16,185,129,.08); }
+    .badge.bad{ color: var(--danger); border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
+    .badge.warn{ color: var(--warn); border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+
+    .row-bad{
+      outline: 2px solid rgba(239,68,68,.20);
+      box-shadow: 0 10px 20px rgba(239,68,68,.08);
+    }
+
+    .error{
+      display:none;
+      margin-top: 12px;
+      padding: 12px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(239,68,68,.25);
+      background: rgba(239,68,68,.06);
+      color: #991b1b;
+      font-size: 13px;
+      white-space: pre-line;
+    }
+
+    /* ===== 你给的 modal 样式（原封不动 + 小补充） ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 30px 20px;
+      border-radius: 12px;
+      width: 420px;
+      max-width: 95%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-title{
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-color);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      padding-bottom: 10px;
+      margin-bottom: 4px;
+    }
+
+    .modal-row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size: 14px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.06);
+      background: #fff;
+    }
+
+    .modal-row strong{ color: var(--secondary); font-weight: 700; }
+    .modal-row span{ font-variant-numeric: tabular-nums; font-weight: 700; }
+
+    .modal-actions{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- 标题卡片 -->
+    <div class="card">
+      <div class="card-title">
+        <div>
+          今日新注册用户 · 充值/消费/余额核对
+          <div class="sub-title">（核对失败优先排序）</div>
+        </div>
+        <div class="right-tools">
+          <button class="btn ghost" id="btnReload">刷新</button>
+          <button class="btn primary" id="btnExport">导出CSV</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+<div class="left-tools">
+  <!-- ✅ 新增：时间范围（datetime-local） -->
+  <input class="input" id="startTime" type="datetime-local" style="min-width:190px;" />
+  <input class="input" id="endTime" type="datetime-local" style="min-width:190px;" />
+
+  <!-- ✅ 新增：查询按钮（不想要也行，输入改变也能触发） -->
+  <button class="btn primary" id="btnQuery">查询</button>
+
+  <!-- 原有：搜索/过滤 -->
+  <input class="input" id="uidSearch" placeholder="搜索 UID（包含匹配）">
+  <label class="toggle">
+    <input type="checkbox" id="onlyBad">
+    只看异常
+  </label>
+  <select class="select" id="sortBy">
+    <option value="api">按接口顺序（默认）</option>
+    <option value="diffAbsDesc">按差额绝对值从大到小</option>
+    <option value="paidDesc">按充值成功从大到小</option>
+    <option value="uidAsc">按UID从小到大</option>
+  </select>
+</div>
+
+        <div class="right-tools">
+          <div class="hint" id="statusText">-</div>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="label">总用户数</div>
+          <div class="value" id="kpiTotal">-</div>
+          <div class="sub">今天注册的 uid 数量</div>
+        </div>
+        <div class="kpi">
+          <div class="label">异常用户数</div>
+          <div class="value" id="kpiBad">-</div>
+          <div class="sub">balance_check = false</div>
+        </div>
+        <div class="kpi">
+          <div class="label">异常差额合计</div>
+          <div class="value money" id="kpiDiffSum">-</div>
+          <div class="sub">Σ(difference)（仅异常）</div>
+        </div>
+        <div class="kpi">
+          <div class="label">充值成功合计</div>
+          <div class="value money" id="kpiPaidSum">-</div>
+          <div class="sub">Σ(paid_total)</div>
+        </div>
+      </div>
+
+      <div class="error" id="errorBox"></div>
+    </div>
+
+    <!-- 表格卡片 -->
+    <div class="card">
+      <div class="card-title" style="font-size:20px;">
+        核对明细列表
+        <div class="sub-title">点击某一行可查看弹窗明细</div>
+      </div>
+
+      <div id="loading" class="loading">加载中…</div>
+
+      <div style="overflow:auto;">
+        <table id="dataTable" style="display:none;">
+          <thead>
+            <tr>
+              <th style="width:120px;">UID</th>
+              <th>充值成功</th>
+              <th>待核销金额</th>
+<th>消费金额(含礼物)</th>
+<th>当前余额(含金币)</th>
+              <th>差额</th>
+              <th style="width:140px;">核对结果</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="hint" style="margin-top:12px;">
+        公式：差额 = 消费金额(订单消费 + 礼物消费) + 待核销金额 + 当前余额(wallet + gold_balance/10) - 充值成功；核对通过：差额≈0（误差 &lt; 0.01）。
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div class="modal" id="detailModal">
+    <div class="modal-content" role="dialog" aria-modal="true">
+      <div class="modal-title">
+        <span id="mTitle">UID 明细</span>
+        <button class="btn ghost" id="btnCloseModal" style="height:34px;">关闭</button>
+      </div>
+
+      <div class="modal-row"><strong>充值成功</strong><span id="mPaid">-</span></div>
+       <div class="modal-row"><strong>待核销金额</strong><span id="dConsume">-</span></div>
+      <div class="modal-row"><strong>消费金额</strong><span id="mConsume">-</span></div>
+      <div class="modal-row"><strong>当前余额</strong><span id="mWallet">-</span></div>
+      <div class="modal-row"><strong>差额</strong><span id="mDiff">-</span></div>
+      <div class="modal-row"><strong>核对结果</strong><span id="mCheck">-</span></div>
+
+      <div class="modal-actions">
+        <button class="btn primary" id="btnCopyLine">复制本行数据</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // ✅ 你给的接口地址
+  const API_URL = "https://open.rcwulian.cn/api/finance/demo.php";
+
+  let rawData = [];
+  let viewData = [];
+  let lastClickedRow = null;
+
+  const el = (id) => document.getElementById(id);
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+// datetime-local 需要：YYYY-MM-DDTHH:MM
+function toLocalInputValue(d){
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function setDefaultRangeToday(){
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 0);
+  el("startTime").value = toLocalInputValue(start);
+  el("endTime").value   = toLocalInputValue(end);
+}
+
+  function fmtMoney(n){
+    const x = Number(n || 0);
+    return x.toLocaleString("zh-CN", {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function setError(msg){
+    const box = el("errorBox");
+    if(!msg){
+      box.style.display = "none";
+      box.textContent = "";
+      return;
+    }
+    box.style.display = "block";
+    box.textContent = msg;
+  }
+
+  function calcKpi(data){
+    const total = data.length;
+    const badList = data.filter(x => !x.balance_check);
+    const badCount = badList.length;
+
+    const diffSum = badList.reduce((s,x)=> s + Number(x.difference||0), 0);
+    const paidSum = data.reduce((s,x)=> s + Number(x.paid_total||0), 0);
+
+    el("kpiTotal").textContent = total;
+    el("kpiBad").textContent = badCount;
+    el("kpiDiffSum").textContent = fmtMoney(diffSum);
+    el("kpiPaidSum").textContent = fmtMoney(paidSum);
+  }
+
+  function badgeClassByDiff(diff){
+    const d = Math.abs(Number(diff||0));
+    if(d < 0.01) return "ok";
+    if(d < 5) return "warn";
+    return "bad";
+  }
+
+  function applyFilters(){
+    const q = (el("uidSearch").value || "").trim();
+    const onlyBad = el("onlyBad").checked;
+    const sortBy = el("sortBy").value;
+
+    let data = rawData.slice();
+
+    if(q){
+      data = data.filter(x => String(x.uid).includes(q));
+    }
+    if(onlyBad){
+      data = data.filter(x => !x.balance_check);
+    }
+
+    if(sortBy === "diffAbsDesc"){
+      data.sort((a,b)=> Math.abs(Number(b.difference||0)) - Math.abs(Number(a.difference||0)));
+    }else if(sortBy === "paidDesc"){
+      data.sort((a,b)=> Number(b.paid_total||0) - Number(a.paid_total||0));
+    }else if(sortBy === "uidAsc"){
+      data.sort((a,b)=> Number(a.uid||0) - Number(b.uid||0));
+    } // api：保持接口顺序
+
+    viewData = data;
+    renderTable(viewData);
+
+    el("statusText").textContent = `显示 ${viewData.length} 条 / 总 ${rawData.length} 条`;
+  }
+
+  function renderTable(data){
+    const tbody = el("tbody");
+    tbody.innerHTML = "";
+
+    if(!data.length){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="6" style="color:var(--secondary);padding:16px;">暂无数据</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+
+    for(const row of data){
+      const tr = document.createElement("tr");
+
+      if(!row.balance_check) tr.classList.add("row-bad");
+
+      const diff = Number(row.difference||0);
+      const diffCls = badgeClassByDiff(diff);
+
+      tr.innerHTML = `
+        <td><b>${row.uid}</b></td>
+        <td class="money">${fmtMoney(row.paid_total)}</td>
+        <td class="money">${fmtMoney(row.waiting_consumption)}</td>
+        <td class="money">${fmtMoney(row.total_consumption)}</td>
+        <td class="money">${fmtMoney(row.user_wallet)}</td>
+        <td class="money">
+          <span class="badge ${diffCls}">${fmtMoney(diff)}</span>
+        </td>
+        <td>
+          ${row.balance_check
+            ? `<span class="badge ok">正常</span>`
+            : `<span class="badge bad">异常</span>`
+          }
+        </td>
+      `;
+
+      tr.addEventListener("click", ()=> openModal(row));
+      tbody.appendChild(tr);
+    }
+  }
+
+  function showLoading(on){
+    el("loading").style.display = on ? "block" : "none";
+    el("dataTable").style.display = on ? "none" : "table";
+  }
+
+  async function load(){
+    setError("");
+    showLoading(true);
+    el("statusText").textContent = "加载中…";
+const showRange = (el("startTime").value || "-") + " ~ " + (el("endTime").value || "-");
+el("statusText").textContent = "加载中…  " + showRange;
+    try{
+// ✅ 从输入框读时间（datetime-local）
+// 后端支持 2026-02-03T00:00 这种格式，所以直接传即可
+const start_time = el("startTime").value;
+const end_time   = el("endTime").value;
+
+const qs = new URLSearchParams();
+if (start_time) qs.set("start_time", start_time);
+if (end_time)   qs.set("end_time", end_time);
+
+const url = qs.toString() ? (API_URL + "?" + qs.toString()) : API_URL;
+
+const res = await fetch(url, {
+  method: "GET",
+  credentials: "include",
+  headers: { "Accept": "application/json" }
+});
+
+      const json = await res.json();
+
+      if(json.code !== 0){
+        rawData = [];
+        calcKpi(rawData);
+        applyFilters();
+        showLoading(false);
+        setError(`接口返回错误：code=${json.code}，msg=${json.msg || "未知错误"}`);
+        return;
+      }
+
+      rawData = Array.isArray(json.data) ? json.data : [];
+      calcKpi(rawData);
+      applyFilters();
+      showLoading(false);
+      setError("");
+
+    }catch(e){
+      rawData = [];
+      calcKpi(rawData);
+      applyFilters();
+      showLoading(false);
+
+      setError(
+        "请求失败（常见原因）：\n" +
+        "1) 未登录/没有 session_token cookie\n" +
+        "2) 跨域 CORS 未放行（尤其是本地 file:// 打开）\n" +
+        "3) 接口不可达\n\n" +
+        "建议：把这个 HTML 放到与 open.rcwulian.cn 同域的静态目录下访问。"
+      );
+    }
+  }
+
+  function exportCsv(){
+    const rows = [
+      ["uid","paid_total","total_consumption","user_wallet","difference","balance_check"]
+    ];
+    for(const x of viewData){
+      rows.push([
+        x.uid,
+        x.paid_total,
+        x.total_consumption,
+        x.user_wallet,
+        x.difference,
+        x.balance_check ? "true" : "false"
+      ]);
+    }
+    const csv = rows.map(r => r.map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `today_users_balance_check_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ===== Modal =====
+  function openModal(row){
+    lastClickedRow = row;
+
+    el("mTitle").textContent = `UID ${row.uid} · 核对明细`;
+    el("mPaid").textContent = fmtMoney(row.paid_total);
+    el("mConsume").textContent = fmtMoney(row.total_consumption);
+    el("mWallet").textContent = fmtMoney(row.user_wallet);
+    el("mDiff").textContent = fmtMoney(row.difference);
+
+    el("mCheck").innerHTML = row.balance_check
+      ? `<span class="badge ok">正常</span>`
+      : `<span class="badge bad">异常</span>`;
+
+    el("detailModal").style.display = "flex";
+  }
+
+  function closeModal(){
+    el("detailModal").style.display = "none";
+  }
+
+  function copyLine(){
+    if(!lastClickedRow) return;
+    const r = lastClickedRow;
+    const text =
+      `uid=${r.uid}, paid_total=${r.paid_total}, total_consumption=${r.total_consumption}, ` +
+      `user_wallet=${r.user_wallet}, difference=${r.difference}, balance_check=${r.balance_check}`;
+    navigator.clipboard?.writeText(text).then(()=> {
+      // 轻提示：不弹 alert，避免打断
+      el("btnCopyLine").textContent = "已复制";
+      setTimeout(()=> el("btnCopyLine").textContent = "复制本行数据", 1200);
+    }).catch(()=> {
+      alert("复制失败，请手动复制：\n" + text);
+    });
+  }
+
+  // events
+  el("btnReload").addEventListener("click", load);
+  el("btnExport").addEventListener("click", exportCsv);
+  el("uidSearch").addEventListener("input", applyFilters);
+  el("onlyBad").addEventListener("change", applyFilters);
+  el("sortBy").addEventListener("change", applyFilters);
+el("btnQuery").addEventListener("click", load);
+  el("btnCloseModal").addEventListener("click", closeModal);
+  el("btnCopyLine").addEventListener("click", copyLine);
+el("startTime").addEventListener("change", load);
+el("endTime").addEventListener("change", load);
+  // 点击遮罩关闭
+  el("detailModal").addEventListener("click", (e)=>{
+    if(e.target === el("detailModal")) closeModal();
+  });
+  // ESC 关闭
+  window.addEventListener("keydown", (e)=>{
+    if(e.key === "Escape") closeModal();
+  });
+
+setDefaultRangeToday();
+load();
+</script>
+</body>
+</html>

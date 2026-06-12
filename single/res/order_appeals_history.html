@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>订单申诉处理历史</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{
+      --primary:#5b8cff; --secondary:#7f8fa4;
+      --bg-start:#f8f9ff; --bg-end:#f0f3ff;
+      --card:#fff; --border:#ddd; --text:#333;
+      --shadow:0 4px 24px rgba(91,140,255,.08);
+      --hover:#f9f9f9; --ok:#19be6b; --reject:#ff4d4f;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC",system-ui}
+    body{min-height:100vh;background:linear-gradient(135deg,var(--bg-start),var(--bg-end));padding:20px;display:flex;justify-content:center;align-items:flex-start}
+    .container{max-width:1200px;width:100%}
+    .card{background:var(--card);border-radius:12px;padding:20px;box-shadow:var(--shadow);margin-bottom:20px;transition:.3s}
+    .card-title{font-size:24px;color:var(--text);margin-bottom:16px;font-weight:600;border-bottom:2px solid var(--primary);padding-bottom:10px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+    .input, select{height:38px;border:1px solid var(--border);border-radius:8px;padding:0 12px;background:#fff}
+    .btn{height:38px;padding:0 14px;border:none;border-radius:8px;background:var(--primary);color:#fff;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .list{display:grid;grid-template-columns:1fr;gap:12px}
+    .appeal{border:1px solid var(--border);border-radius:12px;padding:16px;background:#fff;display:grid;grid-template-columns:1fr auto;gap:8px}
+    .appeal:hover{background:var(--hover)}
+    .row{display:flex;flex-wrap:wrap;gap:12px;color:#555;font-size:14px}
+    .kv{display:flex;gap:6px}
+    .k{color:#999}
+    .v{color:#333}
+    .badge{padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;height:24px;display:inline-flex;align-items:center}
+    .badge.ok{background:rgba(25,190,107,.1);color:var(--ok);border:1px solid rgba(25,190,107,.2)}
+    .badge.reject{background:rgba(255,77,79,.08);color:var(--reject);border:1px solid rgba(255,77,79,.2)}
+    .actions{display:flex;align-items:center;gap:8px}
+    .link{border:1px solid var(--border);background:#fff;color:#333}
+    .muted{color:#999;}
+    .details{grid-column:1 / -1;display:none;padding-top:6px;border-top:1px dashed #eee}
+    .details pre{white-space:pre-wrap;word-break:break-word;margin:8px 0;background:#fafafa;border:1px solid #eee;border-radius:8px;padding:10px}
+    .loading,.empty,.error{text-align:center;padding:18px;color:var(--primary)}
+    .error{color:var(--reject)}
+    /* 分页 */
+    .pager{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:10px}
+    .pager .btn{background:#fff;color:#333;border:1px solid var(--border)}
+    .pager .btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+    @media (min-width:900px){ .list{grid-template-columns:1fr 1fr} }
+    /* 让长订单号等自动换行，避免把布局撑爆 */
+.v, .details pre, .muted { word-break: break-all; }
+
+/* 工具栏在桌面保持现状；在手机上改为网格布局，控件自动换行 */
+.toolbar {
+  display: grid;
+  grid-template-columns: repeat( auto-fit, minmax(140px, 1fr) );
+  gap: 10px;
+}
+.toolbar .input, .toolbar select, .toolbar .btn { width: 100%; }
+#meta { grid-column: 1 / -1; }
+
+/* 调整分页在小屏的表现 */
+.pager { flex-wrap: wrap; justify-content: center; }
+
+/* ====== 响应式：平板及以下 ====== */
+@media (max-width: 768px) {
+  body { padding: 12px; }
+  .container { max-width: 100%; }
+  .card { padding: 14px; }
+  .card-title { font-size: 20px; padding-bottom: 8px; }
+
+  .list { gap: 10px; }
+
+  /* 卡片：小屏不再两列网格右侧放按钮，改为上下结构 */
+  .appeal {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    border-radius: 10px;
+  }
+  .row { gap: 8px; font-size: 13px; }
+
+  /* 状态徽章稍微小一点 */
+  .badge { height: 22px; font-size: 12px; padding: 0 8px; }
+
+  /* 操作按钮移到卡片底部，左对齐；按钮更紧凑、可换行 */
+  .actions {
+    order: 3;
+    justify-content: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .btn { height: 34px; padding: 0 12px; font-size: 13px; }
+  .btn.link { background: #fff; border: 1px solid var(--border); }
+
+  /* 详情块上下留白更紧凑 */
+  .details pre { margin: 6px 0; padding: 8px; font-size: 13px; }
+}
+
+/* ====== 超窄屏优化（≤420px）====== */
+@media (max-width: 420px) {
+  .card-title { font-size: 18px; }
+  .toolbar { grid-template-columns: 1fr; } /* 每行一个控件 */
+  .btn { height: 32px; font-size: 12px; }
+  .row { font-size: 12px; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">订单申诉处理历史</div>
+
+      <div class="toolbar">
+        <select id="statusSelect">
+          <option value="">全部状态</option>
+          <option value="1">已处理</option>
+          <option value="2">驳回</option>
+        </select>
+        <input class="input" id="q" placeholder="订单号/用户id" />
+        <select id="pageSize">
+          <option value="10" selected>10 / 页</option>
+          <option value="20">20 / 页</option>
+          <option value="50">50 / 页</option>
+          <option value="100">100 / 页</option>
+        </select>
+        <button class="btn" id="refresh">刷新</button>
+        <span style="display:none;" id="meta"></span>
+      </div>
+
+      <div id="list" class="list">
+        <div class="loading">加载中…</div>
+      </div>
+
+      <div id="pager" class="pager" style="display:none"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://open.rcwulian.cn/api/orders/order_appeals_history.php';
+    const state = { raw: [], filtered: [], page: 1, size: 10, status: '', q: '' };
+
+    const $ = sel => document.querySelector(sel);
+    const listEl = $('#list'), pagerEl = $('#pager'), metaEl = $('#meta');
+
+    // 拉取数据（自动带 Cookie）
+    async function fetchData() {
+      listEl.innerHTML = '<div class="loading">加载中…</div>';
+      pagerEl.style.display = 'none';
+      try {
+        const res = await fetch(API, { credentials: 'include' });
+        const json = await res.json();
+        if (json.code !== 200) throw new Error(json.msg || '接口返回异常');
+        // 按 handled_at 倒序（后端已排过序，这里兜底）
+        state.raw = (json.data || []).sort((a,b)=> new Date(b.handled_at||0) - new Date(a.handled_at||0));
+        applyFilters(true);
+      } catch (e) {
+        listEl.innerHTML = `<div class="error">加载失败：${e.message}</div>`;
+      }
+    }
+
+    // 过滤 + 分页
+    function applyFilters(resetPage=false) {
+      let arr = state.raw.slice();
+      if (state.status) arr = arr.filter(x => String(x.status) === String(state.status));
+      if (state.q) {
+        const key = state.q.trim().toLowerCase();
+        arr = arr.filter(x => [
+          x.order_id, x.user_id, x.reason || '', x.result || ''
+        ].join(' ').toLowerCase().includes(key));
+      }
+      state.filtered = arr;
+      if (resetPage) state.page = 1;
+      render();
+    }
+
+    // 渲染
+    function render() {
+      const total = state.filtered.length;
+      const pages = Math.max(1, Math.ceil(total / state.size));
+      state.page = Math.min(state.page, pages);
+      const start = (state.page - 1) * state.size;
+      const pageData = state.filtered.slice(start, start + state.size);
+
+      metaEl.textContent = `共 ${total} 条，页 ${state.page}/${pages}`;
+
+      if (!total) {
+        listEl.innerHTML = '<div class="empty">没有符合条件的记录</div>';
+        pagerEl.style.display = 'none';
+        return;
+      }
+
+      listEl.innerHTML = pageData.map(row => cardHtml(row)).join('');
+      attachDetailToggles();
+
+      // 分页
+      pagerEl.innerHTML = '';
+      const mkBtn = (txt, on, disabled=false, active=false) => {
+        const b = document.createElement('button');
+        b.className = 'btn' + (active ? ' active' : '');
+        b.textContent = txt; b.disabled = disabled;
+        b.onclick = on; return b;
+      };
+      pagerEl.append(
+        mkBtn('«', ()=>{ state.page=1; render(); }, state.page===1),
+        mkBtn('‹', ()=>{ state.page--; render(); }, state.page===1)
+      );
+      // 页码（最多 7 个）
+      let nums = [];
+      const pagesToShow = 7;
+      let from = Math.max(1, state.page - Math.floor(pagesToShow/2));
+      let to = Math.min(pages, from + pagesToShow - 1);
+      from = Math.max(1, to - pagesToShow + 1);
+      for (let i=from;i<=to;i++){
+        pagerEl.append(mkBtn(i, ()=>{ state.page=i; render(); }, false, i===state.page));
+      }
+      pagerEl.append(
+        mkBtn('›', ()=>{ state.page++; render(); }, state.page===pages),
+        mkBtn('»', ()=>{ state.page=pages; render(); }, state.page===pages)
+      );
+      pagerEl.style.display = 'flex';
+    }
+
+    function badge(status_text) {
+      const ok = status_text === '已处理';
+      const cls = ok ? 'ok' : 'reject';
+      return `<span class="badge ${cls}">${status_text}</span>`;
+    }
+
+    function fmtTime(s){
+      if(!s) return '-';
+      const d = new Date(s.replace(' ', 'T'));
+      if (isNaN(d.getTime())) return s;
+      const pad=n=>String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function cardHtml(x){
+      const st = x.status_text || (x.status==1?'已处理':x.status==2?'驳回':'其他');
+      return `
+        <div class="appeal">
+          <div>
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div class="row">
+                <div class="kv"><span class="k">订单</span><span class="v">${x.order_id}</span></div>
+                <div class="kv"><span class="k">用户</span><span class="v">${x.user_id}</span></div>
+                <div class="kv"><span class="k">处理人</span><span class="v">${x.handler_uid ?? '-'}</span></div>
+                <div class="kv"><span class="k">处理时间</span><span class="v">${fmtTime(x.handled_at)}</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="kv"><span class="k">状态</span><span>${badge(st)}</span></div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn link js-toggle">详情</button>
+            <button class="btn link" onclick="navigator.clipboard.writeText('${x.order_id||''}').then(()=>alert('已复制订单号'));">复制订单号</button>
+          </div>
+          <div class="details">
+            <div class="muted">申诉原因（reason）</div>
+            <pre>${(x.reason||'').trim()||'无'}</pre>
+            <div class="muted">处理结果（result）</div>
+            <pre>${(x.result||'').trim()||'无'}</pre>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachDetailToggles(){
+      document.querySelectorAll('.appeal .js-toggle').forEach(btn=>{
+        btn.onclick = () => {
+          const details = btn.closest('.appeal').querySelector('.details');
+          details.style.display = (details.style.display==='block'?'none':'block');
+        };
+      });
+    }
+
+    // 事件绑定
+    $('#refresh').onclick = ()=> fetchData();
+    $('#statusSelect').onchange = e => { state.status = e.target.value; applyFilters(true); };
+    $('#pageSize').onchange = e => { state.size = +e.target.value; applyFilters(true); };
+    // 输入防抖
+    let t=null;
+    $('#q').oninput = e => { clearTimeout(t); t=setTimeout(()=>{ state.q=e.target.value; applyFilters(true); }, 250); };
+
+    // 首次加载
+    fetchData();
+  </script>
+</body>
+</html>

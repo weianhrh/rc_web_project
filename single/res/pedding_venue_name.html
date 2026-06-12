@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>场地信息审核</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --card-bg: #ffffff;
+      --text-color: #333;
+      --border-color: #ddd;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --hover-bg: #f9f9f9;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f8f9ff, #f0f3ff);
+      font-family: "PingFang SC", system-ui;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card-bg);
+      box-shadow: var(--shadow);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 20px;
+      color: var(--text-color);
+      font-weight: bold;
+      margin-bottom: 20px;
+      /* border-bottom: 2px solid var(--primary); */
+      padding-bottom: 0px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      text-align: left;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    th {
+      background-color: #f0f3ff;
+      font-weight: 600;
+    }
+
+    th[data-hide="true"],
+    td[data-hide="true"] {
+      display: none;
+    }
+
+    button {
+      padding: 6px 12px;
+      border: none;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #4a77e4;
+    }
+
+    button.danger {
+      background-color: #e74c3c;
+    }
+
+    button.danger:hover {
+      background-color: #c0392b;
+    }
+
+    .textarea-box {
+      margin-top: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      resize: vertical;
+    }
+table + table {
+  margin-top: 24px;
+}
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tr {
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px;
+        background-color: #fff;
+        box-shadow: var(--shadow);
+      }
+
+      td {
+        padding: 8px 12px;
+        border: none;
+        font-size: 15px;
+        text-align: left;
+        position: relative;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: block;
+        margin-bottom: 4px;
+        color: var(--secondary);
+      }
+    }
+  </style>
+</head>
+<body>
+ 
+<div class="container">
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>场地ID</th>
+          <th>提交名称</th>
+          <th data-hide="true">提交时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="audit-list"></tbody>
+    </table>
+
+    <table style="margin-top: 24px;">
+      <thead>
+        <tr>
+          <th>场地ID</th>
+          <th>提交描述</th>
+          <th data-hide="true">提交时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="desc-audit-list"></tbody>
+    </table>
+
+    <table style="margin-top: 24px;">
+      <thead>
+        <tr>
+          <th>字段</th>
+          <th>名称</th>
+          <th data-hide="true">提交时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="device-audit-list"></tbody>
+    </table>
+  </div>
+</div>
+
+  <script>
+    async function loadList() {
+      const res = await fetch("https://open.rcwulian.cn/api/venue/get_audit_list.php");
+      const result = await res.json();
+      const list = result.data?.name_list || [];
+
+      const tbody = document.getElementById("audit-list");
+      tbody.innerHTML = "";
+
+      list.forEach(item => {
+        const time = new Date(item.timestamp * 1000).toLocaleString();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td data-label="场地ID">${item.venue_id}</td>
+          <td data-label="提交名称">${item.venue_name}</td>
+          <td data-label="提交时间" data-hide="true">${time}</td>
+          <td data-label="操作">
+            <button onclick="approve(${item.venue_id})">通过</button>
+            <button class="danger" onclick="toggleReject(${item.venue_id})">拒绝</button>
+            <div class="textarea-box" id="reject-box-${item.venue_id}" style="display:none;">
+              <textarea id="reason-${item.venue_id}" rows="2" placeholder="请输入拒绝理由"></textarea>
+              <button class="danger" onclick="reject(${item.venue_id})" style="margin-top:8px;">确认拒绝</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      notifyTextCount();
+    }
+
+    async function loadDeviceList() {
+      const res = await fetch("https://open.rcwulian.cn/api/venue/getPendingVehicleNameAudits.php");
+      const result = await res.json();
+      const list = result.data || [];
+
+      const tbody = document.getElementById("device-audit-list");
+      tbody.innerHTML = "";
+
+      list.forEach(item => {
+        const time = new Date(item.timestamp * 1000).toLocaleString();
+        const fieldText = item.field === 'name' ? '设备名称' : '分享名称';
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td data-label="字段">${fieldText}</td>
+          <td data-label="名称">${item.new}</td>
+          <td data-label="提交时间" data-hide="true">${time}</td>
+          <td data-label="操作">
+            <button onclick="approveDevice('${item.device_id}', '${item.field}')">通过</button>
+            <button class="danger" onclick="toggleRejectDevice('${item.device_id}', '${item.field}')">拒绝</button>
+            <div class="textarea-box" id="reject-box-${item.device_id}-${item.field}" style="display:none;">
+              <textarea id="reason-${item.device_id}-${item.field}" rows="2" placeholder="请输入拒绝理由"></textarea>
+              <button class="danger" onclick="rejectDevice('${item.device_id}', '${item.field}')" style="margin-top:8px;">确认拒绝</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      notifyTextCount();
+    }
+
+    async function loadDescList() {
+      const res = await fetch("https://open.rcwulian.cn/api/venue/get_audit_list.php");
+      const result = await res.json();
+      const list = result.data?.desc_list || [];
+
+      const tbody = document.getElementById("desc-audit-list");
+      tbody.innerHTML = "";
+
+      list.forEach(item => {
+        const time = new Date(item.timestamp * 1000).toLocaleString();
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td data-label="场地ID">${item.venue_id}</td>
+          <td data-label="提交描述">${item.venue_description}</td>
+          <td data-label="提交时间" data-hide="true">${time}</td>
+          <td data-label="操作">
+            <button onclick="approveDesc(${item.venue_id})">通过</button>
+            <button class="danger" onclick="toggleRejectDesc(${item.venue_id})">拒绝</button>
+            <div class="textarea-box" id="reject-desc-box-${item.venue_id}" style="display:none;">
+              <textarea id="reason-desc-${item.venue_id}" rows="2" placeholder="请输入拒绝理由"></textarea>
+              <button class="danger" onclick="rejectDesc(${item.venue_id})" style="margin-top:8px;">确认拒绝</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      notifyTextCount();
+    }
+
+    async function approve(id) {
+      await fetch("https://open.rcwulian.cn/api/venue/review_venue_name.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venue_id: id, action: "approve" })
+      });
+      alert("已通过");
+      loadList();
+    }
+
+    async function reject(id) {
+      const reason = document.getElementById(`reason-${id}`).value.trim();
+      if (!reason) return alert("请输入拒绝理由");
+
+      await fetch("https://open.rcwulian.cn/api/venue/review_venue_name.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venue_id: id, action: "reject", reason })
+      });
+      alert("已拒绝");
+      loadList();
+    }
+
+    function toggleReject(id) {
+      const box = document.getElementById(`reject-box-${id}`);
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    async function approveDevice(id, field) {
+      await fetch("https://open.rcwulian.cn/api/venue/reviewVehicleNameAudit.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: id, field, action: "approve" })
+      });
+      alert("设备审核通过");
+      loadDeviceList();
+    }
+
+    async function rejectDevice(id, field) {
+      const reason = document.getElementById(`reason-${id}-${field}`).value.trim();
+      if (!reason) return alert("请输入拒绝理由");
+
+      await fetch("https://open.rcwulian.cn/api/venue/reviewVehicleNameAudit.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: id, field, action: "reject", reason })
+      });
+      alert("设备已拒绝");
+      loadDeviceList();
+    }
+
+    function toggleRejectDevice(id, field) {
+      const box = document.getElementById(`reject-box-${id}-${field}`);
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    async function approveDesc(id) {
+      await fetch("https://open.rcwulian.cn/api/venue/review_venue_description.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venue_id: id, action: "approve" })
+      });
+      alert("描述审核通过");
+      loadDescList();
+    }
+
+    async function rejectDesc(id) {
+      const reason = document.getElementById(`reason-desc-${id}`).value.trim();
+      if (!reason) return alert("请输入拒绝理由");
+
+      await fetch("https://open.rcwulian.cn/api/venue/review_venue_description.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venue_id: id, action: "reject", reason })
+      });
+      alert("描述已拒绝");
+      loadDescList();
+    }
+
+    function toggleRejectDesc(id) {
+      const box = document.getElementById(`reject-desc-box-${id}`);
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    function notifyTextCount() {
+      const count = 
+        document.querySelectorAll('#audit-list tr').length +
+        document.querySelectorAll('#desc-audit-list tr').length +
+        document.querySelectorAll('#device-audit-list tr').length;
+      window.parent.postMessage({ type: 'text-card-count', count }, '*');
+    }
+
+    loadList();
+    loadDeviceList();
+    loadDescList();
+  </script>
+  <script>
+  function resizeParent() {
+    const height = document.documentElement.scrollHeight;
+    window.parent.postMessage({
+      type: 'resize-iframe',
+      id: 'iframe-text',
+      height: height
+    }, '*');
+  }
+
+  window.onload = resizeParent;
+  window.onresize = resizeParent;
+</script>
+
+</body>
+</html>

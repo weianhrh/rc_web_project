@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>订单管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .order-item {
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(5, auto);
+            gap: 12px;
+        }
+
+        .order-item .order-id,
+        .order-item .status {
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--primary);
+        }
+
+        .order-item .status {
+            color: var(--primary);
+            text-align: right;
+        }
+
+        .order-item .status.completed {
+            color: #4CAF50;
+        }
+
+        .order-item .status.cancelled {
+            color: #FF6347;
+        }
+
+        .order-item .status.pending {
+            color: #FF9800;
+        }
+
+        .order-item .label {
+            color: var(--secondary);
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .order-item .value {
+            color: #333;
+            font-size: 16px;
+            text-align: right;
+        }
+
+        .order-item .cancel-btn,
+        .order-item .complete-btn {
+            background-color: #ff5c5c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            grid-column: span 2;
+            transition: background-color 0.3s;
+            margin-top: 16px;
+        }
+
+        .order-item .cancel-btn:hover,
+        .order-item .complete-btn:hover {
+            background-color: #e04d4d;
+        }
+
+        @media (max-width: 768px) {
+            .order-item {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    
+        /* 修复移动端遮挡和排版 */
+        .order-item .value, .order-item .label {
+            word-break: break-all;
+        }
+
+        .order-item .complete-btn {
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .order-item .order-id,
+        .order-item .status {
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .order-item {
+                padding: 16px;
+                font-size: 14px;
+            }
+
+            .order-item .label,
+            .order-item .value {
+                font-size: 14px;
+            }
+
+            .order-item .complete-btn {
+                padding: 10px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-title">订单管理</div>
+            <div id="order-list"></div> <!-- 这里将动态插入订单 -->
+        </div>
+    </div>
+
+    <script>
+        // 发起请求获取数据并更新页面 
+        fetch('https://open.rcwulian.cn/api/venue/getReservationsList.php?page=1&limit=20&order_number=&reservation_date=&reservation_location=&status=%E6%AD%A3%E5%9C%A8%E9%A9%BE%E9%A9%B6')
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0 && data.data.length > 0) {
+                    const orderListContainer = document.getElementById('order-list');
+
+                    data.data.forEach(order => {
+                        const orderItem = document.createElement('div');
+                        orderItem.classList.add('order-item');
+
+                        // 订单编号和状态
+                        orderItem.innerHTML = `
+                            <div class="order-id">订单编号：${order.order_number}</div>
+                            <div class="status ${getStatusClass(order.order_status)}">${getStatusText(order.order_status)}</div>
+
+                            <div class="label">用户昵称</div>
+                            <div class="value">${order.nickname} (ID: ${order.user_id})</div>
+
+                            <div class="label">可驾驶时长</div>
+                            <div class="value">${order.driving_duration}分钟</div>
+
+                            <div class="label">驾驶开始时间</div>
+                            <div class="value">${order.driving_start_time}</div>
+
+                            <div class="label">支付方式</div>
+                            <div class="value">${order.pay_type}</div>
+
+                            <div class="label">驾驶车辆</div>
+                            <div class="value">${order.vehicle_name}</div>
+                        
+                            <button class="complete-btn" ${order.order_status !== "正在驾驶" ? "disabled" : ""} onclick="completeOrder('${order.order_number}', this)">结束订单</button>
+                        `;
+
+                    
+
+                        orderListContainer.appendChild(orderItem);
+                    });
+                } else {
+                    const orderListContainer = document.getElementById('order-list');
+                    orderListContainer.innerHTML = "<p>暂无订单记录</p>";
+                }
+            })
+            .catch(error => {
+                console.error('数据加载失败:', error);
+            });
+
+        // 根据状态获取对应的状态文本和颜色
+        function getStatusText(status) {
+            switch (status) {
+                case "正在驾驶": return "正在驾驶";
+                case "已完成": return "已完成";
+                case "已取消": return "已取消";
+                default: return "未知";
+            }
+        }
+
+        // 根据状态返回对应的状态类名
+        function getStatusClass(status) {
+            switch (status) {
+                case "正在驾驶": return "pending";
+                case "已完成": return "completed";
+                case "已取消": return "cancelled";
+                default: return "pending";
+            }
+        }
+
+        // 结束订单的功能
+        function completeOrder(orderNumber, buttonElement) {
+            const url = `https://open.rcwulian.cn/api/orders/CompleteOrder.php?order_id=${orderNumber}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        // 更新状态为已完成
+                        const statusElement = buttonElement.closest('.order-item').querySelector('.status');
+                        statusElement.textContent = '已完成';
+                        statusElement.classList.remove('pending');
+                        statusElement.classList.add('completed');
+
+                        // 禁用按钮，防止重复点击
+                        buttonElement.disabled = true;
+                        buttonElement.textContent = `已完成`;
+                        alert(data.msg);  // 显示退款金额提示
+                    } else {
+                        alert('结束订单失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('结束订单失败:', error);
+                    alert('网络错误，结束订单失败');
+                });
+        }
+    </script>
+
+</body>
+</html>

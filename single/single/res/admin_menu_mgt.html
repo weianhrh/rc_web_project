@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <!--<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.7.6/dist/css/layui.css">-->
+  <link rel="stylesheet" href="https://lib.baomitu.com/layui/2.7.6/css/layui.css">
+
+  <meta charset="UTF-8" />
+  <title>菜单管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --text-color: #333;
+      --hover-bg: #f9f9f9;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", system-ui; }
+    body {
+      background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: auto; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      font-weight: bold;
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+    .edit-btn {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-left: 5px;
+    }
+    .edit-btn:hover { background-color: #4a77e4; }
+    .menu-parent { margin-top: 10px; }
+    .menu-parent > .menu-header {
+      background: #eef3ff;
+      border-radius: 6px;
+      padding: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .arrow {
+      font-size: 12px;
+      color: #999;
+      transition: transform 0.3s;
+    }
+    .menu-children {
+      margin-left: 20px;
+      margin-top: 8px;
+      display: none;
+    }
+    .menu-children.active {
+      display: block;
+    }
+    .menu-parent.open .arrow {
+      transform: rotate(90deg);
+    }
+    .menu-child {
+      background: #fff;
+      border: 1px solid #e2e2e2;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin: 8px 0;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(91, 140, 255, 0.05);
+    }
+    
+    .menu-info {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .menu-info > div:first-child {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    
+    .menu-meta {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.5;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      width: 400px;
+      max-width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .modal-content input, .modal-content select {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    #role_ids {
+  height: 100px;
+  background-color: #fff;
+  appearance: none;
+  resize: none;
+  overflow-y: auto;
+}
+#role_ids_group label {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f8f8f8;
+  font-size: 14px;
+}
+/* 美化“生成配置文件”按钮 */
+#genConfigBtn {
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(91, 140, 255, 0.3);
+}
+
+#genConfigBtn:hover {
+  background-color: #4a77e4;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(91, 140, 255, 0.4);
+}
+
+#genConfigBtn:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(91, 140, 255, 0.2);
+}
+.help-icon {
+  display: inline-block;
+  background-color: #5b8cff;
+  color: #fff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  margin-left: 6px;
+  position: relative;
+  vertical-align: middle;
+  align-self: center;
+}
+
+.help-icon::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 999;
+}
+
+.help-icon:hover::after {
+  opacity: 1;
+}
+@media (max-width: 480px) {
+  .menu-child {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .menu-child > div:last-child {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .edit-btn {
+    flex: 1;
+    font-size: 13px;
+    padding: 6px 8px;
+    min-width: 80px;
+  }
+  .menu-meta {
+    display: none;
+  }
+}
+
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="card-title">
+      菜单管理
+      <button class="edit-btn" style="float:right" onclick="openAddModal()">➕ 添加菜单</button>
+    </div>
+    <div id="menu-list">
+      <div>加载中...</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="addModal" onclick="closeAddModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="card-title" id="modalTitle">添加菜单</div>
+    <input type="hidden" id="menu_id" />
+    <input type="text" id="title" placeholder="菜单标题" />
+    <input type="text" id="name" placeholder="唯一标识 name" />
+    <div style="display:flex; align-items: center; gap: 6px; position: relative;">
+      <input type="text" id="icon" placeholder="图标类名 layui-icon-xxx 支持模糊输入预览图标" style="flex:1;" oninput="filterIcons(this.value)" />
+      <i id="iconPreview" class="layui-icon" style="font-size: 20px; padding: 0px;"></i>
+      <div id="iconSuggestions" style="position:absolute; top:100%; left:0; z-index:999; background:#fff; border:1px solid #ccc; border-radius:6px; width:100%; max-height:200px; overflow:auto; display:none;"></div>
+    </div>
+
+    <div style="display:flex; align-items: center; gap: 6px; position: relative;">
+      <input type="text" id="jump" placeholder="跳转链接，如 /iframe/link/xxx" style="flex:1;" />
+      <button type="button"  id="genConfigBtn"  onclick="generateLinkFile()">生成配置文件</button>
+    </div>
+
+    <input type="number" id="parent_id" placeholder="父级ID，0为顶级" />
+    <div id="role_ids_group" style="flex-wrap: wrap; gap: 10px;">
+      <label><input type="checkbox" name="role_ids" value="1"> 超级管理员</label>
+      <label><input type="checkbox" name="role_ids" value="2"> 管理员</label>
+      <label><input type="checkbox" name="role_ids" value="3"> 代理商</label>
+      <!--<label><input type="checkbox" name="role_ids" value="4"> 普通用户</label>-->
+       <span class="help-icon" data-tip="勾选多个角色后，菜单对这些角色可见">?</span>
+    </div>
+
+
+    <input type="number" id="sort" placeholder="排序，数字越小越靠前" />
+    <button class="edit-btn" onclick="submitMenu()">提交</button>
+    <button class="edit-btn" style="background:#ccc;color:#000" onclick="closeAddModal()">取消</button>
+  </div>
+</div>
+
+<script>
+async function confirmDelete(id) {
+  if (!window.confirm('⚠️ 此操作不可恢复，确认删除？')) return;
+
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerText = '删除中...';
+
+  const res = await fetch('/api/operat/admin_menu.php?action=delete', {
+    method: 'POST',
+    body: new URLSearchParams({ id })
+  });
+
+  btn.disabled = false;
+  btn.innerText = '删除';
+
+  const result = await res.json();
+  if (result.code === 0) {
+    loadMenus();
+  } else {
+    alert('删除失败：' + result.msg);
+  }
+}
+
+let menuData = [];
+let mode = 'add';
+
+function openAddModal(item = null) {
+  mode = item ? 'edit' : 'add';
+  document.getElementById('modalTitle').innerText = mode === 'add' ? '添加菜单' : '编辑菜单';
+  document.getElementById('menu_id').value = item?.id || '';
+  document.getElementById('title').value = item?.title || '';
+  document.getElementById('name').value = item?.name || '';
+  document.getElementById('icon').value = item?.icon || '';
+  document.getElementById('jump').value = item?.jump || '';
+  document.getElementById('parent_id').value = item?.parent_id || 0;
+  const roleIds = (item?.role_ids || '').split(',');
+    document.querySelectorAll('#role_ids_group input[name="role_ids"]').forEach(input => {
+      input.checked = roleIds.includes(input.value);
+    });
+
+  const checked = Array.from(document.querySelectorAll('#role_ids_group input[name="role_ids"]:checked'))
+  .map(cb => cb.value)
+  .join(',');
+
+
+  document.getElementById('sort').value = item?.sort || 0;
+  document.getElementById('addModal').style.display = 'flex';
+}
+
+function closeAddModal() {
+  document.getElementById('addModal').style.display = 'none';
+}
+
+async function loadMenus() {
+  const res = await fetch('/api/operat/admin_menu.php?action=get');
+  const data = await res.json();
+  menuData = data.data;
+  renderMenuList();
+}
+
+// function renderMenuList() {
+//   const container = document.getElementById('menu-list');
+//   container.innerHTML = '';
+
+//   const parents = menuData.filter(item => item.parent_id == 0);
+//   const children = menuData.filter(item => item.parent_id != 0);
+
+//   parents.forEach(parent => {
+//   const parentDiv = document.createElement('div');
+//   parentDiv.className = 'menu-parent';
+
+//   const header = document.createElement('div');
+//   header.className = 'menu-header';
+
+//   const matchingChildren = children
+//     .filter(c => c.parent_id == parent.id)
+//     .sort((a, b) => a.sort - b.sort);
+
+//   const hasChildren = matchingChildren.length > 0;
+//   header.innerHTML = `${parent.title}（ID: ${parent.id}）` + (hasChildren ? ` <span class="arrow">▶</span>` : '');
+
+//   const childrenBox = document.createElement('div');
+//   childrenBox.className = 'menu-children';
+
+//   if (hasChildren) {
+//     header.onclick = () => {
+//       childrenBox.classList.toggle('active');
+//       parentDiv.classList.toggle('open');
+//     };
+//   }
+
+//   matchingChildren.forEach(child => {
+//     const row = document.createElement('div');
+//     row.className = 'menu-child';
+
+//     row.innerHTML = `
+//       <div class="menu-info">
+//         <div>${child.title}（ID: ${child.id} | 父ID: ${child.parent_id} | 排序: ${child.sort}）</div>
+//         <div class="menu-meta">图标：${child.icon || '无'} | 跳转：${child.jump || '无'} | 角色：${child.role_ids}</div>
+//       </div>
+//       <div>
+//         <button class="edit-btn">编辑</button>
+//         <button class="edit-btn" style="background:#f44336">删除</button>
+//       </div>
+//     `;
+//     header.innerHTML = `
+//       <div>${parent.title}（ID: ${parent.id}）</div>
+//       <div>
+//         <button class="edit-btn" onclick="event.stopPropagation(); openAddModal(${JSON.stringify(parent)})">编辑</button>
+//         <button class="edit-btn" style="background:#f44336" onclick="event.stopPropagation(); confirmDelete(${parent.id})">删除</button>
+//         ${hasChildren ? `<span class="arrow">▶</span>` : ''}
+//       </div>
+//     `;
+
+//     const [editBtn, delBtn] = row.querySelectorAll('button');
+//     editBtn.addEventListener('click', () => openAddModal(child));
+//     delBtn.addEventListener('click', () => deleteMenu(child.id));
+
+//     childrenBox.appendChild(row);
+//   });
+
+//   parentDiv.appendChild(header);
+//   parentDiv.appendChild(childrenBox);
+//   container.appendChild(parentDiv);
+// });
+
+// }
+function renderMenuList() {
+  const container = document.getElementById('menu-list');
+  container.innerHTML = '';
+
+  const parents = menuData.filter(item => item.parent_id == 0);
+  const children = menuData.filter(item => item.parent_id != 0);
+
+  parents.forEach(parent => {
+    const parentDiv = document.createElement('div');
+    parentDiv.className = 'menu-parent';
+
+    const header = document.createElement('div');
+    header.className = 'menu-header';
+
+    const matchingChildren = children
+      .filter(c => c.parent_id == parent.id)
+      .sort((a, b) => a.sort - b.sort);
+
+    const hasChildren = matchingChildren.length > 0;
+
+    header.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 6px;">
+        
+        <span>${parent.title}（ID: ${parent.id}）</span>
+        ${hasChildren ? `<span class="arrow">▶</span>` : ''}
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button class="edit-btn">编辑</button>
+        <button class="edit-btn" style="background:#f44336">删除</button>
+      </div>
+    `;
+
+
+    const [editBtn, delBtn] = header.querySelectorAll('button');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openAddModal(parent);
+    });
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmDelete(parent.id);
+    });
+
+    const childrenBox = document.createElement('div');
+    childrenBox.className = 'menu-children';
+
+    if (hasChildren) {
+      header.onclick = () => {
+        childrenBox.classList.toggle('active');
+        parentDiv.classList.toggle('open');
+      };
+    }
+
+    matchingChildren.forEach(child => {
+      const row = document.createElement('div');
+      row.className = 'menu-child';
+
+      row.innerHTML = `
+        <div class="menu-info">
+          <div>${child.title}（ID: ${child.id} | 父ID: ${child.parent_id} | 排序: ${child.sort}）</div>
+          <div class="menu-meta">图标：${child.icon || '无'} | 跳转：${child.jump || '无'} | 角色：${child.role_ids}</div>
+        </div>
+        <div>
+          <button class="edit-btn">编辑</button>
+          <button class="edit-btn" style="background:#f44336">删除</button>
+        </div>
+      `;
+
+      const [editBtn, delBtn] = row.querySelectorAll('button');
+      editBtn.addEventListener('click', () => openAddModal(child));
+      delBtn.addEventListener('click', () => confirmDelete(child.id));
+
+      childrenBox.appendChild(row);
+    });
+
+    parentDiv.appendChild(header);
+    parentDiv.appendChild(childrenBox);
+    container.appendChild(parentDiv);
+  });
+}
+
+
+async function submitMenu() {
+  const form = new URLSearchParams({
+    id: document.getElementById('menu_id').value,
+    title: document.getElementById('title').value,
+    name: document.getElementById('name').value,
+    icon: document.getElementById('icon').value,
+    jump: document.getElementById('jump').value,
+    parent_id: document.getElementById('parent_id').value,
+    role_ids: Array.from(document.querySelectorAll('#role_ids_group input[name="role_ids"]:checked')).map(cb => cb.value).join(','),
+    sort: document.getElementById('sort').value,
+    action: mode
+  });
+
+  const res = await fetch('/api/operat/admin_menu.php', {
+    method: 'POST',
+    body: form
+  });
+
+  const result = await res.json();
+  if (result.code === 0) {
+    closeAddModal();
+    loadMenus();
+  } else {
+    alert((mode === 'add' ? '添加' : '编辑') + '失败：' + result.msg);
+  }
+}
+
+async function deleteMenu(id) {
+  if (!confirm('确定删除此菜单？')) return;
+  const res = await fetch('/api/operat/admin_menu.php?action=delete', {
+    method: 'POST',
+    body: new URLSearchParams({ id })
+  });
+  const result = await res.json();
+  if (result.code === 0) loadMenus();
+  else alert('删除失败：' + result.msg);
+}
+
+// loadMenus();
+</script>
+<script>
+let allLayuiIcons = [];
+
+window.onload = async function () {
+  // 拉取 LayUI 官网字体样式
+//   const res = await fetch("https://cdn.jsdelivr.net/npm/layui@2.7.6/dist/css/layui.css");
+  const res = await fetch("https://lib.baomitu.com/layui/2.7.6/css/layui.css");
+  const css = await res.text();
+  const matches = [...css.matchAll(/\.layui-icon-([a-z0-9-]+):before/g)];
+  allLayuiIcons = matches.map(m => 'layui-icon-' + m[1]);
+  // 初始化菜单数据
+  loadMenus();
+};
+
+function filterIcons(keyword) {
+  const input = document.getElementById('icon');
+  const preview = document.getElementById('iconPreview');
+  const suggestionBox = document.getElementById('iconSuggestions');
+  suggestionBox.innerHTML = '';
+
+  // 实时预览
+  preview.className = `layui-icon ${keyword}`;
+
+  if (!keyword || keyword.length < 3) {
+    suggestionBox.style.display = 'none';
+    return;
+  }
+
+  const filtered = allLayuiIcons.filter(icon => icon.includes(keyword));
+  if (filtered.length === 0) {
+    suggestionBox.style.display = 'none';
+    return;
+  }
+
+  filtered.slice(0, 50).forEach(icon => {
+    const div = document.createElement('div');
+    div.innerHTML = `<i class="layui-icon ${icon}" style="font-size:16px;"></i> <span>${icon}</span>`;
+    div.style = `padding:6px 10px; cursor:pointer; font-size:14px;`;
+    div.onmouseenter = () => div.style.background = '#f2f2f2';
+    div.onmouseleave = () => div.style.background = '#fff';
+    div.onclick = () => {
+      input.value = icon;
+      preview.className = `layui-icon ${icon}`;
+      suggestionBox.style.display = 'none';
+    };
+    suggestionBox.appendChild(div);
+  });
+
+  suggestionBox.style.display = 'block';
+}
+async function generateLinkFile() {
+  const jumpInput = document.getElementById('jump');
+  const jumpPath = jumpInput.value.trim(); // 例如 /iframe/link/test
+
+  const match = jumpPath.match(/^\/iframe\/link\/([a-zA-Z0-9_-]+)$/);
+  if (!match) {
+    alert('跳转链接格式必须是 /iframe/link/xxx');
+    return;
+  }
+  const customTitle = document.getElementById('title').value.trim();
+  const customName = match[1]; // 获取 
+  const filePath = `/iframe/link/${customName}.html`;
+  const htmlContent = `<title>${customTitle}</title>\n<iframe src="/res/${customName}.html" frameborder="0" class="layadmin-iframe"></iframe>`;
+  console.log(filePath,":",htmlContent);
+  const res = await fetch('/api/operat/gen_link_template.php', {
+    method: 'POST',
+    body: new URLSearchParams({
+      path: filePath,
+      content: htmlContent
+    })
+  });
+
+  const result = await res.json();
+  if (result.code === 0) {
+    alert('✅ 配置文件已生成：' + filePath);
+  } else {
+    alert('❌ 生成失败：' + result.msg);
+  }
+}
+  // 禁用文字选中
+  document.addEventListener('selectstart', e => e.preventDefault());
+</script>
+
+</body>
+</html>

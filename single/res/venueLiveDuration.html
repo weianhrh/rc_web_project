@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>当天开播时长统计</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --danger: #ff4d4f;
+            --success: #18a058;
+            --warning: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        body { background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%); min-height: 100vh; padding: 20px; color: var(--text-color); }
+        .container { max-width: 1280px; margin: 0 auto; }
+        .card { background: var(--card-bg); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .card-title { font-size: 24px; font-weight: 700; padding-bottom: 12px; border-bottom: 2px solid var(--primary); margin-bottom: 18px; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+        .form-item { display: flex; align-items: center; gap: 8px; }
+        .form-item label { font-size: 14px; color: #555; white-space: nowrap; }
+        select, button { height: 38px; border-radius: 8px; font-size: 14px; }
+        select { border: 1px solid var(--border-color); padding: 0 10px; min-width: 240px; background: #fff; }
+        button { border: none; padding: 0 16px; cursor: pointer; background: var(--primary); color: #fff; }
+        button.secondary { background: #64748b; }
+        .summary { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+        .stat { background: #f4f7ff; border: 1px solid #e2e8ff; border-radius: 12px; padding: 14px 16px; min-width: 220px; }
+        .stat .label { color: #64748b; font-size: 13px; margin-bottom: 6px; }
+        .stat .value { font-size: 22px; font-weight: 700; color: var(--primary); }
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; margin-top: 12px; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); text-align: left; font-size: 13px; white-space: nowrap; }
+        th { background: #f8fafc; font-weight: 700; color: #334155; }
+        tr:hover td { background: #f9fbff; }
+        .badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+        .badge-live { background: #e8f8ef; color: var(--success); }
+        .badge-close { background: #eef2ff; color: var(--primary); }
+        .empty, .loading { padding: 30px; text-align: center; color: #777; }
+        .role-tip { font-size: 13px; color: #64748b; margin-bottom: 10px; }
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .card { padding: 14px; }
+            .toolbar { flex-direction: column; align-items: stretch; }
+            .form-item { width: 100%; align-items: stretch; flex-direction: column; gap: 6px; }
+            select, button { width: 100%; min-width: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="card-title">当天开播时长统计</div>
+        <div id="role_tip" class="role-tip">加载权限中...</div>
+
+        <div class="toolbar" id="toolbar">
+            <div class="form-item" id="venue_filter_box">
+                <label for="venue_id">场地</label>
+                <select id="venue_id">
+                    <option value="0">全部场地</option>
+                </select>
+            </div>
+            <button onclick="loadStats()">查询</button>
+            <button class="secondary" onclick="resetSearch()">重置</button>
+        </div>
+
+        <div class="summary">
+            <div class="stat">
+                <div class="label">当天开播总时间</div>
+                <div class="value" id="total_duration">00:00:00</div>
+            </div>
+            <div class="stat">
+                <div class="label">当天开关播阶段数</div>
+                <div class="value" id="segment_count">0</div>
+            </div>
+            <div class="stat">
+                <div class="label">统计日期</div>
+                <div class="value" id="stat_date">-</div>
+            </div>
+        </div>
+
+        <div class="table-wrap" id="venue_total_wrap" style="display:none;">
+            <table>
+                <thead>
+                <tr>
+                    <th>场地</th>
+                    <th>当天总开播时间</th>
+                    <th>阶段数</th>
+                </tr>
+                </thead>
+                <tbody id="venue_total_tbody"></tbody>
+            </table>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>场地</th>
+                    <th>开播时间</th>
+                    <th>关播时间</th>
+                    <th>本阶段统计开始</th>
+                    <th>本阶段统计结束</th>
+                    <th>每次开关播总时间</th>
+                    <th>状态</th>
+                </tr>
+                </thead>
+                <tbody id="segment_tbody">
+                <tr><td colspan="7" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const VENUE_API = '/api/operat/EnergyGift.php';
+    const USER_API = '/api/operat/get_current_user.php';
+    const STATS_API = '/api/operat/venueLiveDuration.php';
+
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadCurrentUser(function () {
+            loadVenues(function () {
+                applyRoleView();
+                loadStats();
+            });
+        });
+    });
+
+    function loadCurrentUser(callback) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', USER_API, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+            try {
+                const res = JSON.parse(xhr.responseText);
+                if (res.code !== 0) {
+                    document.getElementById('role_tip').textContent = res.msg || '未登录';
+                    document.getElementById('segment_tbody').innerHTML = '<tr><td colspan="7" class="empty">未登录或无权访问</td></tr>';
+                    return;
+                }
+                currentUser = res.data;
+                callback();
+            } catch (e) {
+                document.getElementById('role_tip').textContent = '当前用户信息解析失败';
+            }
+        };
+        xhr.send();
+    }
+
+    function applyRoleView() {
+        const roleId = Number(currentUser.role_id);
+        const venueSelect = document.getElementById('venue_id');
+        const venueFilterBox = document.getElementById('venue_filter_box');
+        const roleTip = document.getElementById('role_tip');
+
+        if (roleId === 1) {
+            roleTip.textContent = '当前权限：超级管理员，可查看全部场地的当天开播总时间和阶段性时间。';
+            venueFilterBox.style.display = 'flex';
+        } else if (roleId === 4) {
+            const myVenueId = String(currentUser.venue_id || '0');
+            roleTip.textContent = '当前权限：场地账号，仅显示自己绑定场地的每次开关播总时间。';
+            venueSelect.value = myVenueId;
+            venueSelect.disabled = true;
+            venueFilterBox.style.display = 'none';
+        } else {
+            roleTip.textContent = '当前角色无权查看';
+            document.getElementById('toolbar').style.display = 'none';
+        }
+    }
+
+    function loadVenues(callback) {
+        const venueSelect = document.getElementById('venue_id');
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', VENUE_API, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.code === 0 && Array.isArray(response.data)) {
+                    response.data.forEach(venue => {
+                        const option = document.createElement('option');
+                        option.value = venue.id;
+                        option.textContent = `${venue.id} - ${venue.venue_name}`;
+                        venueSelect.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                console.error('场地下拉框加载失败', e);
+            } finally {
+                callback();
+            }
+        };
+        xhr.send('action=get_venues');
+    }
+
+    function resetSearch() {
+        if (Number(currentUser.role_id) === 1) {
+            document.getElementById('venue_id').value = '0';
+        }
+        loadStats();
+    }
+
+    function loadStats() {
+        const tbody = document.getElementById('segment_tbody');
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">加载中...</td></tr>';
+
+        const roleId = Number(currentUser.role_id);
+        let venueId = document.getElementById('venue_id').value;
+        if (roleId === 4) {
+            venueId = currentUser.venue_id || '0';
+        }
+
+        const params = new URLSearchParams();
+        params.append('action', 'get_today_live_duration');
+        params.append('venue_id', venueId);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', STATS_API, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
+            if (xhr.status !== 200) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty">请求失败，请检查接口路径</td></tr>';
+                return;
+            }
+            try {
+                const response = JSON.parse(xhr.responseText);
+                if (response.code !== 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" class="empty">${escapeHtml(response.msg || '查询失败')}</td></tr>`;
+                    return;
+                }
+                renderStats(response.data);
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty">返回数据解析失败</td></tr>';
+            }
+        };
+        xhr.send(params.toString());
+    }
+
+    function renderStats(data) {
+        const segments = data.segments || [];
+        const venueTotals = data.venue_totals || [];
+        const tbody = document.getElementById('segment_tbody');
+
+        document.getElementById('total_duration').textContent = formatSeconds(data.total_seconds || 0);
+        document.getElementById('segment_count').textContent = segments.length;
+        document.getElementById('stat_date').textContent = data.date || '-';
+
+        renderVenueTotals(venueTotals, Number(data.role_id));
+
+        if (segments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty">今天暂无开播记录</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = segments.map(row => {
+            const venueText = `${row.venue_id || ''} - ${row.venue_name || ''}`;
+            const statusBadge = Number(row.is_living) === 1
+                ? '<span class="badge badge-live">直播中</span>'
+                : '<span class="badge badge-close">已关播</span>';
+
+            return `
+                <tr>
+                    <td>${escapeHtml(venueText)}</td>
+                    <td>${escapeHtml(row.open_time || '')}</td>
+                    <td>${escapeHtml(row.close_time || '未关播')}</td>
+                    <td>${escapeHtml(row.calc_start || '')}</td>
+                    <td>${escapeHtml(row.calc_end || '')}</td>
+                    <td>${formatSeconds(row.duration_seconds || 0)}</td>
+                    <td>${statusBadge}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderVenueTotals(list, roleId) {
+        const wrap = document.getElementById('venue_total_wrap');
+        const tbody = document.getElementById('venue_total_tbody');
+
+        // role_id=1 查看全部场地时显示按场地汇总；role_id=4 不显示这个汇总表
+        if (roleId !== 1 || list.length <= 1) {
+            wrap.style.display = 'none';
+            return;
+        }
+
+        wrap.style.display = 'block';
+        tbody.innerHTML = list.map(row => `
+            <tr>
+                <td>${escapeHtml((row.venue_id || '') + ' - ' + (row.venue_name || ''))}</td>
+                <td>${formatSeconds(row.total_seconds || 0)}</td>
+                <td>${row.segment_count || 0}</td>
+            </tr>
+        `).join('');
+    }
+
+    function formatSeconds(seconds) {
+        seconds = Number(seconds || 0);
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>场地信息管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .venue-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .venue-item img {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .venue-info {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .venue-info .field {
+            margin-bottom: 16px;
+            font-size: 16px;
+        }
+
+        .venue-info .label {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .venue-info .value {
+            color: #333;
+            font-size: 16px;
+        }
+
+        .edit-btn, .save-btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 16px;
+        }
+
+        .edit-btn:hover, .save-btn:hover {
+            background-color: #4c6ef5;
+        }
+
+        .edit-input, .edit-select {
+            background-color: #f8f9ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
+
+         响应式设计 
+        @media (max-width: 768px) {
+            .venue-item {
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-title">场地信息</div>
+
+            <div id="venue-info" class="venue-item">
+                <!-- 场地信息将动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL中的id参数
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        let SENSITIVE_WORDS = [];
+
+        function loadSensitiveWords() {
+            return fetch('https://open.rcwulian.cn/api/sensitive_words.json') // 路径根据你项目结构调整
+                .then(res => res.json())
+                .then(words => {
+                    SENSITIVE_WORDS = words;
+                });
+        }
+        // 获取场地信息
+        function loadVenueData() {
+            const venueId = getUrlParameter('id'); // 获取URL中的id参数
+            let url;
+            // console.log(venueId);
+            if (venueId) {
+                // 如果URL中有id参数，使用该id查询特定场地
+                url = `https://open.rcwulian.cn/api/venue/getVenueList.php?id=${venueId}`;
+            } else {
+                // 如果URL中没有id参数，使用原来的逻辑
+                url = 'https://open.rcwulian.cn/api/venue/getVenueList.php?page=1&limit=10';
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0 && data.data.length > 0) {
+                        const venue = data.data[0];
+                        displayVenueInfo(venue);
+                          // ✅ 检查 Redis 审核状态（新增逻辑）
+                        fetch(`https://open.rcwulian.cn/api/venue/getVenueNameStatus.php`)
+                            .then(res => res.json())
+                            .then(res => {
+                                if (res.code === 0 && res.data) {
+                                    const status = res.data.status;
+                                    const reason = res.data.reason;
+                
+                                    if (status === 'rejected') {
+                                        alert(`场地名称审核未通过，原因：${reason}`);
+                
+                                        // 删除 Redis 信息
+                                        fetch(`https://open.rcwulian.cn/api/venue/deleteVenueNameStatus.php`)
+                                            .then(() => console.log('Redis 审核状态已清理'));
+                                    }
+                                }
+                            });
+                        // 加载图片审核状态
+            fetch('https://open.rcwulian.cn/api/venue/getVenueImageStatus.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.code === 0 && data.data) {
+                        const status = data.data.status;
+                        const reason = data.data.reason || '无';
+                        
+                        const statusEl = document.getElementById('image_status');
+                        if (!statusEl) return;
+            
+                        if (status === 'pending') {
+                            statusEl.innerText = '图片审核中';
+                            statusEl.style.color = '#ff9800';
+                        } else if (status === 'approved') {
+                            statusEl.innerText = '图片审核已通过';
+                            statusEl.style.color = '#4caf50';
+                        } else if (status === 'rejected') {
+                            statusEl.innerHTML = `图片审核未通过<br><span style="color:#999;font-size:14px;">原因：${reason}</span>`;
+                            statusEl.style.color = '#f44336';
+                        }
+                    }
+                })
+                        
+                    } else {
+                        alert('未找到场地信息');
+                    }
+                })
+                .catch(error => {
+                    console.error('数据加载失败:', error);
+                });
+            
+                fetch(`https://open.rcwulian.cn/api/venue/getVenueDescriptionStatus.php`)
+                  .then(res => res.json())
+                  .then(res => {
+                    if (res.code === 0 && res.data) {
+                      const status = res.data.status;
+                      const reason = res.data.reason;
+                
+                      if (status === 'rejected') {
+                        alert(`场地描述审核未通过，原因：${reason}`);
+                        fetch(`https://open.rcwulian.cn/api/venue/deleteVenueDescriptionStatus.php`)
+                          .then(() => console.log('场地描述审核记录已清除'));
+                      }
+                    }
+                  });
+
+        }
+
+        // 显示场地信息
+        function displayVenueInfo(venue) {
+            const venueInfoContainer = document.getElementById('venue-info');
+
+            venueInfoContainer.innerHTML = `
+                <img src="${venue.image_url}" alt="场地图片" id="venue-image">
+                <div id="image_status" style="color:#ff9800;font-weight:600;margin-bottom:12px;">图片状态:暂无最新上传的待审核状态</div>
+                <input type="file" id="imageUploadInput" accept="image/*" onchange="handleImageUpload(event)" style="margin-bottom:16px; display: none;">
+            
+                
+                <div class="venue-info">
+                    <div class="field">
+                        <div class="label">场地名称:</div>
+                        <div class="value" id="venue-name">${venue.venue_name}</div>
+                    </div>
+                    <div class="field">
+                    <div class="label">场地描述:</div>
+                      <div class="value" id="venue-description" data-original="__KEEP__">
+                        <span id="venue-description-text">${venue.venue_description || ''}</span>
+                        <span style="margin-left:8px;color:#7f8fa4;font-size:13px;">
+                          <i class="fas fa-lock"></i> 前台不可编辑（由审核更新）
+                        </span>
+                      </div>
+                    </div>
+                    <div class="field">
+                        <div class="label">场地标签:</div>
+                        <div class="value" id="venue-tags">${venue.venue_tags}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">开放时间:</div>
+                        <div class="value" id="venue-time" style="display: flex; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <span id="time-display" style="min-width: 90px;">${venue.start_time}</span>
+                            <div id="time-picker" style="display:none;">
+                            <input type="time" id="start-time" class="edit-input" style="width:auto; display:inline-block;">
+                            <span style="margin: 0 8px;">-</span>
+                            <input type="time" id="end-time" class="edit-input" style="width:auto; display:inline-block;">
+                        </div>
+
+                        </div>
+
+                    </div>
+                
+
+                    <div class="field">
+                        <div class="label">场地状态:</div>
+                        <div class="value" id="venue-status">
+                            <select class="edit-select" id="status-select" style="display:none;">
+                                <option value="营业中" ${venue.venue_status === "营业中" ? "selected" : ""}>营业中</option>
+                                <option value="休息中" ${venue.venue_status === "休息中" ? "selected" : ""}>休息中</option>
+                                <option value="建设中" ${venue.venue_status === "建设中" ? "selected" : ""}>建设中</option>
+                            </select>
+                            <span id="status-span">${venue.venue_status}</span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <div class="label">直播地址:</div>
+                        <div class="value" id="venue-live-stream">${venue.live_stream_url}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">显示直播:</div>
+                        <div class="value" id="venue-show-live-stream">
+                            <select class="edit-select" id="show-live-stream-select" style="display:none;">
+                                <option value="1" ${venue.show_live_stream === 1 ? "selected" : ""}>是</option>
+                                <option value="0" ${venue.show_live_stream === 0 ? "selected" : ""}>否</option>
+                            </select>
+                            <span id="show-live-stream-span">${venue.show_live_stream === 1 ? "是" : "否"}</span>
+                        </div>
+                    </div>
+
+                    <button class="edit-btn" onclick="enableEdit()">编辑</button>
+                    <button class="save-btn" style="display:none;" onclick="saveChanges()">保存</button>
+                </div>
+            `;
+                        // 设置默认时间值
+            const startTimeInput = document.getElementById('start-time');
+            const endTimeInput = document.getElementById('end-time');
+            
+            if (venue.start_time && venue.start_time.includes('-')) {
+                const [start, end] = venue.start_time.split('-');
+                if (startTimeInput && endTimeInput) {
+                    startTimeInput.value = start.trim();
+                    endTimeInput.value = end.trim();
+                }
+            }
+
+        }
+
+        // 使字段可编辑
+        // function enableEdit() {
+        //     const fields = document.querySelectorAll('.value');
+        //     const saveBtn = document.querySelector('.save-btn');
+        //     const editBtn = document.querySelector('.edit-btn');
+
+        //     // 切换为可编辑状态
+        //     fields.forEach(field => {
+        //         if (field.id !== 'venue-tags') {  // 不允许编辑场地标签
+        //             const currentValue = field.textContent;
+        //             if (field.id === 'venue-status') {
+        //                 // 如果是场地状态，变成选择框
+        //                 document.getElementById('status-select').style.display = 'inline-block';
+        //                 document.getElementById('status-span').style.display = 'none';
+        //             } else if (field.id === 'venue-show-live-stream') {
+        //                 // 如果是显示直播，变成选择框
+        //                 document.getElementById('show-live-stream-select').style.display = 'inline-block';
+        //                 document.getElementById('show-live-stream-span').style.display = 'none';
+        //             } else if (field.id === 'venue-live-stream') {
+        //                 // 如果是直播地址，变成输入框
+        //                 field.innerHTML = `<input type="text" class="edit-input" value="${currentValue}">`;
+        //             }else if (field.id === 'venue-time') {
+        //                 document.getElementById('time-picker').style.display = 'block';
+        //                 return;  // ← 替换掉 continue
+        //             }else if (field.id === 'venue-description') {
+        //                 field.innerHTML = `<input type="text" class="edit-input" value="${currentValue}">`;
+        //             }
+
+        //             else {
+        //                 field.innerHTML = `<input type="text" class="edit-input" value="${currentValue}">`;
+                        
+        //             }
+        //         }
+        //     });
+            
+        //     document.getElementById('imageUploadInput').style.display = 'block';
+
+        //     // 隐藏编辑按钮，显示保存按钮
+        //     editBtn.style.display = 'none';
+        //     saveBtn.style.display = 'inline-block';
+        // }
+function enableEdit() {
+  const fields = document.querySelectorAll('.value');
+  const saveBtn = document.querySelector('.save-btn');
+  const editBtn = document.querySelector('.edit-btn');
+
+  fields.forEach(field => {
+    // ✅ 不允许编辑：场地标签、场地描述
+    if (field.id === 'venue-tags' || field.id === 'venue-description') {
+      return; // 跳过
+    }
+
+    const currentValue = field.textContent;
+
+    if (field.id === 'venue-status') {
+      document.getElementById('status-select').style.display = 'inline-block';
+      document.getElementById('status-span').style.display = 'none';
+    } else if (field.id === 'venue-show-live-stream') {
+      document.getElementById('show-live-stream-select').style.display = 'inline-block';
+      document.getElementById('show-live-stream-span').style.display = 'none';
+    } else if (field.id === 'venue-live-stream') {
+      field.innerHTML = `<input type="text" class="edit-input" value="${currentValue}">`;
+    } else if (field.id === 'venue-time') {
+      document.getElementById('time-picker').style.display = 'block';
+      return; // 跳过到下一个
+    } else {
+      field.innerHTML = `<input type="text" class="edit-input" value="${currentValue}">`;
+    }
+  });
+
+  document.getElementById('imageUploadInput').style.display = 'block';
+  editBtn.style.display = 'none';
+  saveBtn.style.display = 'inline-block';
+}
+
+        // 保存编辑内容
+        function saveChanges() {
+            const fields = document.querySelectorAll('.edit-input');
+            const venueData = {};
+        
+
+            // 获取修改后的值
+            fields.forEach(field => {
+                const parentField = field.closest('.field');
+                const label = parentField.querySelector('.label').textContent.trim(); // 获取字段的label文本
+        
+                // 根据label文本映射字段名
+                switch (label) {
+                    case "场地名称:":
+                        venueData['venue_name'] = field.value;
+                        break;
+                    case "场地描述:":
+                        venueData['venue_description'] = field.value;
+                        break;
+                    case "开放时间:":
+                const start = document.getElementById('start-time').value;
+                const end = document.getElementById('end-time').value;
+                venueData['start_time'] = `${start}-${end}`;
+                break;
+
+                    case "直播地址:":
+                        venueData['live_stream_url'] = field.value;
+                        break;
+                    default:
+                        break;
+                }
+            });
+            
+            // 获取用户输入
+            const venueNameInput = venueData['venue_name'];
+            const venueDescInput = venueData['venue_description'];
+            
+            const hitName = containsSensitiveWords(venueNameInput || '');
+            if (hitName) {
+                alert(`场地名称中包含敏感词：${hitName}`);
+                return;
+            }
+            
+            const hitDesc = containsSensitiveWords(venueDescInput || '');
+            if (hitDesc) {
+                alert(`场地描述中包含敏感词：${hitDesc}`);
+                return;
+            }
+
+            // 获取选择框中的值
+            venueData['status'] = document.getElementById('status-select').value;
+            venueData['show_live_stream'] = document.getElementById('show-live-stream-select').value;
+        // 保持原来的图片地址（不会更新）
+            venueData['image_url'] = document.getElementById('venue-info').querySelector('img').src;
+
+        
+            // 保持标签不变
+            venueData['venue_tags'] = document.getElementById('venue-tags').textContent.trim();
+        
+            // 更新场地信息
+            const updatedVenue = {
+                id: getUrlParameter('id'),
+                venue_name: venueData['venue_name'],
+                venue_description: venueData['venue_description'],
+                venue_tags: venueData['venue_tags'],
+                start_time: venueData['start_time'],
+                venue_status: venueData['status'],
+                live_stream_url: venueData['live_stream_url'],
+                show_live_stream: venueData['show_live_stream'],
+                image_url: venueData['image_url'],
+            };
+        
+            // 调试输出
+            console.log('保存的场地信息：', updatedVenue);
+        
+            // 发送保存请求到后台
+            fetch('https://open.rcwulian.cn/api/venue/setVenue.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedVenue)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    alert('场地信息保存成功');
+                    // displayVenueInfo(updatedVenue);
+                    // loadVenueData();  // ✅ 替换掉 displayVenueInfo
+                    location.reload();  // ✅ 强制刷新页面，确保完全同步
+                } else if (data.code === 1008) {
+                    alert(data.msg); // 场地名违规提示
+                    loadVenueData(); // 重新加载场地数据，恢复原名称
+                } else {
+                    alert(data.msg); // 其他错误
+                      loadVenueData();
+                }
+            })
+
+            .catch(error => {
+                console.error('保存失败:', error);
+                alert("保存失败，请检查网络或稍后重试");
+            });
+
+        }
+
+        let hasUploaded = false;
+
+        function handleImageUpload(event) {
+            if (hasUploaded) {
+                alert("您已经上传过图片，请等待审核结果。");
+                return;
+            }
+            
+            const file = event.target.files[0];
+            if (!file) return;
+        
+            const formData = new FormData();
+            const venueId = getUrlParameter('id'); // ✅ 获取 URL 中的 id
+            formData.append('id', venueId);        // ✅ 将 id 传给后端
+
+            formData.append('image', file);
+        
+            fetch('https://open.rcwulian.cn/api/venue/uploadImg.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    alert("图片上传成功，等待审核");
+                    hasUploaded = true; // 设置上传标志
+                    loadVenueData();    // 重新加载数据（比如展示“审核中”）
+                } else {
+                    alert("上传失败：" + data.msg);
+                }
+            })
+            .catch(err => {
+                console.error('上传失败:', err);
+                alert("上传失败，请重试");
+            });
+        }
+        // 页面加载时获取场地数据
+        // loadVenueData();
+        function containsSensitiveWords(text) {
+            for (let word of SENSITIVE_WORDS) {
+                if (text.includes(word)) {
+                    return word; // 命中的敏感词
+                }
+            }
+            return null;
+        }    
+        loadSensitiveWords().then(() => {
+            loadVenueData();
+        });
+
+    </script>
+
+</body>
+</html>

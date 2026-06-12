@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>APP→设备 指令接口文档（铲车）｜RC物联</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --panel:#ffffff;
+      --line:#e9edf3;
+      --line2:#eef2f7;
+      --text:#1f2d3d;
+      --muted:#6b7a90;
+      --muted2:#9aa7b6;
+      --brand:#2f6bff;
+      --brand2:#5aa7ff;
+      --chip:#f3f6ff;
+      --code:#0b1220;
+      --codeText:#e9f0ff;
+      --shadow:0 12px 34px rgba(15,30,60,.08);
+      --shadow2:0 18px 60px rgba(15,30,60,.10);
+      --radius:14px;
+      --radius2:16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+      color:var(--text);
+      background:var(--bg);
+    }
+    a{color:inherit;text-decoration:none}
+    .container{max-width:1400px;margin:0 auto;padding:0 18px}
+
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+    }
+    .topbar .inner{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:16px;
+      height:60px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.2px;
+    }
+    .logo{
+      width:32px;height:32px;border-radius:10px;
+      background:linear-gradient(135deg,var(--brand),var(--brand2));
+      box-shadow:0 10px 26px rgba(47,107,255,.22);
+      position:relative;
+    }
+    .logo:after{
+      content:"";
+      position:absolute; inset:9px;
+      background:rgba(255,255,255,.30);
+      border-radius:9px;
+    }
+    .nav{
+      display:flex; align-items:center; gap:18px;
+      font-size:13px;
+      color:var(--muted);
+      flex-wrap:wrap;
+    }
+    .nav a{padding:7px 10px;border-radius:10px}
+    .nav a.active{
+      color:var(--brand);
+      background:rgba(47,107,255,.08);
+      border:1px solid rgba(47,107,255,.18);
+    }
+    .nav a:hover{color:#0f1f3d}
+
+    .search{
+      display:flex; align-items:center; gap:10px;
+      flex:1;
+      max-width:560px;
+      border:1px solid var(--line);
+      background:#fafbfd;
+      border-radius:12px;
+      padding:8px 10px;
+    }
+    .search input{
+      border:0; outline:0; background:transparent;
+      flex:1; font-size:13px; color:#22324a;
+    }
+    .search .hint{
+      font-size:12px; color:var(--muted2);
+      border-left:1px solid var(--line);
+      padding-left:10px;
+      white-space:nowrap;
+    }
+    .actions{
+      display:flex; align-items:center; gap:10px;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 12px;
+      border-radius:12px;
+      font-size:13px;
+      color:#2b3a55;
+      cursor:pointer;
+      transition:transform .12s ease, box-shadow .12s ease;
+      box-shadow:0 10px 26px rgba(15,30,60,.05);
+      white-space:nowrap;
+    }
+    .btn.primary{
+      border-color:rgba(47,107,255,.22);
+      background:linear-gradient(135deg, rgba(47,107,255,.10), rgba(90,167,255,.10));
+      color:var(--brand);
+      font-weight:700;
+    }
+    .btn:hover{transform:translateY(-1px); box-shadow:0 14px 30px rgba(15,30,60,.08)}
+    @media(max-width:980px){
+      .search{display:none}
+    }
+
+    .page{
+      display:grid;
+      grid-template-columns: 300px 1fr;
+      gap:18px;
+      padding:16px 0 56px;
+    }
+    @media(max-width:980px){
+      .page{grid-template-columns:1fr}
+    }
+
+    .side{
+      position:sticky; top:76px;
+      align-self:start;
+      border-right:1px solid var(--line2);
+      padding-right:10px;
+      max-height: calc(100vh - 90px);
+      overflow:auto;
+    }
+    @media(max-width:980px){
+      .side{position:relative; top:auto; border-right:0; padding-right:0; max-height:none}
+    }
+    .selectRow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .select{
+      width:100%;
+      border:1px solid var(--line);
+      background:#fafbfd;
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:13px;
+      color:#2b3a55;
+      outline:none;
+    }
+    .side .groupTitle{
+      margin:12px 0 8px;
+      color:var(--muted2);
+      font-size:12px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .toc a{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:9px 10px;
+      border-radius:12px;
+      font-size:13px;
+      color:#2b3a55;
+      border:1px solid transparent;
+    }
+    .toc a:hover{
+      background:#f4f7ff;
+      border-color:#dbe6ff;
+      color:#2c5cff;
+    }
+    .toc a.active{
+      background:rgba(47,107,255,.08);
+      border-color:rgba(47,107,255,.18);
+      color:var(--brand);
+      font-weight:700;
+    }
+    .dot{
+      width:6px;height:6px;border-radius:999px;background:#d9e3ff; flex:0 0 auto;
+      margin-right:10px;
+    }
+    .toc a.active .dot{background:var(--brand)}
+
+    .content{min-width:0;}
+    .head{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      border-bottom:1px solid var(--line2);
+      padding-bottom:14px;
+      margin-bottom:14px;
+    }
+    .title{display:flex; gap:10px; align-items:flex-start;}
+    .icon{
+      width:42px;height:42px;border-radius:14px;
+      background:linear-gradient(135deg, rgba(47,107,255,.12), rgba(90,167,255,.10));
+      border:1px solid rgba(47,107,255,.16);
+      display:grid; place-items:center;
+      color:var(--brand);
+      font-weight:900;
+    }
+    h1{margin:0;font-size:26px;letter-spacing:.2px;}
+    .desc{margin-top:8px;color:var(--muted);font-size:13.5px;line-height:1.75;}
+    .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+
+    .section{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:var(--panel);
+      box-shadow: var(--shadow);
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .section h2{margin:0 0 10px;font-size:16px;display:flex; align-items:center; gap:10px;}
+    .section h3{margin:14px 0 8px;font-size:14px}
+
+    .tip{
+      border:1px solid #e7edff;
+      background: #f5f8ff;
+      color:#2a3b66;
+      padding:10px 12px;
+      border-radius:14px;
+      line-height:1.75;
+      font-size:13px;
+    }
+    .tip.warn{border-color:#ffe3b2;background:#fff8ea;color:#6a4b00;}
+    .tip.ok{border-color:#bdebd0;background:#ecfff3;color:#0d5a2d;}
+
+    .k{
+      font-family:var(--mono);
+      background:var(--chip);
+      border:1px solid #dbe6ff;
+      color:var(--brand);
+      padding:2px 6px;
+      border-radius:8px;
+      display:inline-block;
+      font-size:12.5px;
+      white-space:nowrap;
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      overflow:hidden;
+      border:1px solid var(--line);
+      border-radius:14px;
+      margin-top:10px;
+    }
+    th,td{
+      text-align:left;
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      vertical-align:top;
+      font-size:13px;
+      line-height:1.65;
+    }
+    th{background:#fafbfd;color:#2b3a55;font-weight:800;}
+    tr:last-child td{border-bottom:none}
+
+    pre, code{font-family:var(--mono)}
+    pre{
+      margin:10px 0 0;
+      background:var(--code);
+      color:var(--codeText);
+      padding:12px 12px;
+      border-radius:14px;
+      overflow:auto;
+      position:relative;
+      font-size:12.5px;
+      line-height:1.6;
+      box-shadow: 0 16px 40px rgba(0,0,0,.18);
+    }
+    .copy{
+      position:absolute; right:10px; top:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(255,255,255,.10);
+      color:var(--codeText);
+      padding:6px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:12px;
+    }
+    .copy:hover{background:rgba(255,255,255,.16)}
+    .anchor{scroll-margin-top:84px;}
+
+    .examples{display:grid; grid-template-columns:1fr; gap:12px;}
+    @media(min-width:880px){.examples{grid-template-columns:1fr 1fr}}
+    .ex{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:14px;
+      background:#fff;
+      box-shadow:0 10px 26px rgba(15,30,60,.05);
+    }
+    .ex-title{font-weight:900;font-size:13.5px;margin-bottom:6px}
+    .ex-desc{color:var(--muted);font-size:12.8px;line-height:1.6}
+
+    mark{background: rgba(47,107,255,.14);color:#0f1f3d;padding:0 2px;border-radius:6px;}
+
+    .float{
+      position:fixed; right:18px; bottom:18px; z-index:60;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .fbtn{
+      width:46px;height:46px;border-radius:14px;
+      border:1px solid var(--line);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      display:grid; place-items:center;
+      cursor:pointer;
+      color:#2b3a55;
+    }
+    .fbtn:hover{transform:translateY(-1px)}
+    @media(max-width:980px){ .float{right:12px; bottom:12px} }
+    .fbtn .top-icon{
+  width:22px;
+  height:22px;
+  display:block;
+  pointer-events:none; /* 防止点到图片导致点击失效 */
+}
+
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="container">
+      <div class="inner">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>RC物联 · 文档中心</div>
+        </div>
+
+        <div class="search" title="搜索文档内容">
+          🔎
+          <input id="searchInput" placeholder="搜索本页：+F / SN / xs / ws / dx / lz / ol / or / OTA ..." />
+          <div class="hint">Ctrl K</div>
+        </div>
+
+        <div class="actions">
+          <div class="nav">
+            <a class="active" href="#" onclick="return false;">文档</a>
+            <a href="#" onclick="return false;">客户端 API</a>
+            <a href="#" onclick="return false;">服务端 API</a>
+          </div>
+          <button class="btn" id="copyPage">复制页面链接</button>
+          <button class="btn primary" onclick="alert('这里可接入你的登录/控制台入口');">登录/注册</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page">
+      <aside class="side">
+        <div class="selectRow">
+          <select class="select" id="productSel">
+            <option selected>铲车（Loader）</option>
+            <option disabled>挖机（Excavator）- 待添加</option>
+            <option disabled>遥控车（RC Car）- 待添加</option>
+            <option disabled>坦克（Tank）- 待添加</option>
+          </select>
+          <select class="select" id="langSel">
+            <option selected>协议版本：v1.0.0</option>
+            <option disabled>协议版本：v0.9.x - 待添加</option>
+          </select>
+        </div>
+
+        <div class="groupTitle">
+          <span>APP → 设备 指令文档</span>
+          <span style="color:#9aa7b6;font-size:12px">目录</span>
+        </div>
+
+        <nav class="toc" id="toc">
+          <a href="#overview"><span style="display:flex;align-items:center;"><span class="dot"></span>1. 说明</span></a>
+          <a href="#format"><span style="display:flex;align-items:center;"><span class="dot"></span>2. 指令格式</span></a>
+          <a href="#commands"><span style="display:flex;align-items:center;"><span class="dot"></span>3. 指令列表</span></a>
+          <a href="#examples"><span style="display:flex;align-items:center;"><span class="dot"></span>4. 示例（可复制）</span></a>
+          <a href="#notes"><span style="display:flex;align-items:center;"><span class="dot"></span>5. 注意事项</span></a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <div class="head">
+          <div class="title">
+            <div class="icon">🛠️</div>
+            <div>
+              <h1>APP → 设备 指令接口文档（铲车）</h1>
+              <div class="desc">
+                本文描述：APP 如何发送“行走 / 转向 / 大臂 / 铲斗 / 灯光 / OTA”等指令给指定铲车设备（通过服务端转发）。<br/>
+                <b>原则：</b>一次只发送 <b>一条</b> 指令。
+              </div>
+              <div class="desc" style="margin-top:8px;color:#9aa7b6">
+                快捷：<span class="k">Ctrl + K</span> 搜索本页 ｜ 点击左侧目录快速跳转
+              </div>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button class="btn primary" id="copySpec">复制指令模板</button>
+            <button class="btn" id="collapse">折叠侧栏</button>
+          </div>
+        </div>
+
+        <section id="overview" class="section anchor">
+          <h2>1. 说明</h2>
+          <div class="tip">
+            每次发送一条指令，服务端按设备序列号（SN）转发给对应设备执行。<br/>
+            铲车停止动作建议按固件现状使用：<span class="k">+ol</span>（停行走/铲斗相关）与 <span class="k">+or</span>（停转向/大臂相关）。
+          </div>
+        </section>
+
+        <section id="format" class="section anchor">
+          <h2>2. 指令格式</h2>
+          <div class="tip">
+            发送指令统一格式如下（一次只发一条）：<br/>
+            <span class="k">+F+SN+指令-</span>
+          </div>
+
+          <h3 class="anchor">2.1 模板</h3>
+          <pre><button class="copy" data-copy>复制</button>+F+{SN}+{CMD}-</pre>
+
+          <h3 class="anchor">2.2 字段说明</h3>
+          <table>
+            <thead><tr><th style="width:220px;">字段</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td><span class="k">SN</span></td><td>设备序列号/识别码（用于定位目标设备）。</td></tr>
+              <tr><td><span class="k">CMD</span></td><td>本页“指令列表”中的任意一条指令（例如 <span class="k">+xs#1</span>）。</td></tr>
+              <tr><td><span class="k">-</span></td><td>结束符（必须带）。</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="commands" class="section anchor">
+          <h2>3. 指令列表</h2>
+          <div class="tip">
+            指令以 <span class="k">+</span> 开头。<br/>
+            有值：<span class="k">+TYPE#VALUE</span>；无值：<span class="k">+TYPE</span>。
+          </div>
+
+          <table>
+            <thead><tr>
+              <th style="width:90px;">TYPE</th>
+              <th style="width:230px;">指令写法（不带末尾 -）</th>
+              <th>说明（按固件执行逻辑）</th>
+              <th style="width:120px;">取值</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="k">xs</span></td>
+                <td><span class="k">+xs#V</span></td>
+                <td>行走前进/后退：V=1 前进；V=2 后退</td>
+                <td>1 / 2</td>
+              </tr>
+              <tr>
+                <td><span class="k">ws</span></td>
+                <td><span class="k">+ws#V</span></td>
+                <td>转向：V=1 左转；V=2 右转（会触发闪烁逻辑）</td>
+                <td>1 / 2</td>
+              </tr>
+              <tr>
+                <td><span class="k">dx</span></td>
+                <td><span class="k">+dx#V</span></td>
+                <td>大臂：V=1 升；V=2 降</td>
+                <td>1 / 2</td>
+              </tr>
+              <tr>
+                <td><span class="k">lz</span></td>
+                <td><span class="k">+lz#V</span></td>
+                <td>铲斗：V=1 上翻；V=2 下翻</td>
+                <td>1 / 2</td>
+              </tr>
+              <tr>
+                <td><span class="k">ol</span></td>
+                <td><span class="k">+ol</span></td>
+                <td>停止行走/铲斗相关输出（固件将一组 GPIO 拉低）</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td><span class="k">or</span></td>
+                <td><span class="k">+or</span></td>
+                <td>停止转向/大臂相关输出，并停止闪烁</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td><span class="k">HO</span></td>
+                <td><span class="k">+HO#V</span></td>
+                <td>左右灯常亮开关（LED 可能反相）：2000 开 / 1000 关</td>
+                <td>2000 / 1000</td>
+              </tr>
+              <tr>
+                <td><span class="k">HP</span></td>
+                <td><span class="k">+HP#V</span></td>
+                <td>双闪：2000 开 / 1000 关</td>
+                <td>2000 / 1000</td>
+              </tr>
+              <tr>
+                <td><span class="k">UP</span></td>
+                <td><span class="k">+UP</span></td>
+                <td>触发 OTA 检测</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="examples" class="section anchor">
+          <h2>4. 示例（可复制）</h2>
+          <div class="examples">
+
+            <div class="ex">
+              <div class="ex-title">示例 1：前进</div>
+              <div class="ex-desc">行走前进（V=1）</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+xs#1-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 2：后退</div>
+              <div class="ex-desc">行走后退（V=2）</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+xs#2-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 3：左转</div>
+              <div class="ex-desc">转向左（V=1）</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+ws#1-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 4：升大臂</div>
+              <div class="ex-desc">大臂上升（V=1）</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+dx#1-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 5：铲斗上翻</div>
+              <div class="ex-desc">铲斗上翻（V=1）</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+lz#1-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 6：停止行走/铲斗相关</div>
+              <div class="ex-desc">松手建议发送</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+ol-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 7：停止转向/大臂相关</div>
+              <div class="ex-desc">松手建议发送</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+or-</pre>
+            </div>
+
+            <div class="ex">
+              <div class="ex-title">示例 8：触发 OTA 检测</div>
+              <div class="ex-desc">升级检查</div>
+              <pre><button class="copy" data-copy>复制</button>+F+{SN}+UP-</pre>
+            </div>
+
+          </div>
+        </section>
+
+        <section id="notes" class="section anchor">
+          <h2>5. 注意事项</h2>
+          <div class="tip warn">
+            1) 每条指令必须以 <span class="k">-</span> 结尾。<br/>
+            2) APP目前未定义 <span class="k">V=0</span> 的停止语义，停止主要依赖：<span class="k">+ol</span> / <span class="k">+or</span>。<br/>
+            3) 建议“松手即停”：松行走/铲斗 → 发 <span class="k">+F+SN+ol-</span>；松转向/大臂 → 发 <span class="k">+F+SN+or-</span>。<br/>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+<div class="float">
+  <div class="fbtn" title="回到顶部" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <img src="/res/top.png" alt="top" class="top-icon">
+  </div>
+</div>
+
+<script>
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-copy]');
+    if (!btn) return;
+    const pre = btn.parentElement;
+    const text = pre.textContent.replace('复制','').trim();
+    try{
+      await navigator.clipboard.writeText(text);
+    }catch{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    const old = btn.textContent;
+    btn.textContent = '已复制';
+    setTimeout(()=>btn.textContent = old, 900);
+  });
+
+  // 复制指令模板
+  document.getElementById('copySpec').addEventListener('click', async ()=>{
+    const text = "+F+{SN}+{CMD}-";
+    try{ await navigator.clipboard.writeText(text); }catch{}
+    alert("已复制指令模板：\n" + text);
+  });
+
+  // 复制页面链接
+  document.getElementById('copyPage').addEventListener('click', async ()=>{
+    const url = location.href;
+    try{ await navigator.clipboard.writeText(url); }catch{}
+    alert("已复制页面链接：\n" + url);
+  });
+
+  // Ctrl+K 聚焦搜索
+  const input = document.getElementById('searchInput');
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && (e.key.toLowerCase()==='k')){
+      e.preventDefault();
+      input.focus();
+    }
+  });
+
+  // 简单站内搜索：高亮正文中的关键词（不会改代码块内容）
+  const content = document.querySelector('main.content');
+  let lastMark = "";
+  function clearMarks(){
+    if(!lastMark) return;
+    content.querySelectorAll('mark').forEach(m=>{
+      const t = document.createTextNode(m.textContent);
+      m.replaceWith(t);
+    });
+    lastMark = "";
+  }
+  function highlight(term){
+    clearMarks();
+    if(!term) return;
+    lastMark = term;
+
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+      acceptNode(node){
+        const p = node.parentElement;
+        if(!p) return NodeFilter.FILTER_REJECT;
+        if(p.closest('pre') || p.closest('code') || p.tagName === 'SCRIPT' || p.tagName === 'STYLE')
+          return NodeFilter.FILTER_REJECT;
+        if(!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    const texts = [];
+    while(walker.nextNode()) texts.push(walker.currentNode);
+
+    const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+    texts.forEach(t=>{
+      const s = t.nodeValue;
+      if(!re.test(s)) return;
+      const frag = document.createDocumentFragment();
+      let lastIndex = 0;
+      s.replace(re, (m, idx)=>{
+        if(idx > lastIndex) frag.appendChild(document.createTextNode(s.slice(lastIndex, idx)));
+        const mark = document.createElement('mark');
+        mark.textContent = m;
+        frag.appendChild(mark);
+        lastIndex = idx + m.length;
+      });
+      if(lastIndex < s.length) frag.appendChild(document.createTextNode(s.slice(lastIndex)));
+      t.replaceWith(frag);
+    });
+  }
+  input.addEventListener('input', ()=> highlight(input.value.trim()));
+
+  // 目录高亮（滚动监听）
+  const tocLinks = Array.from(document.querySelectorAll('#toc a[href^="#"]'));
+  const sections = tocLinks
+    .map(a => document.querySelector(a.getAttribute('href')))
+    .filter(Boolean);
+
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      const id = "#" + en.target.id;
+      tocLinks.forEach(a=>a.classList.toggle('active', a.getAttribute('href') === id));
+    });
+  }, { root:null, rootMargin:"-72px 0px -72% 0px", threshold:0.01 });
+
+  sections.forEach(s=>io.observe(s));
+
+  // 折叠侧栏
+  const side = document.querySelector('.side');
+  const page = document.querySelector('.page');
+  document.getElementById('collapse').addEventListener('click', ()=>{
+    const hidden = side.style.display === 'none';
+    if(hidden){
+      side.style.display = '';
+      page.style.gridTemplateColumns = '300px 1fr';
+    }else{
+      side.style.display = 'none';
+      page.style.gridTemplateColumns = '1fr';
+    }
+  });
+</script>
+</body>
+</html>

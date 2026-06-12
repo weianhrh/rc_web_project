@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录</title>
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.1);
+      --text-color: #333;
+      --transition: all 0.3s ease;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start), var(--background-gradient-end));
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .login-card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    
+    .login-card h2 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: var(--primary);
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--secondary);
+      font-size: 14px;
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+    
+    .login-button {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .login-button:hover {
+      background: #4a77e4;
+    }
+    
+    .error-message {
+      color: #ff6b6b;
+      margin-bottom: 10px;
+      font-size: 14px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h2>RC物联移动工作台</h2>
+    <div id="error-message" class="error-message"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+      </div>
+      <div class="form-group">
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" placeholder="请输入密码" required>
+      </div>
+      <button type="submit" class="login-button">登录</button>
+    </form>
+  </div>
+  <script src="canvas-nest-colorful.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorMessage = document.getElementById('error-message');
+      
+      if (!username || !password) {
+        errorMessage.textContent = '用户名和密码不能为空';
+        errorMessage.style.display = 'block';
+        return;
+      }
+      
+      // 构造表单数据
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('password', password);
+      
+      // 发送登录请求，后端接口地址请根据实际情况调整
+      fetch('https://open.rcwulian.cn/api/login/login.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.code === 0) {
+          // 登录成功后跳转到主页面
+          window.location.href = 'index.html';
+        } else {
+          errorMessage.textContent = data.msg || '登录失败';
+          errorMessage.style.display = 'block';
+        }
+      })
+      .catch(error => {
+        console.error('登录请求失败:', error);
+        errorMessage.textContent = '登录请求失败，请重试';
+        errorMessage.style.display = 'block';
+      });
+    });
+  </script>
+</body>
+</html>

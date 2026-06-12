@@ -1,0 +1,852 @@
+<!--open.rcwulian.cn/single/res/views/index.html-->
+<title>主页二</title>
+
+  <div class="layui-card layadmin-header">
+    <div class="layui-breadcrumb" lay-filter="breadcrumb">
+      <a lay-href="">主页</a>
+      <a><cite>场地名称：</cite></a>
+      <a><cite id="daily-order-venue_name">场地名称</cite></a>
+    </div>
+  </div>
+
+  <div class="layui-fluid">
+<div class="layui-row layui-col-space15 nd-top-row">
+
+
+<div class="layui-col-md6 layui-col-sm12 nd-carousel">
+  <div class="layui-card nd-equal-card">
+    <div class="layui-card-header">RC物联</div>
+    <div class="layui-card-body">
+      <div class="layui-carousel" id="ndCarousel" lay-filter="ndCarousel">
+        <div carousel-item id="carousel-items">
+          <div><div style="padding:16px;color:#64748b;">轮播加载中...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="layui-col-md6 layui-col-sm12 nd-logs">
+  <div class="layui-card nd-equal-card">
+    <div class="layui-card-header">更新日志</div>
+    <div class="layui-card-body nd-log-scroll" id="logs-container"></div>
+  </div>
+</div>
+
+<div class="layui-col-sm12 nd-notices">
+  <div class="layui-card">
+    <div class="layui-card-header">官方通知</div>
+    <div class="layui-card-body" id="notices-container"></div>
+  </div>
+</div>
+
+</div>
+
+  </div>
+
+ <style>
+    .notice-popup {
+      padding: 20px;
+      max-width: 100%;
+      word-break: break-all;
+      overflow-wrap: break-word;
+    }
+    .notice-popup h3 {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    .notice-popup .content {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 20px;
+      white-space: pre-wrap; /* 保留换行并自动换行 */
+      max-height: 60vh;
+      overflow: auto;
+    }
+    .notice-popup .btn-group {
+      text-align: right;
+      margin-top: 20px;
+    }
+    .notice-popup .btn-group button {
+      padding: 8px 20px;
+      font-size: 16px;
+    }
+    /* 自定义滚动条样式 */
+    .notice-popup .content::-webkit-scrollbar { width: 6px; }
+    .notice-popup .content::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+    .notice-popup .content::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+    .notice-popup .content::-webkit-scrollbar-thumb:hover { background: #555; }
+
+    /* 列表里的段落也保留换行并能自动换行 */
+    .layuiadmin-home2-usernote p {
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-wrap: break-word;
+      margin: 6px 0;
+    }
+
+    /* 给自动识别的链接一个下划线样式（可选） */
+    .notice-popup .content a,
+    .layuiadmin-home2-usernote p a {
+      text-decoration: underline;
+      word-break: break-all;
+    }
+    /* ===== 全局质感：背景 + 字体层级 ===== */
+body{
+  background: radial-gradient(1200px 800px at 10% 0%, #f3f7ff 0%, #f7f8fc 45%, #f5f6fb 100%);
+}
+
+:root{
+  --nd-card:#fff;
+  --nd-text:#0f172a;
+  --nd-muted:#64748b;
+  --nd-border:rgba(15,23,42,.08);
+  --nd-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+  --nd-radius: 16px;
+}
+
+/* 卡片整体更“产品化” */
+.layui-card{
+  border: 1px solid var(--nd-border);
+  border-radius: var(--nd-radius);
+  box-shadow: var(--nd-shadow);
+  overflow: hidden;
+}
+
+/* 头部别像“后台标题条”，改成更轻的 */
+.layui-card-header{
+  font-weight: 600;
+  color: var(--nd-text);
+  background: linear-gradient(180deg, rgba(91,140,255,.10) 0%, rgba(91,140,255,0) 70%);
+  border-bottom: 1px solid var(--nd-border);
+}
+
+/* 内容区留白更舒服 */
+.layui-card-body{ padding: 18px 18px 8px; }
+
+/* ===== 通知/日志列表：timeline 卡片项 ===== */
+.nd-item{
+  display:flex;
+  gap:12px;
+  padding: 12px 0;
+  border-bottom: 1px dashed rgba(15,23,42,.08);
+}
+.nd-item:last-child{ border-bottom: 0; }
+
+.nd-item__dot{
+  width:10px;height:10px;border-radius:50%;
+  margin-top: 8px;
+  background: var(--dot, rgba(91,140,255,.95));
+  box-shadow: 0 0 0 6px rgba(91,140,255,.12);
+  flex:0 0 10px;
+}
+
+.nd-item__body{
+  flex:1;
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(15,23,42,.06);
+  border-radius: 14px;
+  padding: 12px 12px 10px;
+}
+
+.nd-item__row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.nd-item__title{
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nd-text);
+}
+
+.nd-item__time{
+  font-size: 12px;
+  color: var(--nd-muted);
+  white-space: nowrap;
+}
+
+.nd-item__content{
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(15,23,42,.86);
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  /* ✅ 关键：长公告默认“收起”，避免一进来就像公告墙 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nd-item__actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  padding-top: 10px;
+}
+
+/* linkify 的链接更像产品，不要太“网页蓝” */
+.nd-item__content a{
+  color: #3f6edc;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(63,110,220,.6);
+}
+.nd-item__content a:hover{
+  border-bottom-style: solid;
+}
+
+/* 等级徽标 */
+.nd-badge{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+  border:1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.85);
+  color:#334155;
+}
+/* 4种等级配色：只作用在“徽标/圆点”，正文不染色 */
+.nd-item--info   .nd-item__dot{ background: rgba(91,140,255,.95); box-shadow:0 0 0 6px rgba(91,140,255,.12); }
+.nd-item--warn   .nd-item__dot{ background: rgba(245,158,11,.95); box-shadow:0 0 0 6px rgba(245,158,11,.14); }
+.nd-item--danger .nd-item__dot{ background: rgba(239,68,68,.95);  box-shadow:0 0 0 6px rgba(239,68,68,.14); }
+.nd-item--gray   .nd-item__dot{ background: rgba(100,116,139,.9); box-shadow:0 0 0 6px rgba(100,116,139,.12); }
+
+.nd-item--info   .nd-badge{ border-color: rgba(91,140,255,.25); color:#2f5fd0; background: rgba(91,140,255,.08); }
+.nd-item--warn   .nd-badge{ border-color: rgba(245,158,11,.28); color:#a16207; background: rgba(245,158,11,.10); }
+.nd-item--danger .nd-badge{ border-color: rgba(239,68,68,.28);  color:#b91c1c; background: rgba(239,68,68,.10); }
+.nd-item--gray   .nd-badge{ border-color: rgba(100,116,139,.22); color:#475569; background: rgba(100,116,139,.10); }
+
+/* 标题行左侧：标题 + 等级徽标并排 */
+.nd-item__left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+@media (max-width: 1080px){
+  /* 列表项整体更紧凑 */
+  .nd-item{ gap:10px; padding: 10px 0; }
+  .nd-item__body{ padding: 10px 10px 8px; border-radius: 12px; }
+
+  /* 点点别占视觉 */
+  .nd-item__dot{ margin-top: 6px; }
+
+  /* 关键：标题行换行，时间单独一行 */
+  .nd-item__row{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  /* 左侧标题+badge 一行显示 */
+  .nd-item__left{ width:100%; gap:8px; }
+  .nd-item__title{
+    font-size: 14px;
+    line-height: 1.2;
+    max-width: 100%;
+    /* 标题过长时省略 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+/* 让左侧这一行始终是：标题(可截断) + badge(不被挤) */
+.nd-item__left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+}
+
+/* 标题：最多约 7 个中文宽度，超出省略号 */
+.nd-item__title{
+  flex: 0 1 auto;        /* 允许变小 */
+  max-width: 7em;        /* ✅ 7个汉字左右 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* badge：绝不收缩 */
+.nd-badge{
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+  /* 时间字体更小 */
+  .nd-item__time{
+    font-size: 11px;
+    opacity: .9;
+  }
+
+  /* 内容区：手机上最多 2 行，避免占屏 */
+  .nd-item__content{
+    font-size: 12.5px;
+    line-height: 1.6;
+    -webkit-line-clamp: 2;
+  }
+
+  /* 按钮更小，别挤 */
+  .nd-item__actions{ padding-top: 8px; }
+  .nd-item__actions .layui-btn{
+    height: 26px;
+    line-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+}
+/* ===== 更新日志：同款 timeline 卡片项 ===== */
+.nd-log{ /* 容器可不写 */ }
+
+.nd-log-item{
+  display:flex;
+  gap:12px;
+  padding: 12px 0;
+  border-bottom: 1px dashed rgba(15,23,42,.08);
+}
+.nd-log-item:last-child{ border-bottom: 0; }
+
+.nd-log-item__dot{
+  width:10px;height:10px;border-radius:50%;
+  margin-top: 8px;
+  background: rgba(100,116,139,.9);
+  box-shadow: 0 0 0 6px rgba(100,116,139,.12);
+  flex:0 0 10px;
+}
+
+.nd-log-item__body{
+  flex:1;
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(15,23,42,.06);
+  border-radius: 14px;
+  padding: 12px 12px 10px;
+}
+
+.nd-log-item__row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom: 8px;
+}
+
+.nd-log-item__left{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  min-width:0;
+}
+
+/* 平台/版本 badge */
+.nd-log-badge{
+  flex:0 0 auto;
+  white-space:nowrap;
+  padding:2px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+  border:1px solid rgba(100,116,139,.22);
+  color:#475569;
+  background: rgba(100,116,139,.10);
+}
+
+.nd-log-title{
+  flex:1 1 auto;
+  min-width:0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nd-text);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.nd-log-time{
+  font-size: 12px;
+  color: var(--nd-muted);
+  white-space: nowrap;
+}
+
+.nd-log-content{
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(15,23,42,.86);
+  white-space: pre-wrap;
+  word-break: break-word;
+
+  /* 默认收起 3 行 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.nd-log-content a{
+  color: #3f6edc;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(63,110,220,.6);
+}
+.nd-log-content a:hover{ border-bottom-style: solid; }
+
+.nd-log-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  padding-top: 10px;
+}
+
+/* 手机端更紧凑 */
+@media (max-width: 1080px){
+  .nd-log-item{ gap:10px; padding: 10px 0; }
+  .nd-log-item__body{ padding: 10px 10px 8px; border-radius: 12px; }
+  .nd-log-item__dot{ margin-top: 6px; }
+  .nd-log-item__row{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .nd-log-time{ font-size: 11px; opacity: .9; }
+  .nd-log-content{ font-size: 12.5px; line-height: 1.6; -webkit-line-clamp: 2; }
+  .nd-log-actions{ padding-top: 8px; }
+  .nd-log-actions .layui-btn{
+    height: 26px;
+    line-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+  }
+}
+/* ===== 轮播外观 ===== */
+#ndCarousel{
+  width:100%;
+  height: 280px;
+  border-radius: 14px;
+  overflow:hidden;
+  border: 1px solid rgba(15,23,42,.06);
+  background: rgba(255,255,255,.7);
+}
+#ndCarousel img{
+  width:100%;
+  height: 280px;
+  object-fit: cover;
+  display:block;
+}
+
+/* 小屏幕：轮播高度更低 */
+@media (max-width: 1080px){
+  #ndCarousel{ height: 200px; }
+  #ndCarousel img{ height: 200px; }
+}
+
+/* ========= PC/大屏：两张卡同高，右侧日志内部滚动 ========= */
+@media (min-width: 1081px){
+  /* 这一行的两列拉伸到相同高度 */
+  .nd-top-row{
+    display:flex;
+    flex-wrap:wrap;
+  }
+  .nd-top-row > .layui-col-md6{
+    display:flex;
+  }
+
+  /* 两个卡片同高 */
+  .nd-equal-card{
+    display:flex;
+    flex-direction:column;
+    width:100%;
+  }
+
+  /* 让日志容器滚动：高度 = 轮播高度(280) + body上下padding差一点 */
+  .nd-log-scroll{
+    height: 280px;
+    overflow:auto;
+    padding-right: 10px; /* 给滚动条留空间 */
+  }
+}
+
+/* ========= 手机/小屏：轮播 -> 官方通知 -> 日志 ========= */
+/* ========= APP/小屏：轮播 -> 官方通知 -> 更新日志 ========= */
+@media (max-width: 1080px){
+  .nd-top-row{
+    display:flex;
+    flex-direction:column;
+  }
+  .nd-carousel{ order: 1; }
+  .nd-notices{ order: 2; }
+  .nd-logs{ order: 3; }
+
+  /* 手机上日志别固定高 */
+  .nd-log-scroll{
+    height:auto !important;
+    overflow:visible !important;
+  }
+}
+@media (max-width: 1080px){
+  #ndCarousel{ height: 200px; }
+  #ndCarousel img{
+    height: 200px;
+    object-fit: contain;   /* ✅ 不裁切，完整显示 */
+    background: #fff;      /* 可选：留白更干净 */
+  }
+}
+
+/* 滚动条美化（可选） */
+.nd-log-scroll::-webkit-scrollbar{ width: 8px; }
+.nd-log-scroll::-webkit-scrollbar-track{ background: rgba(15,23,42,.06); border-radius: 999px; }
+.nd-log-scroll::-webkit-scrollbar-thumb{ background: rgba(100,116,139,.35); border-radius: 999px; }
+.nd-log-scroll::-webkit-scrollbar-thumb:hover{ background: rgba(100,116,139,.55); }
+/* ✅ 更新日志：高亮（最新） */
+.nd-log-item--active .nd-log-item__dot{
+  background: rgba(91,140,255,.95);
+  box-shadow: 0 0 0 6px rgba(91,140,255,.12);
+}
+.nd-log-item--active .nd-log-badge{
+  border-color: rgba(91,140,255,.25);
+  color:#2f5fd0;
+  background: rgba(91,140,255,.08);
+}
+
+  </style>
+
+  <script>
+    layui.use('sample', layui.factory('sample'));
+  </script>
+
+  <script>
+    layui.use(['jquery', 'layer','carousel'], function(){
+      var $ = layui.jquery;
+      var layer = layui.layer;
+var carousel = layui.carousel;
+      /* ========== 工具函数：文本安全转义、自动识别链接（linkify） ========== */
+ // ===== 拉轮播图 =====
+  function loadCarousel(){
+    $.ajax({
+      url: './api/index/AppImages.php',
+      type: 'GET',
+      dataType: 'json',
+      data: { type: 2, limit: 10 }, // type=0 轮播
+      success: function(res){
+        if(res.code !== 0){
+          $('#carousel-items').html('<div style="padding:16px;color:#64748b;">暂无轮播</div>');
+          renderCarousel(); // 仍然初始化，避免样式怪
+          return;
+        }
+
+        var list = res.data || [];
+        if(!list.length){
+          $('#carousel-items').html('<div style="padding:16px;color:#64748b;">暂无轮播</div>');
+          renderCarousel();
+          return;
+        }
+
+        var html = '';
+        list.forEach(function(it){
+          var img = it.image_url || '';
+          var link = it.redirect_url || '';
+          // 用 data-link 记录跳转
+          html += `
+            <div class="nd-carousel-slide" data-link="${escapeHtml(link)}" style="cursor:${link?'pointer':'default'};">
+              <img src="${escapeHtml(img)}" alt="">
+            </div>
+          `;
+        });
+
+        $('#carousel-items').html(html);
+        renderCarousel();
+
+        // 点击跳转
+        $('#carousel-items .nd-carousel-slide').off('click').on('click', function(){
+          var url = $(this).attr('data-link');
+          if(url){
+            window.open(url, '_blank', 'noopener');
+          }
+        });
+      },
+      error: function(){
+        $('#carousel-items').html('<div style="padding:16px;color:#64748b;">轮播加载失败</div>');
+        renderCarousel();
+      }
+    });
+  }
+
+  // ===== 初始化轮播（每次重新渲染内容后都调用一次）=====
+  function renderCarousel(){
+    carousel.render({
+      elem: '#ndCarousel',
+      width: '100%',
+      height: (window.innerWidth < 1080 ? '200px' : '280px'),
+      anim: 'fade',
+      autoplay: true,
+      interval: 4000,
+      arrow: 'hover',
+      indicator: 'inside'
+    });
+  }
+      function escapeHtml(s){
+        return String(s)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+      }
+
+      // 去掉 URL 末尾可能粘上的标点（中英混合环境很常见）
+      function stripTrailingPunct(url){
+        return url.replace(/[。．\.，,；;！!？\?\)\]】》」'"]+$/u,'');
+      }
+
+      // 将纯文本中的 http(s) 链接转成 <a>
+      function linkify(text){
+        if(!text) return '';
+        var urlRe = /(https?:\/\/[^\s<>"']+)/g;
+        var out = [];
+        var last = 0;
+
+        String(text).replace(urlRe, function(m, _1, offset){
+          // 追加之前的纯文本（做转义）
+          out.push(escapeHtml(text.slice(last, offset)));
+
+          // 清理结尾多余标点
+          var clean = stripTrailingPunct(m);
+          var trailing = m.slice(clean.length);
+
+          // 作为可读 label 试着 decode（例如中文文件名更友好）
+          var label;
+          try { label = decodeURI(clean); } catch(e){ label = clean; }
+
+          // 生成链接（新窗口 + 安全 rel）
+          out.push(
+            '<a href="'+ clean +'" target="_blank" rel="noopener noreferrer nofollow">'
+            + escapeHtml(label) + '</a>'
+          );
+
+          // 把被剥离的标点再补回（做转义）
+          out.push(escapeHtml(trailing));
+
+          last = offset + m.length;
+          return m;
+        });
+
+        // 收尾剩余纯文本
+        out.push(escapeHtml(text.slice(last)));
+        return out.join('');
+      }
+
+      // 简单校验 color 值，避免把恶意内容插进 style
+      function safeColorAttr(color){
+        return (color && /^(#([0-9a-f]{3}|[0-9a-f]{6})\b|rgb[a]?\(|hsl[a]?\(|[a-zA-Z]+)$/.test(color))
+          ? ' style="color:'+ color +'"' : '';
+      }
+
+      /* ========== 渲染逻辑 ========== */
+
+      // 日期格式化
+// 日期格式化（加上年份）
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+
+  // 兼容：10位秒时间戳 / 13位毫秒时间戳
+  if (/^\d+$/.test(String(dateStr))) {
+    var n = Number(dateStr);
+    if (String(dateStr).length === 10) n = n * 1000;
+    dateStr = n;
+  }
+
+  var date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+
+  var y = date.getFullYear();
+  var m = date.getMonth() + 1;
+  var d = date.getDate();
+  var hh = String(date.getHours()).padStart(2, '0');
+  var mm = String(date.getMinutes()).padStart(2, '0');
+
+  return y + '年' + m + '月' + d + '日 ' + hh + ':' + mm;
+}
+function levelMeta(n){
+  var imp = Number(n.importance || 1);
+  if (imp === 4) return {text:'处罚', cls:'danger', def:'#7c3aed'};
+  if (imp === 3) return {text:'紧急', cls:'danger', def:'#ef4444'};
+  if (imp === 2) return {text:'重要', cls:'warn',   def:'#f59e0b'};
+  return {text:'普通', cls:'info',   def:'#5b8cff'};
+}
+
+      // 载入官方通知与更新日志    <a href="javascript:;" class="layui-btn layui-btn-primary layui-btn-xs">反馈</a>
+      $.ajax({
+        url: './api/index/Msg.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+          if(res.code === 0) {
+            // 官方通知
+            var noticesHtml = '';
+(res.data.notices || []).forEach(function(notice){
+  var lv = levelMeta(notice);
+  var dot = (notice.color && String(notice.color).trim()) ? notice.color : lv.def;
+
+  noticesHtml += `
+    <div class="nd-item nd-item--${lv.cls}" style="--dot:${dot}">
+      <div class="nd-item__dot"></div>
+      <div class="nd-item__body">
+        <div class="nd-item__row">
+          <div class="nd-item__left">
+          <span class="nd-badge">${lv.text}</span>
+            <div class="nd-item__title">${notice.title || '官方通知'}</div>
+            
+          </div>
+          <div class="nd-item__time">${formatDate(notice.publish_time)}</div>
+        </div>
+        <div class="nd-item__content">${linkify(notice.content||'')}</div>
+        <div class="nd-item__actions">
+          <a href="javascript:;" class="layui-btn layui-btn-xs"
+            onclick='showNoticePopup(${JSON.stringify(notice).replace(/'/g,"\\'")})'>查看详情</a>
+        </div>
+      </div>
+    </div>
+  `;
+});
+            $('#notices-container').html(noticesHtml || '<div class="layui-text">暂无通知</div>');
+
+            // 更新日志
+var logsHtml = '';
+(res.data.logs || []).forEach(function(log, idx){
+  var activeCls = (idx === 0) ? ' nd-log-item--active' : '';
+  logsHtml += `
+    <div class="nd-log-item${activeCls}">
+      <div class="nd-log-item__dot"></div>
+      <div class="nd-log-item__body">
+        <div class="nd-log-item__row">
+          <div class="nd-log-item__left">
+            <span class="nd-log-badge">${escapeHtml(log.platform || '平台')}</span>
+            <div class="nd-log-title">${escapeHtml(log.version || '更新日志')}</div>
+          </div>
+          <div class="nd-log-time">${formatDate(log.publish_time)}</div>
+        </div>
+
+        <div class="nd-log-content">${linkify(log.content || '')}</div>
+
+        <div class="nd-log-actions">
+          <a href="javascript:;" layadmin-event="replyNote" data-id="7"
+             class="layui-btn layui-btn-xs layuiadmin-reply">反馈</a>
+        </div>
+      </div>
+    </div>
+  `;
+});
+$('#logs-container').html(logsHtml || '<div class="layui-text">暂无更新日志</div>');
+
+
+
+            // 如有违规设备，可在此渲染
+            // (res.data.violations || []).forEach(...)
+          } else {
+            layer.msg('获取数据失败: ' + res.msg);
+          }
+        },
+        error: function() {
+          layer.msg('请求失败，请检查网络连接');
+        }
+      });
+
+      // DailySummaryStats
+      $.ajax({
+        url: './api/index/DailySummaryStats.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+          if(res.code === 0) {
+            $('#daily-total-payment').text(res.data.totalPayment || '0.00');
+            $('#daily-order-count').text(res.data.orderCount || '0');
+            $('#daily-order-reservationCount').text(res.data.reservationCount || '0');
+            $('#daily-order-venue_name').text(res.data.venue_name || '非法数据');
+          } else {
+            layer.msg('获取数据失败: ' + res.msg);
+          }
+        },
+        error: function() {
+          layer.msg('数据请求失败，请检查API和网络状态');
+        }
+      });
+
+      // 检查未读通知
+      function checkUnreadNotices() {
+        $.ajax({
+          url: './api/index/Msg.php',
+          type: 'POST',
+          data: { action: 'getUnreadNotices' },
+          dataType: 'json',
+          success: function(res) {
+            if(res.code === 0 && res.data && res.data.length > 0) {
+              showNoticePopup(res.data[0]); // 显示第一条未读
+            }
+          }
+        });
+      }
+
+      // 弹窗
+window.showNoticePopup = function(notice) {
+  layer.open({
+    type: 1,
+    title: false,
+    closeBtn: 0,
+    shadeClose: false,
+    area: [window.innerWidth < 500 ? '90%' : '800px', 'auto'],
+    maxHeight: '80vh',
+    content: `
+      <div class="notice-popup">
+        <h3>${escapeHtml(notice.title || '')}</h3>
+        <div class="content">${linkify(notice.content || '')}</div>
+        <div class="btn-group">
+          <button class="layui-btn layui-btn-primary" onclick="markAsRead(${Number(notice.id) || 0})">标记已读</button>
+        </div>
+      </div>
+    `
+  });
+};
+
+
+      // 标记已读（挂到 window 供弹窗按钮调用）
+      window.markAsRead = function(noticeId) {
+        $.ajax({
+          url: './api/index/Msg.php',
+          type: 'POST',
+          data: {
+            action: 'markNoticeAsRead',
+            notice_id: noticeId
+          },
+          dataType: 'json',
+          success: function(res) {
+            if(res.code === 0) {
+              layer.closeAll();
+              checkUnreadNotices();
+            } else {
+              layer.msg('标记已读失败：' + res.msg);
+            }
+          }
+        });
+      };
+
+      // 页面就绪后检查未读通知
+      $(document).ready(function() {
+        checkUnreadNotices();
+      });
+          loadCarousel();
+    });
+
+
+  </script>

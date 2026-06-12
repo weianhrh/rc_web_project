@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <title>智能工作台</title>
+
+  <link rel="stylesheet" href="/res/common/base.css">
+  <link rel="stylesheet" href="/res/common/layout.css">
+  <link rel="stylesheet" href="/res/fa/css/all.min.css">
+
+  <style>
+    body {
+      padding: 16px;
+    }
+
+    body.loading [data-role-hide="2"],
+    body.role-2 [data-role-hide="2"] {
+      display: none !important;
+    }
+
+    .dashboard-card {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      border-radius: 24px;
+    }
+    .metrics-container {
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(0,0,0,.05);
+    }
+
+    .card-title {
+      margin-bottom: 24px;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .metrics-grid-top {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .metrics-grid-bottom {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    
+    .metrics-grid-bottom.no-doll-revenue {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    
+    #goldRevenueWrap,
+    #dollRevenueWrap {
+      cursor: pointer;
+    }
+    .metric-item {
+      min-width: 0;
+      min-height: 108px;
+      padding: 16px;
+      background: var(--rc-color-surface-soft);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .metric-label {
+      margin-bottom: 8px;
+      color: var(--rc-color-secondary);
+      font-size: 14px;
+    }
+
+    .metric-value {
+      color: var(--rc-color-primary);
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .abnormal-tip {
+      display: none;
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #ff3b3b;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .abnormal-tip:hover {
+      text-decoration: underline;
+    }
+
+    .abnormal-tip .muted {
+      margin-left: 6px;
+      font-size: 12px;
+      opacity: .85;
+    }
+
+    .abnormal-tip.is-zero,
+    .abnormal-tip.is-zero .muted,
+    .abnormal-tip.is-zero #abnormal-count {
+      color: #16a34a;
+    }
+
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      padding-top: 24px;
+    }
+
+    .nav-card {
+      position: relative;
+      padding: 16px;
+      text-align: center;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,.05);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .nav-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--rc-shadow-sm);
+    }
+
+    .nav-icon {
+      margin-bottom: 8px;
+      color: var(--rc-color-primary);
+      font-size: 24px;
+    }
+
+    .nav-text {
+      color: #666;
+      font-size: 12px;
+    }
+
+    .badge {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      min-height: auto;
+      padding: 2px 6px;
+      color: #fff;
+      background: #ff3b3b;
+      border: none;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      .dashboard-card {
+        padding: 16px;
+        border-radius: 18px;
+      }
+
+      .metrics-grid-top,
+      .metrics-grid-bottom {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+        #dollRevenueWrap,
+        #goldRevenueWrap {
+          grid-column: auto;
+          align-items: center;
+          text-align: center;
+        }
+      .metric-item {
+        min-height: 92px;
+        padding: 14px;
+      }
+
+      .metric-label {
+        font-size: 13px;
+      }
+
+      .metric-value {
+        font-size: 20px;
+      }
+
+    .nav-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    }
+
+    @media (max-width: 420px) {
+      .metric-item {
+        min-height: 86px;
+        padding: 12px;
+      }
+
+      .metric-label {
+        font-size: 12px;
+      }
+
+      .metric-value {
+        font-size: 18px;
+      }
+    }
+    @media (max-width: 768px) {
+      .nav-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      }
+    
+      .nav-card {
+        padding: 16px 8px !important;
+      }
+    
+      .nav-text {
+        font-size: 10px !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="loading">
+  <div class="dashboard-card rc-card rc-card-body">
+    <div class="metrics-container">
+      <div class="abnormal-tip" id="abnormal-tip">
+        今日异常用户数：<span id="abnormal-count">0</span>
+        <span class="muted">（点击查看）</span>
+      </div>
+
+      <div class="card-title" id="venue-name">加载中...</div>
+
+      <div class="metrics-grid-top">
+        <div class="metric-item" data-role-hide="2" id="registerCountWrap">
+          <div class="metric-label">今日APP注册用户</div>
+          <div class="metric-value" id="registerCount">0人</div>
+        </div>
+
+        <div class="metric-item" data-role-hide="2" id="activeUsersWrap">
+          <div class="metric-label">今日活跃用户数</div>
+          <div class="metric-value" id="ActiveUsers">0人</div>
+        </div>
+
+        <div class="metric-item" data-role-hide="2" id="rechargeWrap">
+          <div class="metric-label">今日平台总收益</div>
+          <div class="metric-value" id="totalRechargeFromBalanceChanges">¥0.00</div>
+        </div>
+
+        <div class="metric-item" data-role-hide="2" id="consumptionWrap">
+          <div class="metric-label">今日用户实际总消费</div>
+          <div class="metric-value" id="totalUserConsumption">¥0.00</div>
+        </div>
+      </div>
+
+      <div class="metrics-grid-bottom">
+        <div class="metric-item" id="appealWrap">
+          <div class="metric-label">申诉待处理</div>
+          <div class="metric-value" id="appeal_count">0</div>
+        </div>
+
+        <div class="metric-item" id="reportWrap">
+          <div class="metric-label">投诉待处理</div>
+          <div class="metric-value" id="reservationCount">0</div>
+        </div>
+
+        <div class="metric-item" id="dollRevenueWrap" data-role-hide="2">
+          <div class="metric-label">娃娃机收益</div>
+          <div class="metric-value" id="dollRevenueToday">¥0.00</div>
+        </div>
+        <div class="metric-item" id="goldRevenueWrap" data-role-hide="2">
+          <div class="metric-label">今日金币收益</div>
+          <div class="metric-value" id="todayGoldRechargeRevenue">¥0.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-grid" id="navGrid"></div>
+  </div>
+
+  <script src="/res/common/common.js"></script>
+<script src="/res/common/biz.js?v=5"></script>
+
+  <script>
+    (async function initDashboard() {
+      try {
+        const result = await RcCommon.fetchJson('/api/index/adminbackstage.php?_=' + Date.now());
+        const ret = result.data;
+
+        if (!ret || ret.code !== 0) {
+          throw new Error('adminbackstage.php 返回异常');
+        }
+
+        const data = ret.data || {};
+        const roleId = Number(data.role_id || 0);
+        window.__ROLE_ID__ = roleId;
+
+        document.body.classList.remove('loading');
+        document.body.classList.toggle('role-2', roleId === 2);
+
+        RcCommon.setText('#venue-name', data.venue_name || '');
+        RcCommon.setText('#registerCount', Number(data.registerCount || 0) + '人');
+        RcCommon.setText('#ActiveUsers', Number(data.activeUserCount || 0) + '人');
+        RcCommon.setText('#totalRechargeFromBalanceChanges', '¥' + RcCommon.formatMoney(data.totalRechargeFromBalanceChanges));
+        RcCommon.setText('#totalUserConsumption', '¥' + RcCommon.formatMoney(data.totalUserConsumption));
+
+        const dollRevenue = Number(data.dollRevenueToday || 0);
+        RcCommon.setText('#dollRevenueToday', '¥' + RcCommon.formatMoney(dollRevenue));
+        const goldRevenue = Number(data.todayGoldRechargeRevenue || 0);
+        RcCommon.setText('#todayGoldRechargeRevenue', '¥' + RcCommon.formatMoney(goldRevenue));
+
+        const dollRevenueWrap = RcCommon.qs('#dollRevenueWrap');
+        const metricsGridBottom = RcCommon.qs('.metrics-grid-bottom');
+
+        if (dollRevenueWrap) {
+          const hasDollRevenue = dollRevenue > 0;
+          dollRevenueWrap.style.display = hasDollRevenue ? 'flex' : 'none';
+          if (metricsGridBottom) {
+            metricsGridBottom.classList.toggle('no-doll-revenue', !hasDollRevenue);
+          }
+        }
+
+        const reportCount = Number(data.reportCount || 0);
+        RcCommon.setText('#reservationCount', reportCount);
+        if (reportCount >= 1) RcCommon.qs('#reservationCount').style.color = 'red';
+
+        const appealCount = Number(data.appeal_count || 0);
+        RcCommon.setText('#appeal_count', appealCount);
+        if (appealCount >= 1) RcCommon.qs('#appeal_count').style.color = 'red';
+
+        await loadAbnormalCount();
+        await loadNav(roleId);
+        loadBadges(data);
+        bindClicks();
+
+        RcBiz.initShippingAlert({
+          apiUrl: '/api/dolls/getPendingShipmentCount.php',
+          reviewPageUrl: 'pending-shipping.html',
+          interval: 30000,
+          cooldownMs: 60 * 1000
+        });
+
+      } catch (err) {
+        console.error('初始化失败:', err);
+        document.body.classList.remove('loading');
+        RcCommon.toast('后台首页加载失败', 'error');
+      }
+    })();
+
+    async function loadAbnormalCount() {
+      try {
+        const result = await RcCommon.fetchJson('/api/finance/demo.php?only_count=1&_=' + Date.now());
+        const data = result.data || {};
+        const count = Number(data.count || (Array.isArray(data.data) ? data.data.length : 0)) || 0;
+
+        const tipEl = RcCommon.qs('#abnormal-tip');
+        const cntEl = RcCommon.qs('#abnormal-count');
+
+        if (!tipEl || !cntEl) return;
+
+        cntEl.textContent = count;
+        tipEl.style.display = 'block';
+        tipEl.classList.toggle('is-zero', count === 0);
+        tipEl.classList.toggle('is-bad', count > 0);
+        tipEl.style.opacity = count === 0 ? '0.75' : '1';
+
+        tipEl.onclick = function () {
+          window.location.href = 'finance_demo.html?_=' + Date.now();
+        };
+      } catch (err) {
+        console.warn('异常用户数加载失败:', err);
+      }
+    }
+
+    async function loadNav(roleId) {
+   const result = await RcCommon.fetchJson('/res/navItems.json?v=5&_=' + Date.now());
+      const navItems = Array.isArray(result.data) ? result.data : [];
+
+      const hideIdsForRole2 = new Set([
+        'Withdrawal-approval',
+        'Performance-ranking',
+        'item_1759975475005',
+        'RefundQequest'
+      ]);
+
+      const filtered = roleId === 2
+        ? navItems.filter(function (item) {
+            return !hideIdsForRole2.has(String(item.id || '').trim());
+          })
+        : navItems;
+
+      RcBiz.renderNavGrid('#navGrid', filtered, {
+        cardClass: 'nav-card',
+        iconClass: 'nav-icon',
+        textClass: 'nav-text'
+      });
+    }
+
+function loadBadges(data) {
+  // 图文审核徽章
+RcCommon.fetchJson('/api/venue/getPendingImages.php?_=' + Date.now())
+  .then(function (result) {
+    const d = result.data || {};
+    const badge = document.getElementById('pending-count');
+
+    console.log('图文审核接口结果:', d);
+    console.log('pending-count元素:', badge);
+
+    if (!badge) return;
+
+    let count = 0;
+
+//   console.log('length:', result.count);
+    if (typeof d.count !== 'undefined') {
+      count = Number(d.count);
+    } else if (Array.isArray(d.data)) {
+     count = d.data.length;
+    }
+
+    if (!Number.isFinite(count)) count = 0;
+
+    badge.textContent = String(count);
+    badge.style.display = count > 0 ? 'inline-block' : 'none';
+
+    console.log('最终图文审核count:', count, badge.style.display);
+  })
+  .catch(function (err) {
+    console.error('图文审核数量加载失败:', err);
+  });
+
+  // 加盟管理徽章
+  RcCommon.fetchJson('/api/franchise/FranchiesList.php?_=' + Date.now())
+    .then(function (result) {
+      const d = result.data || {};
+      const badge = RcCommon.qs('#franchise-count');
+
+      if (badge && d.code === 200 && Array.isArray(d.data)) {
+        const count = d.data.length;
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+      }
+    })
+    .catch(function (err) {
+      console.error('加盟管理数量加载失败:', err);
+    });
+
+  // 提现审批徽章
+  const approvalBadge = RcCommon.qs('#approval-count');
+  if (approvalBadge) {
+    const count = Number(data.totalPendingwithdrawalapproval || 0);
+    approvalBadge.textContent = count;
+    approvalBadge.style.display = count > 0 ? 'block' : 'none';
+  }
+}
+
+    function bindClicks() {
+        const jumpMap = {
+          '#appealWrap': 'order_report.html',
+          '#reportWrap': 'reporthand.html',
+          '#rechargeWrap': '/api/index/recharge_detail.php',
+          '#registerCountWrap': '/api/index/user_register_detail.php',
+          '#activeUsersWrap': '/api/index/user_active_detail.php',
+          '#dollRevenueWrap': 'claw_orders_dashboard.html',
+          '#goldRevenueWrap': '/api/index/gold_revenue_stats.php',
+          '#consumptionWrap': 'user_orders.html'
+        };
+      Object.keys(jumpMap).forEach(function (selector) {
+        const el = RcCommon.qs(selector);
+        if (!el) return;
+        el.addEventListener('click', function () {
+          window.location.href = jumpMap[selector];
+        });
+      });
+
+      document.addEventListener('selectstart', function (e) {
+        e.preventDefault();
+      });
+    }
+  </script>
+</body>
+</html>

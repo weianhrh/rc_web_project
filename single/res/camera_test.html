@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>摄像头测试</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+            background: #f5f7fb;
+            margin: 0;
+            padding: 24px;
+        }
+        .box {
+            max-width: 560px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 30px rgba(0,0,0,.08);
+        }
+        button {
+            height: 40px;
+            padding: 0 18px;
+            border: none;
+            border-radius: 8px;
+            background: #1677ff;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        video {
+            width: 100%;
+            max-height: 360px;
+            background: #000;
+            margin-top: 16px;
+            border-radius: 12px;
+        }
+        pre {
+            margin-top: 16px;
+            padding: 12px;
+            background: #111827;
+            color: #d1d5db;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h2>摄像头权限测试</h2>
+    <p>点击下面按钮，测试当前浏览器是否能正常打开摄像头。</p>
+
+    <button onclick="testCamera()">测试摄像头</button>
+
+    <video id="video" autoplay playsinline muted></video>
+    <pre id="log"></pre>
+</div>
+
+<script>
+function log(data) {
+    document.getElementById('log').textContent +=
+        '[' + new Date().toLocaleTimeString() + '] ' +
+        (typeof data === 'string' ? data : JSON.stringify(data, null, 2)) +
+        '\n\n';
+}
+
+async function testCamera() {
+    const video = document.getElementById('video');
+
+    log({
+        href: location.href,
+        ua: navigator.userAgent,
+        isSecureContext: window.isSecureContext,
+        hasMediaDevices: !!navigator.mediaDevices,
+        hasGetUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    });
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        log('当前浏览器不支持 getUserMedia');
+        return;
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        });
+
+        video.srcObject = stream;
+
+        const tracks = stream.getVideoTracks();
+        log({
+            status: 'success',
+            tracks: tracks.map(t => ({
+                label: t.label,
+                enabled: t.enabled,
+                readyState: t.readyState
+            }))
+        });
+    } catch (e) {
+        log({
+            status: 'failed',
+            name: e.name,
+            message: e.message
+        });
+    }
+}
+</script>
+</body>
+</html>

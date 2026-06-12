@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>娃娃机订单收益看板</title>
+
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+            --success: #18b566;
+            --warning: #ff9f43;
+            --danger: #ff5a5f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            text-align: left;
+        }
+
+        .venue-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            transition: var(--transition);
+            align-items: center;
+        }
+
+        .venue-card:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .venue-img {
+            width: 96px;
+            height: 96px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #f3f5fb;
+            flex-shrink: 0;
+        }
+
+        .venue-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+
+        .venue-info .venue-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .venue-info span {
+            display: block;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        .venue-actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            padding-left: 15px;
+            gap: 8px;
+            flex-shrink: 0;
+            min-width: 140px;
+        }
+
+        .edit-btn {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .edit-btn:hover {
+            background-color: #4a77e4;
+        }
+
+        .secondary-btn {
+            background: #eef3ff;
+            color: var(--primary);
+            border: 1px solid #dbe6ff;
+        }
+
+        .secondary-btn:hover {
+            background: #e4ecff;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 16px;
+            color: var(--primary);
+            padding: 20px;
+        }
+
+        .muted {
+            color: var(--secondary);
+            font-size: 13px;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--secondary);
+            padding: 24px 12px;
+            font-size: 14px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-item label {
+            font-size: 13px;
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        .filter-item input {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            border: 1px solid #d9e2f2;
+            border-radius: 8px;
+            outline: none;
+            transition: var(--transition);
+            background: #fff;
+        }
+
+        .filter-item input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.08);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 15px;
+        }
+
+        .stat-box {
+            border: 1px solid #e8eefc;
+            border-radius: 12px;
+            padding: 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            min-height: 108px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--text-color);
+            line-height: 1.1;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            color: var(--secondary);
+            margin-top: 8px;
+        }
+
+        .big-amount {
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--success);
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+
+        .amount-red {
+            color: var(--danger);
+        }
+
+        .amount-orange {
+            color: var(--warning);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #eef3ff;
+            color: var(--primary);
+            width: fit-content;
+        }
+
+        .top-user-card .venue-img {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+        }
+
+        .section-note {
+            margin-top: -8px;
+            margin-bottom: 16px;
+            color: var(--secondary);
+            font-size: 13px;
+        }
+
+        .order-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+        }
+
+        .order-meta span {
+            color: #556172;
+        }
+
+        .rank-badge {
+            min-width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #eef3ff;
+            color: var(--primary);
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .filter-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .card-title {
+                font-size: 20px;
+            }
+
+            .stats-grid,
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+
+            .venue-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .venue-actions {
+                width: 100%;
+                align-items: flex-start;
+                min-width: 0;
+                padding-left: 0;
+                padding-top: 6px;
+            }
+
+            .big-amount,
+            .stat-value {
+                font-size: 24px;
+            }
+        }
+        /* ===== 紧凑版覆盖样式：直接放到 style 最后 ===== */
+
+body {
+    padding: 12px;
+}
+
+.container {
+    max-width: 1080px;
+}
+
+.card {
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+}
+
+.card-title {
+    font-size: 18px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+}
+
+.section-note,
+.muted,
+.stat-sub,
+.stat-label,
+.filter-item label {
+    font-size: 12px;
+}
+
+.filter-row {
+    gap: 10px;
+}
+
+.filter-item {
+    gap: 6px;
+}
+
+.filter-item input {
+    padding: 8px 10px;
+    font-size: 13px;
+    height: 38px;
+    border-radius: 7px;
+}
+
+.edit-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    height: 38px;
+    border-radius: 7px;
+}
+
+.stats-grid {
+    gap: 12px;
+}
+
+.stat-box {
+    padding: 14px;
+    min-height: 88px;
+    border-radius: 10px;
+}
+
+.stat-value {
+    font-size: 22px;
+}
+
+.venue-card {
+    padding: 12px;
+    gap: 12px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+}
+
+.venue-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+}
+
+.top-user-card .venue-img {
+    width: 64px;
+    height: 64px;
+}
+
+.venue-info {
+    gap: 5px;
+    font-size: 13px;
+}
+
+.venue-info .venue-name {
+    font-size: 15px;
+}
+
+.venue-info span {
+    line-height: 1.4;
+}
+
+.order-meta {
+    gap: 6px 12px;
+}
+
+.venue-actions {
+    min-width: 110px;
+    padding-left: 10px;
+    gap: 6px;
+}
+
+.big-amount {
+    font-size: 18px;
+}
+
+.rank-badge {
+    min-width: 28px;
+    height: 28px;
+    font-size: 13px;
+}
+
+.tag {
+    padding: 3px 8px;
+    font-size: 11px;
+}
+
+.loading,
+.empty {
+    padding: 16px 10px;
+    font-size: 13px;
+}
+
+/* 让订单明细更紧一点 */
+#order_list .venue-card {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+#order_list .venue-info {
+    gap: 4px;
+}
+
+#order_list .big-amount {
+    font-size: 17px;
+}
+
+/* 设备排行也压缩一点 */
+#device_rank_list .venue-card {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+/* 当前设备收益卡右侧金额别太大 */
+#device_total_revenue,
+#top_user_total_spent {
+    font-size: 20px;
+}
+
+/* 桌面端再微调一下四宫格 */
+@media (min-width: 1025px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .stat-box {
+        min-height: 84px;
+    }
+}
+
+/* 手机端保持可读，不要再压太狠 */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    .card-title {
+        font-size: 17px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    .big-amount {
+        font-size: 18px;
+    }
+
+    .venue-img {
+        width: 64px;
+        height: 64px;
+    }
+
+    .top-user-card .venue-img {
+        width: 56px;
+        height: 56px;
+    }
+}
+.filter-item select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    height: 38px;
+    border: 1px solid #d9e2f2;
+    border-radius: 7px;
+    outline: none;
+    transition: var(--transition);
+    background: #fff;
+    color: var(--text-color);
+}
+
+.filter-item select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.08);
+}
+.stat-box {
+    cursor: pointer;
+}
+
+.stat-box:hover {
+    border-color: #cfe0ff;
+    transform: translateY(-1px);
+}
+
+.stat-box.active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(91, 140, 255, 0.10);
+    background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+}
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- 筛选区 -->
+    <div class="card">
+        <div class="card-title">娃娃机订单收益看板</div>
+
+        <div class="filter-row">
+            <div class="filter-item">
+                <label for="start_time">开始时间</label>
+                <input type="datetime-local" id="start_time">
+            </div>
+
+            <div class="filter-item">
+                <label for="end_time">结束时间</label>
+                <input type="datetime-local" id="end_time">
+            </div>
+
+            <div class="filter-item">
+                <label for="serial_number">娃娃机设备</label>
+                <select id="serial_number">
+                    <option value="">全部设备</option>
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label for="keyword_note">备注关键词</label>
+                <input type="text" id="keyword_note" value="娃娃机抓取扣费" disabled>
+            </div>
+
+            <button class="edit-btn" id="btnSearch">查询</button>
+            <button class="edit-btn secondary-btn" id="btnReset">重置</button>
+        </div>
+    </div>
+
+    <!-- 概览统计 -->
+    <div class="card">
+        <div class="card-title">概览统计</div>
+        <div class="section-note" id="summaryTimeText">默认显示今天的数据</div>
+
+        <div class="stats-grid">
+            <div class="stat-box active" data-view="all">
+                <div class="stat-label">总收益</div>
+                <div class="stat-value" id="stat_total_amount">¥0.00</div>
+                <div class="stat-sub">点击查看全部区域</div>
+            </div>
+        
+            <div class="stat-box" data-view="orders">
+                <div class="stat-label">订单总数</div>
+                <div class="stat-value" id="stat_total_count">0</div>
+                <div class="stat-sub">点击只看订单明细</div>
+            </div>
+        
+            <div class="stat-box" data-view="device">
+                <div class="stat-label">当前设备收益</div>
+                <div class="stat-value" id="stat_device_amount">¥0.00</div>
+                <div class="stat-sub" id="stat_device_sub">点击只看设备收益</div>
+            </div>
+        
+            <div class="stat-box" data-view="top_user">
+                <div class="stat-label">消费冠军</div>
+                <div class="stat-value" id="stat_top_user_amount">¥0.00</div>
+                <div class="stat-sub" id="stat_top_user_name">点击只看消费冠军</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 当前设备收益卡 -->
+    <div class="card hidden" id="deviceSummaryCard">
+        <div class="card-title">当前设备收益</div>
+
+        <div class="venue-card">
+            <img id="device_photo" class="venue-img" src="" alt="设备图片">
+            <div class="venue-info">
+                <span class="venue-name" id="device_name">-</span>
+                <span id="device_serial">设备号：-</span>
+                <span id="device_order_count">订单数：0</span>
+                <span id="device_range">时间范围：-</span>
+                <span class="tag">单设备收益详情</span>
+            </div>
+            <div class="venue-actions">
+                <div class="stat-label">设备总收益</div>
+                <div class="big-amount" id="device_total_revenue">¥0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消费最高用户 -->
+    <div class="card hidden" id="topUserCard">
+        <div class="card-title">消费最高用户</div>
+
+        <div class="venue-card top-user-card">
+            <img id="top_user_avatar" class="venue-img" src="" alt="用户头像">
+            <div class="venue-info">
+                <span class="venue-name" id="top_user_nickname">-</span>
+                <span id="top_user_uid">UID：-</span>
+                <span id="top_user_wallet">钱包余额：¥0.00</span>
+                <span id="top_user_order_count">抓取次数：0</span>
+                <span class="tag">当前时间范围消费最高</span>
+            </div>
+            <div class="venue-actions">
+                <div class="stat-label">累计消费</div>
+                <div class="big-amount amount-orange" id="top_user_total_spent">¥0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设备收益排行 -->
+    <div class="card" id="deviceRankCard">
+        <div class="card-title">设备收益排行</div>
+        <div class="section-note">未筛选单台设备时，用来快速看哪台机器更赚钱</div>
+        <div id="device_rank_list"></div>
+    </div>
+
+    <!-- 订单列表 -->
+    <div class="card" id="orderListCard">
+        <div class="card-title">订单明细</div>
+        <div class="section-note">左边看设备，中间看用户和订单信息，右边突出单笔收益</div>
+        <div id="order_list"></div>
+    </div>
+
+</div>
+
+<script>
+    // ====== 这里改成你的接口地址 ======
+    const API_URL = '/api/dolls/get_dolls_order_detail.php';
+    let lastData = null;
+    let currentView = 'all';
+    
+    function renderMachineOptions(options, selectedSerial = '') {
+        const select = document.getElementById('serial_number');
+        const currentValue = selectedSerial || select.value || '';
+    
+        let html = `<option value="">全部设备</option>`;
+    
+        (options || []).forEach(item => {
+            const serial = item.serial_number || '';
+            const name = item.product_name || '';
+            const text = name ? `${name}（${serial}）` : serial;
+            html += `<option value="${serial}">${escapeHtml(text)}</option>`;
+        });
+    
+        select.innerHTML = html;
+    
+        if (currentValue) {
+            select.value = currentValue;
+            if (select.value !== currentValue) {
+                select.value = '';
+            }
+        }
+    }
+    const DEFAULT_DEVICE_IMG = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">
+            <rect width="100%" height="100%" fill="#eef3ff"/>
+            <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#7f8fa4" font-size="14">
+                暂无图片
+            </text>
+        </svg>
+    `);
+
+    function escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, function (m) {
+            return ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[m];
+        });
+    }
+function setView(view) {
+    currentView = view;
+
+    document.querySelectorAll('.stat-box[data-view]').forEach(el => {
+        el.classList.toggle('active', el.dataset.view === view);
+    });
+
+    applyView();
+}
+
+function showEl(id, show) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hidden', !show);
+}
+
+function applyView() {
+    if (!lastData) return;
+
+    const hasDeviceSummary = !!lastData.device_summary;
+    const hasDeviceRank = Array.isArray(lastData.device_revenue_list) && lastData.device_revenue_list.length > 0;
+    const hasTopUser = !!lastData.top_user;
+    const hasOrders = Array.isArray(lastData.list) && lastData.list.length > 0;
+
+    showEl('deviceSummaryCard', false);
+    showEl('deviceRankCard', false);
+    showEl('topUserCard', false);
+    showEl('orderListCard', false);
+
+    if (currentView === 'all') {
+        if (hasDeviceSummary) {
+            showEl('deviceSummaryCard', true);
+        } else if (hasDeviceRank) {
+            showEl('deviceRankCard', true);
+        }
+
+        if (hasTopUser) {
+            showEl('topUserCard', true);
+        }
+
+        if (hasOrders) {
+            showEl('orderListCard', true);
+        }
+    }
+
+    if (currentView === 'orders') {
+        if (hasOrders) {
+            showEl('orderListCard', true);
+        }
+    }
+
+    if (currentView === 'device') {
+        if (hasDeviceSummary) {
+            showEl('deviceSummaryCard', true);
+        } else if (hasDeviceRank) {
+            showEl('deviceRankCard', true);
+        }
+    }
+
+    if (currentView === 'top_user') {
+        if (hasTopUser) {
+            showEl('topUserCard', true);
+        }
+    }
+}
+    function formatMoney(v) {
+        const num = Number(v || 0);
+        return '¥' + num.toFixed(2);
+    }
+
+    function formatDateTime(v) {
+        if (!v) return '-';
+        return String(v).replace('T', ' ');
+    }
+
+    function toDateTimeLocalValue(date) {
+        const pad = n => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function setDefaultToday() {
+        const now = new Date();
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(now);
+        end.setHours(23, 59, 0, 0);
+
+        document.getElementById('start_time').value = toDateTimeLocalValue(start);
+        document.getElementById('end_time').value = toDateTimeLocalValue(end);
+    }
+
+    function buildQuery() {
+        const startTime = document.getElementById('start_time').value;
+        const endTime = document.getElementById('end_time').value;
+        const serialNumber = document.getElementById('serial_number').value.trim();
+
+        const params = new URLSearchParams();
+
+        if (startTime) params.append('start_time', startTime.replace('T', ' ') + ':00');
+        if (endTime) params.append('end_time', endTime.replace('T', ' ') + ':00');
+        if (serialNumber) params.append('serial_number', serialNumber);
+
+        return params.toString();
+    }
+
+    function renderSummary(data) {
+        const totalAmount = Number(data.total_amount || 0);
+        const totalCount = Number(data.total_count || 0);
+        const topUser = data.top_user || null;
+        const deviceSummary = data.device_summary || null;
+        const filters = data.filters || {};
+
+        document.getElementById('stat_total_amount').textContent = formatMoney(totalAmount);
+        document.getElementById('stat_total_count').textContent = totalCount;
+
+        if (deviceSummary) {
+            document.getElementById('stat_device_amount').textContent = formatMoney(deviceSummary.total_revenue || 0);
+            document.getElementById('stat_device_sub').textContent = '当前所选设备在该时间范围内的收益';
+        } else {
+            document.getElementById('stat_device_amount').textContent = formatMoney(totalAmount);
+            document.getElementById('stat_device_sub').textContent = '当前未筛选单设备，显示全部设备收益';
+        }
+
+        if (topUser) {
+            document.getElementById('stat_top_user_amount').textContent = formatMoney(topUser.total_spent || 0);
+            document.getElementById('stat_top_user_name').textContent = `${topUser.nickname || '未命名用户'}（UID: ${topUser.uid || '-'}）`;
+        } else {
+            document.getElementById('stat_top_user_amount').textContent = '¥0.00';
+            document.getElementById('stat_top_user_name').textContent = '暂无数据';
+        }
+
+        document.getElementById('summaryTimeText').textContent =
+            `时间范围：${formatDateTime(filters.start_time)} ~ ${formatDateTime(filters.end_time)}`;
+    }
+
+    function renderDeviceSummary(data) {
+        const card = document.getElementById('deviceSummaryCard');
+        const deviceSummary = data.device_summary || null;
+        const filters = data.filters || {};
+
+        if (!deviceSummary) {
+            card.classList.add('hidden');
+            return;
+        }
+
+        card.classList.remove('hidden');
+
+        document.getElementById('device_photo').src = deviceSummary.photo_url || DEFAULT_DEVICE_IMG;
+        document.getElementById('device_photo').onerror = function () {
+            this.src = DEFAULT_DEVICE_IMG;
+        };
+
+        document.getElementById('device_name').textContent = deviceSummary.vehicle_name || '未命名设备';
+        document.getElementById('device_serial').textContent = `设备号：${deviceSummary.serial_number || '-'}`;
+        document.getElementById('device_order_count').textContent = `订单数：${deviceSummary.order_count || 0}`;
+        document.getElementById('device_range').textContent =
+            `时间范围：${formatDateTime(filters.start_time)} ~ ${formatDateTime(filters.end_time)}`;
+        document.getElementById('device_total_revenue').textContent =
+            formatMoney(deviceSummary.total_revenue || 0);
+    }
+
+    function renderTopUser(data) {
+        const card = document.getElementById('topUserCard');
+        const topUser = data.top_user || null;
+
+        if (!topUser) {
+            card.classList.add('hidden');
+            return;
+        }
+
+        card.classList.remove('hidden');
+
+        document.getElementById('top_user_avatar').src = topUser.headimgurl || DEFAULT_DEVICE_IMG;
+        document.getElementById('top_user_avatar').onerror = function () {
+            this.src = DEFAULT_DEVICE_IMG;
+        };
+
+        document.getElementById('top_user_nickname').textContent = topUser.nickname || '未命名用户';
+        document.getElementById('top_user_uid').textContent = `UID：${topUser.uid || '-'}`;
+        document.getElementById('top_user_wallet').textContent = `钱包余额：${formatMoney(topUser.wallet || 0)}`;
+document.getElementById('top_user_order_count').textContent =
+    `抓取次数：${topUser.order_count || 0}，抓中：${Number(topUser.selected_catch_count || 0)}，累计抓中：${Number(topUser.total_catch_count || 0)}`;
+        document.getElementById('top_user_total_spent').textContent = formatMoney(topUser.total_spent || 0);
+    }
+
+    function renderDeviceRank(data) {
+        const wrap = document.getElementById('device_rank_list');
+        const card = document.getElementById('deviceRankCard');
+        const list = Array.isArray(data.device_revenue_list) ? data.device_revenue_list : [];
+        const hasDeviceSummary = !!data.device_summary;
+
+        if (hasDeviceSummary) {
+            card.classList.add('hidden');
+            wrap.innerHTML = '';
+            return;
+        }
+
+        card.classList.remove('hidden');
+
+        if (!list.length) {
+            wrap.innerHTML = '<div class="empty">暂无设备收益排行数据</div>';
+            return;
+        }
+
+        wrap.innerHTML = list.map((item, index) => `
+            <div class="venue-card">
+                <div class="rank-badge">${index + 1}</div>
+                <img class="venue-img" src="${escapeHtml(item.photo_url || DEFAULT_DEVICE_IMG)}" alt="设备图" onerror="this.src='${DEFAULT_DEVICE_IMG}'">
+                <div class="venue-info">
+                    <span class="venue-name">${escapeHtml(item.vehicle_name || '未命名设备')}</span>
+                    <span>设备号：${escapeHtml(item.serial_number || '-')}</span>
+                    <span>订单数：${Number(item.order_count || 0)}</span>
+                </div>
+                <div class="venue-actions">
+                    <div class="stat-label">总收益</div>
+                    <div class="big-amount">${formatMoney(item.total_revenue || 0)}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderOrderList(data) {
+        const wrap = document.getElementById('order_list');
+        const list = Array.isArray(data.list) ? data.list : [];
+
+        if (!list.length) {
+            wrap.innerHTML = '<div class="empty">当前筛选条件下没有订单数据</div>';
+            return;
+        }
+
+        wrap.innerHTML = list.map(item => `
+            <div class="venue-card">
+                <img class="venue-img" src="${escapeHtml(item.photo_url || DEFAULT_DEVICE_IMG)}" alt="设备图" onerror="this.src='${DEFAULT_DEVICE_IMG}'">
+                <div class="venue-info">
+                    <span class="venue-name">${escapeHtml(item.vehicle_name || '未命名设备')}</span>
+                    <div class="order-meta">
+                        <span>用户：${escapeHtml(item.nickname || '未知用户')}</span>
+                        <span>UID：${escapeHtml(item.uid || '-')}</span>
+                        <span>钱包：${formatMoney(item.wallet || 0)}</span>
+                        <span>抓中：${Number(item.selected_catch_count || 0)}</span>
+                        <span>累计抓中：${Number(item.total_catch_count || 0)}</span>
+                    </div>
+                    <div class="order-meta">
+                        <span>订单号：${escapeHtml(item.order_id || '-')}</span>
+                        <span>设备号：${escapeHtml(item.serial_number || '-')}</span>
+                        <span>状态：${escapeHtml(item.status || '-')}</span>
+                    </div>
+                    <div class="order-meta">
+                        <span>开始时间：${escapeHtml(formatDateTime(item.start_time))}</span>
+                        <span>结束时间：${escapeHtml(formatDateTime(item.end_time))}</span>
+                    </div>
+                    <span class="muted">备注：${escapeHtml(item.note || '-')}</span>
+                </div>
+                <div class="venue-actions">
+                    <div class="stat-label">单笔收益</div>
+                    <div class="big-amount">${formatMoney(item.payment_amount || 0)}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function fetchData() {
+        const query = buildQuery();
+        const url = query ? `${API_URL}?${query}` : API_URL;
+
+        document.getElementById('order_list').innerHTML = '<div class="loading">正在加载数据...</div>';
+        document.getElementById('device_rank_list').innerHTML = '';
+
+        try {
+            const res = await fetch(url, {
+                method: 'GET',
+                credentials: 'include'
+            });
+
+            const json = await res.json();
+
+            if (!json || Number(json.code) !== 200) {
+                throw new Error(json?.msg || '接口返回异常');
+            }
+
+            const data = json.data || {};
+            lastData = data;
+            renderMachineOptions(data.machine_options || [], data?.filters?.serial_number || '');
+            renderSummary(data);
+            renderDeviceSummary(data);
+            renderTopUser(data);
+            renderDeviceRank(data);
+            renderOrderList(data);
+        } catch (err) {
+            document.getElementById('order_list').innerHTML =
+                `<div class="empty" style="color:#ff5a5f;">加载失败：${escapeHtml(err.message || '未知错误')}</div>`;
+            document.getElementById('device_rank_list').innerHTML = '';
+            document.getElementById('deviceSummaryCard').classList.add('hidden');
+            document.getElementById('topUserCard').classList.add('hidden');
+            document.getElementById('deviceRankCard').classList.remove('hidden');
+        }
+    }
+
+    document.getElementById('btnSearch').addEventListener('click', fetchData);
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+        setDefaultToday();
+        document.getElementById('serial_number').value = '';
+        setView('all');
+        fetchData();
+    });
+    document.querySelectorAll('.stat-box[data-view]').forEach(el => {
+        el.addEventListener('click', () => {
+            setView(el.dataset.view);
+        });
+    });
+setView('all');
+setDefaultToday();
+fetchData();
+</script>
+</body>
+</html>

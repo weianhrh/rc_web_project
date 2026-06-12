@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>兑换商城管理</title>
+
+<style>
+:root {
+  --primary:#5b8cff; --secondary:#7f8fa4;
+  --background-gradient-start:#f8f9ff; --background-gradient-end:#f0f3ff;
+  --card-bg:#ffffff; --border-color:#ddd; --text-color:#333;
+  --shadow:0 4px 24px rgba(91,140,255,.08); --transition:all .3s ease; --hover-bg:#f9f9f9;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC",system-ui}
+body{
+  background:linear-gradient(135deg,var(--background-gradient-start) 0%,var(--background-gradient-end) 100%);
+  min-height:100vh;padding:20px;display:flex;justify-content:center;align-items:flex-start
+}
+.container{max-width:1200px;width:100%}
+.card{background:var(--card-bg);border-radius:12px;padding:20px;box-shadow:var(--shadow);margin-bottom:20px;transition:var(--transition)}
+.card-title{font-size:24px;color:var(--text-color);margin-bottom:16px;font-weight:600;border-bottom:2px solid var(--primary);padding-bottom:10px;text-align:left}
+
+.filter-row{display:grid;grid-template-columns:1.2fr 1fr 1fr auto auto;gap:10px;margin-bottom:12px}
+.filter-row input,.filter-row select{
+  width:100%;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;font-size:14px
+}
+.btn{padding:10px 14px;border-radius:8px;border:1px solid transparent;cursor:pointer;font-size:14px;transition:var(--transition)}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:#4a77e4}
+.btn-secondary{background:#eef2ff;color:#2b2f36;border-color:#cfd6ff}
+.btn-danger{background:#ff5b6b;color:#fff}.btn-danger:hover{opacity:.92}
+.btn-ghost{background:#fff;border:1px solid var(--border-color);color:#333}
+
+.venue-card{background:#fff;border:1px solid var(--border-color);border-radius:8px;padding:15px;margin-bottom:12px;display:flex;gap:15px;transition:var(--transition)}
+.venue-card:hover{background-color:var(--hover-bg)}
+.venue-img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #eee}
+.venue-info{flex:1;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--text-color)}
+.venue-info .venue-name{font-size:16px;font-weight:700;color:#1f2a5a}
+.venue-meta{display:flex;flex-wrap:wrap;gap:8px;color:#666}
+.badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#334155;border:1px solid #dbe3ff}
+.badge.warn{background:#fff5f6;color:#ff5b6b;border-color:#ffd5da}
+.badge.ok{background:#ecfdf5;color:#047857;border-color:#bbf7d0}
+
+.loading{text-align:center;font-size:16px;color:var(--primary);padding:20px}
+.empty{padding:24px;color:#7f8fa4;text-align:center}
+
+.pagination{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.page-btn{padding:8px 12px;border-radius:6px;border:1px solid var(--border-color);background:#fff;cursor:pointer}
+.page-btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* ---------- Modal ---------- */
+.modal{
+  display:none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0,0,0,.6);
+  padding: 16px 0;
+  overflow: auto;
+  align-items: flex-start;
+  justify-content: center;
+  overscroll-behavior: contain;
+}
+.modal-content{
+  position: relative;
+  margin: 16px auto;
+  width: 720px;
+  max-width: 92vw;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  background:#fff; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,.3); padding:20px;
+}
+.modal-close{
+  position:absolute; top:8px; right:10px;
+  width:32px; height:32px; border:none; background:transparent;
+  font-size:22px; line-height:32px; cursor:pointer; color:#64748b;
+}
+.modal-close:hover{ color:#111827; }
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid .full{grid-column:1/-1}
+.modal-content input,.modal-content textarea,.modal-content select{
+  width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:14px;transition:border-color .3s;background:#fff
+}
+.modal-content textarea{min-height:90px;resize:vertical}
+.modal-content input:focus,.modal-content textarea:focus{outline:none;border-color:var(--primary)}
+
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+
+.notice{margin-top:4px;font-size:12px;color:#64748b}
+.counter{font-size:12px;color:#64748b;text-align:right}
+
+.toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:8px;opacity:.95;display:none;z-index:1000}
+
+/* 介绍图两列布局 */
+.img-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.img-item label{ display:block; margin-bottom:6px; }
+
+@media (max-width:760px){
+  .filter-row{grid-template-columns:1fr;gap:8px}
+  .venue-card{flex-direction:column}
+  .venue-img{width:100%;height:180px}
+  .modal-content{width:96vw}
+  .form-grid{grid-template-columns:1fr}
+  .img-grid{ grid-template-columns:1fr; }
+}
+
+/* 旧浏览器兜底 */
+@supports not (height: 100dvh) {
+  .modal-content { max-height: calc(100vh - 32px); }
+}
+
+/* 打开弹窗时禁用背景滚动 */
+body.modal-open { overflow: hidden; }
+/* 上传控件（最小补齐） */
+.uploader{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.uploader input[type="file"]{max-width:220px}
+.small{padding:8px 10px;font-size:13px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">兑换商城 · 商品管理</div>
+
+    <div class="filter-row">
+      <input id="kw" placeholder="关键词（商品名/分类）" />
+      <input id="cat" placeholder="分类（精确匹配）" />
+      <select id="disp">
+        <option value="">显示状态（全部）</option>
+        <option value="0">显示(0)</option>
+        <option value="1">隐藏(1)</option>
+      </select>
+      <button class="btn btn-ghost" id="resetBtn">重置</button>
+      <button class="btn btn-primary" id="createBtn">+ 新增商品</button>
+    </div>
+
+    <div id="listArea"></div>
+
+    <div class="pagination">
+      <button class="page-btn" id="prevBtn">上一页</button>
+      <span class="page-btn" id="pageInfo" style="cursor:default"></span>
+      <button class="page-btn" id="nextBtn">下一页</button>
+    </div>
+  </div>
+</div>
+
+<!-- 弹窗：新增/编辑 -->
+<div class="modal" id="editModal" aria-hidden="true">
+  <div class="modal-content">
+    <h3 id="modalTitle" style="margin-bottom:10px;">新增商品</h3>
+    <button type="button" class="modal-close" id="xClose" aria-label="关闭">×</button>
+
+    <div class="form-grid">
+      <div>
+        <label>商品名称 *</label>
+        <input id="f_name" maxlength="255" placeholder="不超过 255 字"/>
+        <div class="notice">同分类下不得重名</div>
+      </div>
+      <div>
+        <label>商品分类</label>
+        <input id="f_cat" maxlength="255" placeholder="不超过 255 字"/>
+      </div>
+
+      <div>
+        <label>价格（整数）*</label>
+        <input id="f_price" type="number" inputmode="numeric" min="0" placeholder="DECIMAL(10,0)"/>
+      </div>
+      <div>
+        <label>库存（整数）*</label>
+        <input id="f_inv" type="number" inputmode="numeric" min="0" placeholder="≥0"/>
+      </div>
+
+      <!-- ✅ 新增：兑换值 -->
+      <div>
+        <label>兑换值（整数）*</label>
+        <input id="f_exchange" type="number" inputmode="numeric" min="0" placeholder="需要兑换的数量/值"/>
+        <div class="notice">例如：需要抓到的娃娃数量（按你注释语义）</div>
+      </div>
+
+      <div>
+        <label>显示状态 *</label>
+        <select id="f_disp">
+          <option value="0">显示(0)</option>
+          <option value="1">隐藏(1)</option>
+        </select>
+      </div>
+
+ <div class="full">
+  <label>主图 URL</label>
+  <input id="f_img" maxlength="255" placeholder="≤255 字符"/>
+
+  <!-- ✅ 新增：主图上传（最小改动） -->
+  <div class="uploader">
+    <input type="file" id="file_main" accept="image/*">
+<button class="btn btn-secondary small" type="button"
+        onclick="uploadAndFill('file_main','f_img', this)">上传主图</button>
+  </div>
+</div>
+
+      <div class="full">
+        <label>商品介绍（≤500 字）</label>
+        <textarea id="f_intro" maxlength="500" placeholder="简要介绍"></textarea>
+        <div class="counter"><span id="introCnt">0</span>/500</div>
+      </div>
+
+      <div class="full">
+        <label style="display:block;margin-bottom:6px">介绍图（可填 1~4 个）</label>
+        <div class="img-grid">
+          <div class="img-item">
+          <label>介绍图 1</label>
+          <input id="f_img1" maxlength="255"/>
+        
+          <!-- ✅ 新增：介绍图1上传 -->
+          <div class="uploader">
+            <input type="file" id="file_img1" accept="image/*">
+            <button class="btn btn-secondary small" type="button"   onclick="uploadAndFill('file_img1','f_img1', this)">上传</button>
+          </div>
+        </div>
+
+         <div class="img-item">
+  <label>介绍图 2</label>
+  <input id="f_img2" maxlength="255"/>
+
+  <!-- ✅ 新增：介绍图1上传 -->
+  <div class="uploader">
+    <input type="file" id="file_img2" accept="image/*">
+    <button class="btn btn-secondary small" type="button"   onclick="uploadAndFill('file_img2','f_img2', this)">上传</button>
+  </div>
+</div>
+
+<div class="img-item">
+  <label>介绍图 3</label>
+  <input id="f_img3" maxlength="255"/>
+
+  <!-- ✅ 新增：介绍图1上传 -->
+  <div class="uploader">
+    <input type="file" id="file_img3" accept="image/*">
+    <button class="btn btn-secondary small" type="button"   onclick="uploadAndFill('file_img3','f_img3', this)">上传</button>
+  </div>
+</div>
+
+<div class="img-item">
+  <label>介绍图 4</label>
+  <input id="f_img4" maxlength="255"/>
+
+  <!-- ✅ 新增：介绍图1上传 -->
+  <div class="uploader">
+    <input type="file" id="file_img4" accept="image/*">
+    <button class="btn btn-secondary small" type="button"   onclick="uploadAndFill('file_img4','f_img4', this)">上传</button>
+  </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelBtn" type="button">取消</button>
+      <button class="btn btn-primary" id="saveBtn" type="button">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "/api/operat/points_mall.php"; // ← 改成你的接口路径
+const state = { page:1, size:10, total:0, keyword:"", category:"", is_display:"" };
+let editingId = null;
+
+// 工具
+const qs = sel => document.querySelector(sel);
+function toast(msg, ms=2000){
+  const t = qs('#toast'); t.textContent = msg; t.style.display='block';
+  setTimeout(()=> t.style.display='none', ms);
+}
+function toQuery(obj){
+  return Object.entries(obj).map(([k,v])=> v===undefined||v===null||v===""?null:
+    encodeURIComponent(k)+"="+encodeURIComponent(v)).filter(Boolean).join("&");
+}
+async function apiGet(params){
+  const url = API + "?" + toQuery(params);
+  const r = await fetch(url,{credentials:"include"});
+  return r.json();
+}
+async function apiPost(params){
+  const body = toQuery(params);
+  const r = await fetch(API, {
+    method:"POST",
+    headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+    credentials:"include",
+    body
+  });
+  return r.json();
+}
+const UPLOAD_API = "https://rcwulian.cn/app/img/userimg/upload_profile.php"; // 你的上传接口
+
+async function uploadAndFill(fileInputId, targetInputId, btn){
+  const fileInput = document.getElementById(fileInputId);
+  const target = document.getElementById(targetInputId);
+  if(!fileInput || !target) return toast("上传控件不存在");
+  const file = fileInput.files && fileInput.files[0];
+  if(!file) return toast("请先选择图片文件");
+
+  const formData = new FormData();
+  formData.append("file", file); // ✅ 确保后端接收字段名就是 file
+
+  const oldText = btn ? btn.textContent : "";
+  if(btn){ btn.disabled = true; btn.textContent = "上传中..."; }
+
+  try{
+    const response = await fetch(UPLOAD_API, {
+      method: "POST",
+      body: formData,
+    //   credentials: "include"
+    });
+
+    const result = await response.json();
+    console.log("上传返回", result);
+
+    if(result && (result.code === 0 || result.code === "0") && result.url){
+      target.value = result.url;
+      toast("上传成功，已填入URL");
+      fileInput.value = "";
+    }else{
+      toast("上传失败：" + (result?.msg || "未知错误"));
+    }
+  }catch(e){
+    console.error(e);
+    toast("上传异常：" + (e?.message || e));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = oldText || "上传"; }
+  }
+}
+
+
+function clip(str, n){ if(!str) return ""; return str.length>n?str.slice(0,n)+"…":str; }
+
+// 列表
+async function loadList(){
+  const listArea = qs('#listArea');
+  listArea.innerHTML = `<div class="loading">加载中…</div>`;
+  const res = await apiGet({
+    action:"list", page:state.page, page_size:state.size,
+    keyword:state.keyword, category:state.category, is_display:state.is_display
+  });
+  if(res.code!==0){ listArea.innerHTML = `<div class="empty">加载失败：${res.msg}</div>`; return; }
+
+  state.total = res.data.total||0;
+  const items = res.data.items||[];
+  if(items.length===0){ listArea.innerHTML = `<div class="empty">暂无数据</div>`; }
+  else{
+    listArea.innerHTML = items.map(renderItem).join("");
+  }
+  renderPagination();
+}
+
+function renderItem(it){
+  const img = it.product_image || it.product_introduce_image1 || "";
+  const dispBadge = it.is_display==0 ? `<span class="badge ok">显示(0)</span>` : `<span class="badge warn">隐藏(1)</span>`;
+  return `
+  <div class="venue-card" data-id="${it.id}">
+    <img class="venue-img" src="${img ? img : 'https://via.placeholder.com/200x200?text=No+Image'}"
+         onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'"/>
+    <div class="venue-info">
+      <div class="venue-name">${clip(it.product_name||'(未命名)', 48)}</div>
+      <div class="venue-meta">
+        <span class="badge">分类：${it.product_category||'-'}</span>
+        <span class="badge">价格：${it.price}</span>
+        <span class="badge">库存：${it.inventory}</span>
+        <span class="badge">兑换值：${it.exchange_value ?? '-'}</span>
+        ${dispBadge}
+        <span class="badge">创建：${(it.created_at||'').replace('T',' ').slice(0,19)}</span>
+      </div>
+      <div style="color:#64748b;margin-top:6px;">${clip(it.product_introduce||'', 120)}</div>
+      <div class="actions-row" style="margin-top:8px;">
+        <button class="btn btn-primary" onclick="onEdit(${it.id})">编辑</button>
+        <button class="btn btn-ghost" onclick="onToggle(${it.id}, ${it.is_display})">${it.is_display==0?'设为隐藏(1)':'设为显示(0)'}</button>
+        <button class="btn btn-danger" onclick="onDelete(${it.id})">删除</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPagination(){
+  const totalPages = Math.max(1, Math.ceil(state.total / state.size));
+  qs('#pageInfo').textContent = `${state.page}/${totalPages}（共 ${state.total} 条）`;
+  qs('#prevBtn').disabled = state.page<=1;
+  qs('#nextBtn').disabled = state.page>=totalPages;
+}
+
+// 过滤与分页事件
+qs('#createBtn').onclick = ()=> openModal();
+qs('#resetBtn').onclick = ()=>{
+  qs('#kw').value = ""; qs('#cat').value = ""; qs('#disp').value = "";
+  state.keyword=""; state.category=""; state.is_display="";
+  state.page=1; loadList();
+};
+qs('#prevBtn').onclick = ()=> { if(state.page>1){ state.page--; loadList(); } };
+qs('#nextBtn').onclick = ()=> {
+  const totalPages = Math.max(1, Math.ceil(state.total / state.size));
+  if(state.page<totalPages){ state.page++; loadList(); }
+};
+qs('#kw').onchange = ()=>{ state.keyword = qs('#kw').value.trim(); state.page=1; loadList(); };
+qs('#cat').onchange = ()=>{ state.category = qs('#cat').value.trim(); state.page=1; loadList(); };
+qs('#disp').onchange = ()=>{ state.is_display = qs('#disp').value; state.page=1; loadList(); };
+
+// 弹窗 & 表单
+function updateIntroCnt(){ qs('#introCnt').textContent = (qs('#f_intro').value||"").length; }
+
+function openModal(row=null){
+  editingId = row ? row.id : null;
+  qs('#modalTitle').textContent = editingId ? '编辑商品' : '新增商品';
+
+  // 填充
+  qs('#f_name').value = row?.product_name || "";
+  qs('#f_cat').value  = row?.product_category || "a";
+  qs('#f_price').value= row?.price ?? "";
+  qs('#f_inv').value  = row?.inventory ?? "";
+  qs('#f_exchange').value = row?.exchange_value ?? 1;  // ✅ 默认 1
+  qs('#f_disp').value = (row?.is_display ?? 0);
+  qs('#f_img').value  = row?.product_image || "";
+  qs('#f_intro').value= row?.product_introduce || "";
+  updateIntroCnt();
+  qs('#f_img1').value = row?.product_introduce_image1 || "";
+  qs('#f_img2').value = row?.product_introduce_image2 || "";
+  qs('#f_img3').value = row?.product_introduce_image3 || "";
+  qs('#f_img4').value = row?.product_introduce_image4 || "";
+
+  const modal = qs('#editModal');
+  modal.setAttribute('aria-hidden','false');
+  modal.style.display = 'flex';
+  document.body.classList.add('modal-open');
+
+  const box = modal.querySelector('.modal-content');
+  box.scrollTop = 0;
+  requestAnimationFrame(()=> qs('#f_name')?.focus());
+  // 打开弹窗时清空上次选择的文件（可选）
+['file_main','file_img1','file_img2','file_img3','file_img4'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.value = "";
+});
+
+}
+
+function closeModal(){
+  const modal = qs('#editModal');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+
+// 保存
+qs('#saveBtn').onclick = async ()=>{
+  const name = qs('#f_name').value.trim();
+  const price = qs('#f_price').value.trim();
+  const inv = qs('#f_inv').value.trim();
+  const exchange = qs('#f_exchange').value.trim();
+  const disp = qs('#f_disp').value;
+  const intro = qs('#f_intro').value;
+  const cat = qs('#f_cat').value.trim();
+  const img = qs('#f_img').value.trim();
+  const img1= qs('#f_img1').value.trim();
+  const img2= qs('#f_img2').value.trim();
+  const img3= qs('#f_img3').value.trim();
+  const img4= qs('#f_img4').value.trim();
+
+  if(!name) return toast('商品名称必填');
+  if(price==="" || isNaN(price)) return toast('价格必须为整数');
+  if(inv==="" || isNaN(inv)) return toast('库存必须为整数');
+  if(exchange==="" || isNaN(exchange)) return toast('兑换值必须为整数');
+  if(intro.length>500) return toast('介绍不能超过 500 字');
+  for (const s of [cat,name,img,img1,img2,img3,img4]){
+    if(s && s.length>255) return toast('有字段超过 255 字符限制');
+  }
+
+  const payload = {
+    action: editingId? "update":"create",
+    id: editingId || undefined,
+    product_name: name,
+    product_category: cat,
+    price: parseInt(price,10),
+    inventory: parseInt(inv,10),
+    exchange_value: parseInt(exchange,10),
+    is_display: disp,
+    product_introduce: intro,
+    product_image: img,
+    product_introduce_image1: img1,
+    product_introduce_image2: img2,
+    product_introduce_image3: img3,
+    product_introduce_image4: img4
+  };
+
+  const res = await apiPost(payload);
+  if(res.code===0){
+    toast('保存成功'); closeModal(); loadList();
+  }else if(res.code===2001){
+    toast('同分类下已存在同名商品');
+  }else{
+    toast('保存失败：'+res.msg);
+  }
+};
+
+// 编辑、删除、显隐
+async function onEdit(id){
+  const res = await apiGet({action:'detail', id});
+  if(res.code!==0 || !res.data){ toast('获取详情失败'); return; }
+  openModal(res.data);
+}
+async function onDelete(id){
+  if(!confirm('确认删除该商品？')) return;
+  const res = await apiPost({action:'delete', ids:id});
+  if(res.code===0){ toast('删除成功'); loadList(); }
+  else toast('删除失败：'+res.msg);
+}
+async function onToggle(id, cur){
+  const to = cur==0 ? 1 : 0;
+  const res = await apiPost({action:'toggle_display', id, is_display: to});
+  if(res.code===0){ toast('已更新显示状态'); loadList(); }
+  else toast('操作失败：'+res.msg);
+}
+
+// 关闭方式：X / 点击遮罩 / Esc / 取消按钮
+qs('#xClose').onclick = closeModal;
+qs('#cancelBtn').onclick = closeModal;
+qs('#editModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && qs('#editModal').style.display === 'flex') closeModal();
+});
+
+// 初始化
+window.addEventListener('DOMContentLoaded', ()=>{
+  qs('#f_intro').addEventListener('input', updateIntroCnt);
+  loadList();
+});
+</script>
+</body>
+</html>

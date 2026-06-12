@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>修改设备信息</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 20px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      text-align: center;
+    }
+
+    .form-field {
+      margin-bottom: 16px;
+    }
+
+    .form-field label {
+      display: block;
+      font-size: 14px;
+      color: var(--secondary);
+      margin-bottom: 6px;
+    }
+
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+    }
+
+    .submit-btn {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .submit-btn:hover {
+      background-color: #4a77e4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">修改设备信息</div>
+      <form id="modify-form">
+        <div class="form-field">
+          <label for="name">设备名称</label>
+          <input type="text" id="name" name="name" required>
+        </div>
+        <div class="form-field">
+          <label for="share_name">设备分享名称</label>
+          <input type="text" id="share_name" name="share_name" required>
+        </div>
+        <div class="form-field">
+          <label for="image_device_serial">前图传</label>
+          <input type="text" id="image_device_serial" name="image_device_serial" required readonly>
+        </div>
+        <div class="form-field">
+          <label for="bk_image_device_serial">后图传</label>
+          <input type="text" id="bk_image_device_serial" name="bk_image_device_serial" readonly>
+        </div>
+        <!--<div class="form-field">-->
+        <!--  <label for="status">设备状态</label>-->
+        <!--  <select id="status" name="status" required>-->
+        <!--    <option value="在线">在线</option>-->
+        <!--    <option value="离线">离线</option>-->
+        <!--    <option value="占有">占有</option>-->
+        <!--  </select>-->
+        <!--</div>-->
+
+
+        <div class="form-field">
+          <label for="sharing_status">分享状态</label>
+          <select id="sharing_status" name="sharing_status" required>
+            <option value="正在共享">正在共享</option>
+            <option value="未共享">未共享</option>
+          </select>
+        </div>
+        <!-- 隐藏字段，设备ID -->
+        <input type="hidden" id="device_id" name="device_id">
+        <button type="submit" class="submit-btn">保存修改</button>
+      </form>
+    </div>
+  </div>
+
+ <script>
+ let userCanEditImage = false;
+
+async function fetchCurrentUserRole() {
+  try {
+    const res = await fetch('https://open.rcwulian.cn/api/operat/get_current_user.php', { credentials: 'include' });
+    const result = await res.json();
+
+    if (result.code === 0 && result.data.role_id === 1) {
+      userCanEditImage = true;
+    }
+  } catch (err) {
+    console.warn('获取用户角色失败:', err);
+  }
+}
+
+  // 页面加载时从 URL 参数中获取设备信息 
+  window.addEventListener('DOMContentLoaded', async function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const device = {};
+   // ✅ 正确写法
+    urlParams.forEach((value, key) => {
+      device[key] = value; // 不再 decodeURIComponent
+    });
+     await fetchCurrentUserRole(); // 获取权限
+
+
+    if (Object.keys(device).length > 0) {
+      document.getElementById('device_id').value = device.serial_number;
+      document.getElementById('name').value = device.name || '';
+      document.getElementById('share_name').value = device.share_name || '';
+      document.getElementById('image_device_serial').value = device.image_device_serial || '';
+      document.getElementById('bk_image_device_serial').value = device.bk_image_device_serial || '';
+    //   document.getElementById('status').value = device.status || '未知';
+//     const statusSelect = document.getElementById('status');
+// const validStatuses = ['在线', '离线', '占有'];
+// if (validStatuses.includes(device.status)) {
+//   statusSelect.value = device.status;
+// } else {
+//   statusSelect.value = '离线'; // 默认值
+// }
+
+
+      document.getElementById('sharing_status').value = device.sharing_status || '正在共享';
+      checkRejectedVehicleName(device.serial_number);
+      
+      // 👇 根据权限设置字段是否只读
+        if (userCanEditImage) {
+          document.getElementById('image_device_serial').removeAttribute('readonly');
+          document.getElementById('bk_image_device_serial').removeAttribute('readonly');
+        }
+
+    } else {
+      alert('未获取到设备信息');
+    }
+  });
+
+  // 提交表单
+  document.getElementById('modify-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    
+    const imageSerial = document.getElementById('image_device_serial').value.trim();
+    const bkImageSerial = document.getElementById('bk_image_device_serial').value.trim();
+    const hexRegex = /^[a-fA-F0-9]{16,20}$/;
+    
+    // if (imageSerial && !hexRegex.test(imageSerial)) {
+    // alert('前图传格式不正确，请输入16~20位十六进制字符');
+    // return;
+    // }
+    
+    // if (bkImageSerial && !hexRegex.test(bkImageSerial)) {
+    // alert('后图传格式不正确，请输入16~20位十六进制字符');
+    // return;
+    // }
+    const submitBtn = document.querySelector('.submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
+
+    const formData = new FormData(this);
+    const data = {};
+    formData.forEach((value, key) => data[key] = value);
+
+    fetch('https://open.rcwulian.cn/api/vehicle/modifyDevice.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    })
+      .then(response => response.json())
+      .then(result => {
+  if (result.code === 0) {
+    alert(result.msg);
+    history.back();  // 使用浏览器历史返回
+    // alert(history);
+  } else if (result.code === 1008) {
+    alert(result.msg); // 含敏感词，已被退回
+    window.location.reload();
+  } else if (result.code === 1009) {
+    alert(result.msg); // 非敏感词但需要审核
+    history.back();  // 审核中同样返回
+  } else {
+    alert('修改失败：' + result.msg);
+  }
+})
+
+
+      .catch(error => {
+        console.error('修改设备信息失败:', error);
+        alert('修改设备信息失败，请重试');
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '保存修改';
+      });
+  });
+  async function checkRejectedVehicleName(device_id) {
+    const res = await fetch(`/api/venue/get_rejected_vehicle_name.php?device_id=${device_id}`);
+    const result = await res.json();
+
+    if (result.code === 0 && result.data.length > 0) {
+      const reasons = result.data.map(item => {
+      const label = item.field === 'name' ? '设备名称' : '分享名称';
+      return `【${label}】驳回原因：${item.reason}`;
+    }).join('\n\n');
+    
+    alert(reasons);
+
+
+      // 用户点击“确定”后立即清除 Redis 审核记录
+      await fetch('/api/venue/acknowledge_vehicle_reject.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keys: result.data.map(item => item.redis_key)
+        })
+      });
+    }
+  }
+</script>
+
+</body>
+</html>

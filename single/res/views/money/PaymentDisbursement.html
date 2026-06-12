@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提现服务</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui/css/layui.css">
+    <style>
+        .withdraw-container {
+            margin-top: 20px;
+            background: #fff;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .layui-form-item .layui-input-block {
+            margin-left: 120px;
+            min-height: 36px;
+        }
+        .layui-form-label {
+            width: 100px;
+            padding: 9px 15px;
+            font-weight: 500;
+        }
+        .layui-btn {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-card layadmin-header">
+      <div class="layui-breadcrumb" lay-filter="breadcrumb">
+        <a lay-href="">主页</a>
+        <a><cite>财务</cite></a>
+        <a><cite>提现服务</cite></a>
+      </div>
+    </div>
+
+    <div class="layui-row">
+        <div class="layui-col-lg12">
+            <div class="layui-card">
+               
+                <div class="layui-card-body">
+                    <form class="layui-form" action="handle_withdraw.php" method="post">
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">总金额：</label>
+                            <div class="layui-input-block">
+                                <input type="text" id="total_amount" name="available_amounts" readonly class="layui-input" value="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">可提现金额：</label>
+                            <div class="layui-input-block">
+                                <input type="text" id="withdrawable_amount" name="available_amount" readonly class="layui-input" value="0.00">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">本次提现金额：</label>
+                            <div class="layui-input-block">
+                                <input type="text" name="amount" required lay-verify="required|number" placeholder="请输入提现金额" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+
+                        <div class="layui-form-item">
+                            <label class="layui-form-label">收款账号：</label>
+                            <div class="layui-input-block">
+                                <select name="account" lay-verify="required">
+                                    <option value="">请选择收款账号</option>
+                                    <option value="1">银行卡 (**** **** **** 1234)</option>
+                                    <option value="2">支付宝 (example@example.com)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="layui-form-item">
+                            <div class="layui-input-block">
+                                <button class="layui-btn" lay-submit lay-filter="formWithdraw">立即提现</button>
+                                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/layui/layui.js"></script>
+    <script>
+    layui.use(['form', 'layer', 'jquery'], function(){
+        var form = layui.form;
+        var layer = layui.layer;
+        var $ = layui.jquery; // 获取LayUI内置的jQuery
+
+        // 页面加载完成后执行
+        $(document).ready(function() {
+            // 发起AJAX请求获取金额
+            $.ajax({
+                url: 'api/pay/CalculateSettlements.php', // API的URL
+                type: 'GET',
+                success: function(response) {
+                    // 解析返回的JSON数据
+                    var data = JSON.parse(response);
+                    if(data.code === 0) {
+                        // 更新页面上的金额显示
+                        $('#total_amount').val(data.notSettledAmount);
+                        $('#withdrawable_amount').val(data.checkedNotSettledAmount);
+                    } else {
+                        // 错误处理
+                        layer.msg('获取数据失败: ' + data.msg);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // 请求失败的处理
+                    layer.msg('请求失败: ' + error);
+                }
+            });
+        });
+
+        // 监听提交
+        form.on('submit(formWithdraw)', function(data){
+            layer.msg(JSON.stringify(data.field));
+            return false;
+        });
+
+        // 在 DOM 完全加载后重新渲染表单
+        form.render();
+    });
+    </script>
+</body>
+</html>

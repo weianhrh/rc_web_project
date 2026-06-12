@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>场地资费套餐</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pricing-item {
+            background: #ffffff;
+            border-radius: 12px;
+            margin-top: 20px;
+            /* padding: 20px; */
+            box-shadow: var(--shadow);
+            /* display: grid
+        ; */
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+
+        }
+
+        .pricing-item .label {
+            color: var(--secondary);
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .pricing-item .value {
+            color: #333;
+            font-size: 16px;
+            text-align: right;
+        }
+
+        .edit-btn,
+        .save-btn,
+        .add-btn,
+        .delete-btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 16px;
+            margin-right: 10px;
+        }
+
+        .delete-btn {
+            background-color: #ff4d4f;
+        }
+
+        .edit-btn:hover,
+        .save-btn:hover,
+        .add-btn:hover {
+            background-color: #4c6ef5;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff7875;
+        }
+
+        .edit-input {
+            background-color: #f8f9ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 12px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    
+        .modal-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: #f8f9ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 14px;
+            color: #333;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%237f8fa4" class="bi bi-chevron-down" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+        }
+@media (max-width: 768px) {
+  .card-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px; /* 元素之间留出间距 */
+  }
+
+  .card-title .add-btn {
+    width: 100%;
+  }
+
+  .card-title #venue-select-wrapper {
+    width: 100%;
+  }
+
+  .card-title select.modal-select {
+    width: 100%;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-title">
+                场地资费套餐
+                <button class="add-btn" onclick="openAddModal()">添加套餐</button>
+               <div id="venue-select-wrapper" class="select-wrap" style="display: none;">
+                  <label for="venue_id"></label>
+                  <select id="venue_id" class="modal-select" onchange="loadPricingData()"></select>
+                </div>
+
+            </div>
+            <div id="pricing-list"></div> <!-- 这里将动态插入资费套餐 -->
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddModal()">&times;</span>
+            <h2>添加套餐</h2>
+            <div class="pricing-item">
+                <div class="label">可驾驶时长（分钟）</div>
+                <input type="number" id="add-minutes" class="edit-input">
+            </div>
+            <div class="pricing-item">
+                <div class="label">可驾驶时长的电池费用</div>
+                <input type="number" id="add-battery" class="edit-input" value="0.00">
+            </div>
+            <div class="pricing-item">
+                <div class="label">备注</div>
+                <input type="text" id="add-notes" class="edit-input">
+            </div>
+            <div class="pricing-item">
+                <div class="label">套餐标签</div>
+                <select id="add-tag" class="modal-select">
+                    <option value="(福利)">(福利)</option>
+                    <option value="(推荐)">(推荐)</option>
+                    <option value="(划算)">(划算)</option>
+                    <option value="(超值)">(超值)</option>
+                </select>
+            </div>
+            <button class="add-btn" onclick="addPricingOption()">添加</button>
+        </div>
+    </div>
+
+    <script>
+    
+    let currentUserRole = 0;
+    
+    fetch('https://open.rcwulian.cn/api/operat/get_current_user.php')
+      .then(res => res.json())
+      .then(data => {
+        if (data.code === 0) {
+          currentUserRole = data.data.role_id;
+    
+          // ✅ 放在成功回调内部
+              if (currentUserRole === 1) {
+            document.getElementById('venue-select-wrapper').style.display = 'block';
+            setupVenueSelectAndLoad();
+            }else {
+                loadPricingData(); // 代理商直接加载
+          }
+    
+        } else {
+          alert('未登录');
+          location.href = '/login.html';
+        }
+      });
+
+function setupVenueSelectAndLoad() {
+    const select = document.getElementById('venue_id');
+
+    fetch('https://open.rcwulian.cn/api/operat/EnergyGift.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=get_venues'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.code === 0) {
+            data.data.forEach(venue => {
+                const opt = document.createElement('option');
+                opt.value = venue.id;
+                opt.textContent = `${venue.id} - ${venue.venue_name}`;
+                if (venue.id == 10) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            loadPricingData(); // 加载默认选中场地
+        }
+    });
+}
+
+
+        // 生成默认套餐
+        function generateDefaultPricingOption() {
+            fetch('https://open.rcwulian.cn/api/operat/pricing_options.php',  {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({  action: 'insert_default' })
+            })
+            .then(response => response.json()) 
+            .then(data => {
+                if (data.code  === 0) {
+                    alert('默认套餐生成成功');
+                    loadPricingData(); // 重新加载数据
+                } else {
+                    alert('生成失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('  生成默认套餐失败:', error);
+                alert('生成失败，请检查网络');
+            });
+        }
+
+        // 加载资费套餐数据
+       function loadPricingData() {
+    let url = 'https://open.rcwulian.cn/api/operat/pricing_options.php';
+    if (currentUserRole === 1) {
+        const venue_id = document.getElementById('venue_id').value;
+        url += `?venue_id=${venue_id}`;
+    }
+
+    const pricingListContainer = document.getElementById('pricing-list');
+    pricingListContainer.innerHTML = '<p style="color:#999">加载中...</p>'; // 清空旧数据并提示加载
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            pricingListContainer.innerHTML = ''; // 再清空一次，准备插入新数据
+
+            if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
+                data.data.forEach(pricing => {
+                    const pricingItem = document.createElement('div');
+                    pricingItem.classList.add('pricing-item');
+
+                    const tag = pricing.Tag || '(福利)';
+                    pricingItem.innerHTML = `
+                        <div class="label">套餐名称</div>
+                        <div class="value" id="title-${pricing.ID}">
+                            ${pricing.Minutes}分钟${parseInt(pricing.Battery)}电池
+                            <select id="tag-select-${pricing.ID}" disabled>
+                                <option value="(福利)" ${pricing.Title.includes("福利") ? "selected" : ""}>(福利)</option>
+                                <option value="(推荐)" ${pricing.Title.includes("推荐") ? "selected" : ""}>(推荐)</option>
+                                <option value="(划算)" ${pricing.Title.includes("划算") ? "selected" : ""}>(划算)</option>
+                                <option value="(超值)" ${pricing.Title.includes("超值") ? "selected" : ""}>(超值)</option>
+                            </select>
+                        </div>
+
+                        <div class="label">可驾驶时长</div>
+                        <div class="value" id="minutes-${pricing.ID}">${pricing.Minutes ? pricing.Minutes + '分钟' : '无'}</div>
+
+                        <div class="label">可驾驶时长的电池费用</div>
+                        <div class="value" id="battery-${pricing.ID}">${pricing.Battery ? pricing.Battery : '无'}</div>
+
+                        <div class="label">备注</div>
+                        <div class="value" id="notes-${pricing.ID}">${pricing.Notes ? pricing.Notes : '无'}</div>
+
+                        <div class="label">资费类型</div>
+                        <div class="value" id="pricingType-${pricing.ID}">${pricing.PricingType}</div>
+
+                        <button class="edit-btn" onclick="enableEdit(${pricing.ID})">修改套餐</button>
+                        <button class="save-btn" style="display:none;" onclick="saveChanges(${pricing.ID})">保存</button>
+                        <button class="delete-btn" onclick="deletePricingOption(${pricing.ID})">删除套餐</button>
+                    `;
+
+                    pricingListContainer.appendChild(pricingItem);
+                });
+            } else {
+                pricingListContainer.innerHTML = '<p style="color:#999">该场地暂无套餐数据。</p>';
+            }
+        })
+        .catch(error => {
+            console.error('数据加载失败:', error);
+            pricingListContainer.innerHTML = '<p style="color:red">加载失败，请检查网络</p>';
+        });
+}
+
+        // 使字段可编辑
+        function enableEdit(id) {
+            const fields = [
+                { id: `minutes-${id}`, label: '可驾驶时长' },
+                { id: `battery-${id}`, label: '可驾驶时长的电池费用' },
+                { id: `notes-${id}`, label: '备注' }
+            ];
+        
+            fields.forEach(field  => {
+                const valueElement = document.getElementById(field.id);  
+                const currentValue = valueElement.textContent.replace('  分钟', '');
+                valueElement.innerHTML  = `<input type="text" class="edit-input" value="${currentValue}">`;
+            });
+        
+            // 启用下拉框
+            document.getElementById(`tag-select-${id}`).disabled  = false;
+        
+            // 隐藏编辑按钮，显示保存按钮
+            const pricingItem = document.querySelector(`#title-${id}`).closest('.pricing-item'); 
+            const editBtn = pricingItem.querySelector('.edit-btn'); 
+            const saveBtn = pricingItem.querySelector('.save-btn'); 
+        
+            editBtn.style.display  = 'none';
+            saveBtn.style.display  = 'inline-block';
+        }
+
+        // 保存编辑内容
+        function saveChanges(id) {
+            const batteryInput = document.getElementById(`battery-${id}`).querySelector('input'); 
+            const batteryValue = parseFloat(batteryInput.value); 
+            const numberRegex = /^\d+(\.\d+)?$/;
+            if (!batteryInput.value || !numberRegex.test(batteryInput.value) || isNaN(batteryValue)) {
+                alert('请输入纯数字格式的电池费用');
+                return;
+            }
+
+
+            if (isNaN(batteryValue) || batteryValue < 1) {
+                alert('套餐充值不能低于 1 元钱，请输入有效的金额。');
+                return;
+            }
+
+            const minutesInput = document.getElementById(`minutes-${id}`).querySelector('input'); 
+            const minutesValue = parseInt(minutesInput.value); 
+            // const rate = parseFloat((batteryValue / minutesValue).toFixed(2));
+            // console.log("saveChanges:",currentUserRole);
+            //  if (currentUserRole !== 1 && (isNaN(rate) || rate < 0.8 || rate > 2)) {
+            //     alert('费率必须在 0.8 元/分钟到 2 元/分钟之间，请重新输入。');
+            //     return;
+            // }
+            if (!numberRegex.test(minutesInput.value) || isNaN(minutesValue)) {
+                alert('请输入纯数字格式的可驾驶时长');
+                return;
+            }
+
+            if (minutesValue > 120) {
+                alert('可驾驶时长不能超过 120 分钟');
+                return;
+            }
+
+            const rate = batteryValue / minutesValue;
+            const roundedRate = Math.round(rate * 100) / 100; // 保留两位有效小数但避免精度问题
+            
+            if (currentUserRole !== 1 && (roundedRate < 0.8 || roundedRate > 2)) {
+                alert(`费率必须在 0.8 元/分钟到 2 元/分钟之间（当前费率：${roundedRate.toFixed(2)}），请重新输入。`);
+                return;
+            }
+            
+                            
+            const tagSelect = document.getElementById(`tag-select-${id}`); 
+            const selectedTag = tagSelect.value; 
+
+            const packageName = `${minutesValue}分钟${parseInt(batteryValue)}电池${selectedTag}`;
+
+            const updatedData = {
+                id: id,
+                minutes: minutesValue,
+                battery: batteryValue,
+                notes: document.getElementById(`notes-${id}`).querySelector('input').value, 
+                packageName: packageName
+            };
+
+            // 发送保存请求到后台
+            fetch('https://open.rcwulian.cn/api/operat/pricing_options.php',  {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(updatedData).toString()
+            })
+            .then(response => response.json()) 
+            .then(data => {
+                if (data.code  === 0) {
+                    alert('资费套餐更新成功');
+                    loadPricingData(); // 重新加载数据
+                } else {
+                    alert('更新失败，请重试：' + data.msg);  // 显示后端返回的错误信息
+                }
+            })
+            .catch(error => {
+                console.error('  保存失败:', error);
+                alert('保存失败，请检查网络');
+            });
+        }
+
+        // 删除套餐
+        function deletePricingOption(id) {
+            if (confirm('确定要删除该套餐吗？')) {
+                const formData = new FormData();
+                formData.append('action',  'delete');
+                formData.append('id',  id);
+                
+
+                fetch('https://open.rcwulian.cn/api/operat/pricing_options.php',  {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json()) 
+                .then(data => {
+                    if (data.code  === 0) {
+                        alert('套餐删除成功');
+                        loadPricingData(); // 重新加载数据
+                    } else {
+                        alert('删除失败，请重试：' + data.msg); 
+                    }
+                })
+                .catch(error => {
+                    console.error('  删除失败:', error);
+                    alert('删除失败，请检查网络');
+                });
+            }
+        }
+
+        // 打开添加套餐模态框
+        function openAddModal() {
+            alert("tips:套餐名称是通过 (可驾驶时长(分钟)+可驾驶时长的电池费用+套餐标签) 动态生成的哦.^_^");
+            const modal = document.getElementById('add-modal'); 
+            modal.style.display  = 'block';
+        }
+
+        // 关闭添加套餐模态框
+        function closeAddModal() {
+            const modal = document.getElementById('add-modal'); 
+            modal.style.display  = 'none';
+        }
+
+        // 添加套餐
+        function addPricingOption() {
+            const minutesInput = document.getElementById('add-minutes');
+            const batteryInput = document.getElementById('add-battery');
+            const notesInput = document.getElementById('add-notes');
+            const tagSelect = document.getElementById('add-tag');
+            const venueIdSelect = document.getElementById('venue_id');
+            const selectedVenueId = venueIdSelect ? venueIdSelect.value : null;
+
+
+
+            const minutes = parseInt(minutesInput.value);
+            const battery = parseFloat(batteryInput.value);
+            const notes = notesInput.value;
+            const tag = tagSelect.value;
+
+            const numberRegex = /^\d+(\.\d+)?$/;
+            if (!numberRegex.test(minutesInput.value) || !numberRegex.test(batteryInput.value)) {
+                alert('请输入纯数字格式的可驾驶时长和电池费用');
+                return;
+            }
+            if (isNaN(minutes) || isNaN(battery) || battery < 1) {
+                alert('请输入有效的可驾驶时长和电池费用，且电池费用不能低于 1 元。');
+                return;
+            }
+
+            if (minutes > 120) {
+                alert('可驾驶时长不能超过 120 分钟');
+                return;
+            }
+
+            const rate = battery / minutes;
+             if (currentUserRole !== 1 && (isNaN(rate) || rate < 0.8 || rate > 2)) {
+                alert('费率必须在 0.8 元/分钟到 2 元/分钟之间，请重新输入。');
+                return;
+            }
+            
+            const packageName = `${minutes}分钟${parseInt(battery)}电池${tag}`;
+            
+            const formData = new FormData();
+            formData.append('venue_id', selectedVenueId);  // ✅ 添加这一行
+            formData.append('action', 'add');
+            formData.append('minutes', minutes);
+            formData.append('battery', battery);
+            formData.append('notes', notes);
+            formData.append('packageName', packageName);
+
+            fetch('https://open.rcwulian.cn/api/operat/pricing_options.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    alert('套餐添加成功');
+                    closeAddModal();
+                    loadPricingData();
+                } else if (data.code === 4) {
+                    alert('添加失败：套餐数量已达上限（4个），不能继续添加');
+                } else {
+                    alert('添加失败，请重试：' + data.msg);
+                }
+            })
+            .catch(error => {
+                console.error('添加失败:', error);
+                alert('添加失败，请检查网络');
+            });
+        }
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+<title>驾驶订单列表</title>
+
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>场地</cite></a>
+    <a><cite>驾驶订单</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="layadmin-reservation-formlist">
+      <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label">订单编号</label>
+          <div class="layui-input-block">
+            <input type="text" name="order_number" placeholder="请输入订单编号" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">驾驶日期</label>
+          <div class="layui-input-block">
+            <input type="text" name="start_date" id="start_date" placeholder="开始日期" autocomplete="off" class="layui-input">
+          </div>
+          <div class="layui-input-block">
+            <input type="text" name="end_date" id="end_date" placeholder="结束日期" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+         <!-- 新增的复选框 -->
+        <div class="layui-inline">
+          <label class="layui-form-label">排除能量</label>
+          <div class="layui-input-block">
+            <input type="checkbox" name="exclude_energy" lay-skin="switch" lay-text="是|否" checked>
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">用户ID</label>
+          <div class="layui-input-block">
+            <input type="text" name="uid" placeholder="请输入用户ID" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        
+       
+        
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-reservation-front-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i> 搜索
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layui-card-body">
+      <table id="LAY-reservation-manage" lay-filter="LAY-reservation-manage"></table>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+layui.use(['admin', 'table', 'form', 'layer', 'laydate'], function(){
+  var table = layui.table,
+      admin = layui.admin,
+      form = layui.form,
+      layer = layui.layer,
+      laydate = layui.laydate;
+
+  // 初始化日期选择器
+  laydate.render({
+    elem: '#start_date',
+    type: 'date'
+  });
+  laydate.render({
+    elem: '#end_date',
+    type: 'date'
+  });
+
+  table.render({
+  elem: '#LAY-reservation-manage',
+  url: '/api/venue/GetDrivingOrders.php', // 更改为新的接口URL
+  cols: [[
+    {type: 'checkbox', fixed: 'left'},
+    {field: 'order_id', title: '订单编号', minWidth: 100},
+    {field: 'uid', title: '用户ID', width: 80},
+     {field: 'nickname', title: '用户昵称', width: 110},
+    {field: 'serial_number', title: '设备ID', width: 110},
+    {field: 'status', title: '状态', width: 110},
+    {field: 'billing_rules', title: '可驾驶时长', width:110},
+    {field: 'pays_type', title: '支付类型', width: 110},
+    {field: 'payment_amount', title: '支付金额', width: 110, templet: function(d) {
+      return '¥ ' + (d.payment_amount ? parseFloat(d.payment_amount).toFixed(2) : '0.00');
+    }},
+    {field: 'start_time', title: '驾驶开始时间', minWidth: 160},
+    {field: 'end_time', title: '驾驶结束时间', minWidth: 160}
+  ]],
+  page: true,
+  limit: 20, // 默认每页显示20条数据
+  limits: [20, 30, 500], // 用户可以选择的每页显示条数选项
+  height: 'full-220',
+  text: '对不起，加载出现异常！',
+  totalRow: true, // 开启表尾合计行
+    done: function(res, curr, count) {
+      // 当表格渲染完毕后计算总金额
+      var totalPayment = 0;
+      res.data.forEach(function(item) {
+        totalPayment += parseFloat(item.payment_amount || 0);
+      });
+      // 更新合计行数据
+      $(".layui-table-total td[data-field='payment_amount'] .layui-table-cell").text('¥ ' + totalPayment.toFixed(2));
+    }
+});
+
+  // 搜索功能
+  form.on('submit(LAY-reservation-front-search)', function(data){
+    var field = data.field;
+    table.reload('LAY-reservation-manage', {
+      where: field
+    });
+  });
+
+  form.render();
+});
+</script>

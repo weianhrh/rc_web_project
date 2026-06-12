@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>主播认证</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- 阿里云 H5 获取 MetaInfo -->
+    <script type="text/javascript" src="https://o.alicdn.com/yd-cloudauth/cloudauth-cdn/jsvm_all.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            background: #f5f7fb;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+            color: #333;
+        }
+
+        .wrap {
+            max-width: 760px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 18px;
+            padding: 28px;
+            box-shadow: 0 8px 30px rgba(0,0,0,.08);
+        }
+
+        h2 {
+            margin: 0 0 24px;
+            font-size: 22px;
+        }
+
+        .form-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .form-row label {
+            width: 110px;
+            color: #666;
+            font-size: 15px;
+        }
+
+        .form-row input {
+            flex: 1;
+            height: 38px;
+            border: 1px solid #d6dbe6;
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .form-row input:focus {
+            border-color: #409eff;
+            box-shadow: 0 0 0 3px rgba(64,158,255,.12);
+        }
+
+        .form-row input:disabled {
+            background: #f5f7fa;
+            color: #606266;
+            cursor: not-allowed;
+        }
+
+        .btn {
+            height: 40px;
+            padding: 0 22px;
+            border: none;
+            border-radius: 8px;
+            background: #1677ff;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .btn:disabled {
+            background: #aab7c8;
+            cursor: not-allowed;
+        }
+
+        .btn-gray {
+            background: #606266;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+
+        .result {
+            margin-top: 18px;
+            padding: 14px;
+            background: #f7f9fc;
+            border-radius: 10px;
+            word-break: break-all;
+            line-height: 1.7;
+            display: none;
+        }
+
+        .tip {
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+
+        .wechat-tip {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 10px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #c2410c;
+            line-height: 1.7;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .mobile-title {
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+
+        .mobile-desc {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 26px;
+        }
+
+        @media (max-width: 600px) {
+            .wrap {
+                margin: 18px;
+                padding: 22px;
+            }
+
+            .form-row {
+                display: block;
+            }
+
+            .form-row label {
+                display: block;
+                width: auto;
+                margin-bottom: 8px;
+            }
+
+            .form-row input {
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .btn,
+            .btn-link {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrap" id="adminBox" style="display:none;">
+    <h2>主播认证资料录入</h2>
+
+    <div class="tip">
+        后台录入资料后，会生成实名认证按钮；请主播本人点击按钮进入阿里云点头/摇头活体认证。
+    </div>
+
+    <div class="form-row">
+        <label>姓名</label>
+        <input id="real_name" placeholder="请输入真实姓名">
+    </div>
+
+    <!--<div class="form-row">-->
+    <!--    <label>手机号</label>-->
+    <!--    <input id="phone" placeholder="请输入手机号">-->
+    <!--</div>-->
+
+    <div class="form-row">
+        <label>身份证号</label>
+        <input id="id_card_no" placeholder="请输入身份证号">
+    </div>
+
+    <div class="form-row">
+        <label>开播账号ID</label>
+        <input id="uid" placeholder="APP'我的'页面ID">
+    </div>
+
+    <div class="center">
+        <button class="btn" id="submitBtn" onclick="submitAuth()">提交并生成认证按钮</button>
+    </div>
+
+    <div class="result" id="resultBox"></div>
+</div>
+
+<div class="wrap center" id="mobileBox" style="display:none;">
+    <div class="mobile-title">主播实名认证</div>
+    <div class="mobile-desc">
+        请使用主播本人手机完成认证。<br>
+        认证准备完成后，请点击开始认证，系统会在新页面打开阿里云活体认证页面。
+    </div>
+
+    <button class="btn" id="startBtn" onclick="startFaceAuth()" disabled>认证准备中...</button>
+
+    <div class="result" id="mobileResult"></div>
+</div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const token = params.get('token');
+
+let authFormLocked = false;
+let preparedCertifyUrl = '';
+let prepareStarted = false;
+
+const WECHAT_BROWSER_TIP = '若微信APP内置浏览器无法跳转认证页面，请更换其它浏览器进行认证';
+
+function isWeChatBrowser() {
+    const ua = navigator.userAgent || '';
+    return /MicroMessenger/i.test(ua);
+}
+
+function getWeChatTipHtml() {
+    if (!isWeChatBrowser()) {
+        return '';
+    }
+
+    return `
+        <div class="wechat-tip">
+            ${WECHAT_BROWSER_TIP}<br>
+            请点击微信右上角“...”选择“在浏览器打开”，再进行实名认证。
+        </div>
+    `;
+}
+
+if (token) {
+    document.getElementById('mobileBox').style.display = 'block';
+
+    const startBtn = document.getElementById('startBtn');
+    const result = document.getElementById('mobileResult');
+
+    if (isWeChatBrowser()) {
+        startBtn.disabled = true;
+        startBtn.innerText = '请更换浏览器认证';
+
+        result.style.display = 'block';
+        result.innerHTML = getWeChatTipHtml();
+    } else {
+        prepareFaceAuth();
+    }
+} else {
+    document.getElementById('adminBox').style.display = 'block';
+
+    if (isWeChatBrowser()) {
+        const resultBox = document.getElementById('resultBox');
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = getWeChatTipHtml();
+    }
+
+    checkVenueAuthStatus();
+}
+
+async function submitAuth() {
+    const btn = document.getElementById('submitBtn');
+    const resultBox = document.getElementById('resultBox');
+
+    const data = {
+        real_name: document.getElementById('real_name').value.trim(),
+        phone: '', // 手机号已取消，后端写空即可
+        id_card_no: document.getElementById('id_card_no').value.trim(),
+        uid: document.getElementById('uid').value.trim()
+    };
+
+    if (!data.real_name || !data.id_card_no || !data.uid) {
+        alert('请把姓名、身份证号、开播账号ID都填完整');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = '提交中...';
+
+    try {
+        const res = await fetch('/api/admin/anchor_auth_submit.php?action=create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+
+        const json = await res.json();
+
+        if (json.code !== 0) {
+            alert(json.msg || '提交失败');
+            return;
+        }
+
+        const authUrl = json.data && json.data.auth_url ? json.data.auth_url : '';
+
+        if (!authUrl) {
+            alert('认证入口生成失败，请联系管理员');
+            return;
+        }
+
+        resultBox.style.display = 'block';
+        resultBox.innerHTML = `
+            ${getWeChatTipHtml()}
+            <b>认证入口已生成</b><br>
+            不显示认证链接，不提供复制按钮。<br>
+            请让主播本人点击下面按钮完成实名认证。<br><br>
+            <a class="btn btn-link" href="${escapeHtml(authUrl)}" target="_blank" rel="noopener">
+                开始实名认证
+            </a>
+        `;
+    } catch (e) {
+        alert('请求失败：' + e.message);
+    } finally {
+        if (!authFormLocked) {
+            btn.disabled = false;
+            btn.innerText = '提交并生成认证按钮';
+        }
+    }
+}
+
+async function prepareFaceAuth() {
+    const btn = document.getElementById('startBtn');
+    const result = document.getElementById('mobileResult');
+
+    if (!token) {
+        result.style.display = 'block';
+        result.innerText = '认证链接无效';
+        return;
+    }
+
+    if (prepareStarted) {
+        return;
+    }
+
+    prepareStarted = true;
+    preparedCertifyUrl = '';
+
+    btn.disabled = true;
+    btn.innerText = '认证准备中...';
+
+    result.style.display = 'block';
+    result.innerText = '正在准备认证环境，请稍候...';
+
+    if (!window.getMetaInfo) {
+        result.innerText = '阿里云认证组件加载失败，请刷新页面或更换浏览器';
+        btn.disabled = false;
+        btn.innerText = '重新准备认证';
+        prepareStarted = false;
+        return;
+    }
+
+    try {
+        const metaInfo = window.getMetaInfo();
+
+        const res = await fetch('/api/admin/anchor_auth_submit.php?action=init', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                token: token,
+                meta_info: metaInfo
+            })
+        });
+
+        const json = await res.json();
+
+        if (json.code !== 0) {
+            result.innerText = json.msg || '认证初始化失败';
+            btn.disabled = false;
+            btn.innerText = '重新准备认证';
+            prepareStarted = false;
+            return;
+        }
+
+        preparedCertifyUrl = json.data && json.data.certify_url ? json.data.certify_url : '';
+
+        if (!preparedCertifyUrl) {
+            result.innerText = '阿里云认证地址为空，请重新准备认证';
+            btn.disabled = false;
+            btn.innerText = '重新准备认证';
+            prepareStarted = false;
+            return;
+        }
+
+        result.innerText = '认证准备完成，请点击“开始认证”，系统会在新页面打开认证页面。';
+
+        btn.outerHTML = `
+            <a class="btn btn-link" id="startBtn" href="${escapeHtml(preparedCertifyUrl)}" target="_blank" rel="noopener">
+                开始认证
+            </a>
+        `;
+    } catch (e) {
+        result.innerText = '认证准备失败：' + e.message;
+        btn.disabled = false;
+        btn.innerText = '重新准备认证';
+        prepareStarted = false;
+    }
+}
+
+function startFaceAuth() {
+    const btn = document.getElementById('startBtn');
+    const result = document.getElementById('mobileResult');
+
+    if (isWeChatBrowser()) {
+        result.style.display = 'block';
+        result.innerHTML = getWeChatTipHtml();
+        return;
+    }
+
+    if (!preparedCertifyUrl) {
+        result.style.display = 'block';
+        result.innerText = '认证地址还在准备中，请稍候再点。';
+
+        if (!prepareStarted) {
+            prepareFaceAuth();
+        }
+
+        return;
+    }
+
+    // 兜底：如果按钮还没有被替换成 a 标签，则用新页面打开
+    const win = window.open(preparedCertifyUrl, '_blank', 'noopener');
+
+    if (!win) {
+        result.style.display = 'block';
+        result.innerHTML = `
+            新页面被浏览器拦截，请点击下面按钮继续认证。<br><br>
+            <a class="btn btn-link" href="${escapeHtml(preparedCertifyUrl)}" target="_blank" rel="noopener">
+                打开认证页面
+            </a>
+        `;
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = '已打开认证页面';
+    }
+}
+
+function setInputValue(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.value = value == null ? '' : String(value);
+    }
+}
+
+function lockInput(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.disabled = true;
+        el.readOnly = true;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (ch) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch];
+    });
+}
+
+function lockAuthedForm(record) {
+    authFormLocked = true;
+
+    const btn = document.getElementById('submitBtn');
+    const resultBox = document.getElementById('resultBox');
+
+    record = record || {};
+
+    // 上面输入框显示已认证信息
+    setInputValue('real_name', record.real_name || '');
+    setInputValue('id_card_no', record.id_card_mask || '');
+    setInputValue('uid', record.uid || '');
+
+    // 锁定输入框
+    lockInput('real_name');
+    lockInput('id_card_no');
+    lockInput('uid');
+
+    btn.disabled = true;
+    btn.innerText = '当前场地已认证';
+
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = `
+        <b>当前场地已存在认证成功记录</b><br>
+        不允许重复发起主播实名认证。
+    `;
+}
+
+async function checkVenueAuthStatus() {
+    try {
+        const res = await fetch('/api/admin/anchor_auth_check_venue.php', {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        const json = await res.json();
+
+        if (json.code === 1010 || (json.data && json.data.can_auth === false)) {
+            const record = json.data && json.data.record ? json.data.record : {};
+            lockAuthedForm(record);
+        }
+    } catch (e) {
+        console.log('检查场地认证状态失败', e);
+    }
+}
+</script>
+
+</body>
+</html>

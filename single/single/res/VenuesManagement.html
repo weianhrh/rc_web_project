@@ -1,0 +1,573 @@
+<!DOCTYPE html> 
+<html lang="zh-CN"> 
+ 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>场地管理</title> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">  
+    <style> 
+        :root { 
+            --primary: #5b8cff; 
+            --secondary: #7f8fa4; 
+            --background-gradient-start: #f8f9ff; 
+            --background-gradient-end: #f0f3ff; 
+            --card-bg: #ffffff; 
+            --border-color: #ddd; 
+            --text-color: #333; 
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+            --transition: all 0.3s ease; 
+            --hover-bg: #f9f9f9; 
+        } 
+ 
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: "PingFang SC", system-ui; 
+        } 
+ 
+        body { 
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+        } 
+ 
+        .container { 
+            max-width: 1200px; 
+            width: 100%; 
+        } 
+ 
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+            transition: var(--transition); 
+        } 
+ 
+        .card-title { 
+            font-size: 24px; 
+            color: var(--text-color); 
+            margin-bottom: 20px; 
+            font-weight: 600; 
+            border-bottom: 2px solid var(--primary); 
+            padding-bottom: 10px; 
+            text-align: left; 
+        } 
+ 
+        /* 场地卡片样式 */ 
+        .venue-card { 
+            background: #fff; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            gap: 15px; 
+            transition: var(--transition); 
+        } 
+ 
+        .venue-card:hover { 
+            background-color: var(--hover-bg); 
+        } 
+ 
+        .venue-img { 
+            width: 100px; 
+            height: 100px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+        } 
+ 
+        .venue-info { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            font-size: 14px; 
+            color: var(--text-color); 
+        } 
+ 
+        .venue-info .venue-name { 
+            font-size: 16px; 
+            font-weight: 600; 
+            color: var(--primary); 
+        } 
+ 
+        .venue-info span { 
+            display: block; 
+        } 
+ 
+        .add-btn { 
+            align-self: flex-start; 
+            background-color: var(--primary); 
+            color: #fff; 
+            border: none; 
+            border-radius: 6px; 
+            padding: 8px 12px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            transition: var(--transition); 
+            margin-bottom: 15px; 
+        } 
+ 
+        .add-btn:hover { 
+            background-color: #4a77e4; 
+        } 
+ 
+        /* 加载提示 */ 
+        .loading { 
+            text-align: center; 
+            font-size: 16px; 
+            color: var(--primary); 
+            padding: 20px; 
+        } 
+ 
+        /* 添加场地表单样式 */ 
+        .add-venue-form { 
+            display: none; 
+            margin-bottom: 15px; 
+        } 
+ 
+        .add-venue-form input, 
+        .add-venue-form select { 
+            width: 100%; 
+            padding: 8px; 
+            margin-bottom: 10px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 4px; 
+        } 
+ 
+        .add-venue-form button { 
+            background-color: var(--primary); 
+            color: #fff; 
+            border: none; 
+            border-radius: 6px; 
+            padding: 8px 12px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            transition: var(--transition); 
+        } 
+ 
+        .add-venue-form button:hover { 
+            background-color: #4a77e4; 
+        } 
+ 
+        @media (max-width: 768px) { 
+            .venue-card { 
+                flex-direction: column; 
+                align-items: center; 
+            } 
+ 
+            .venue-img { 
+                width: 80px; 
+                height: 80px; 
+            } 
+ 
+            .venue-info { 
+                text-align: center; 
+            } 
+        } 
+ 
+        .venue-actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 15px;
+        }
+ 
+        .edit-btn {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+ 
+        .edit-btn:hover {
+            background-color: #4a77e4;
+        }
+ 
+        @media (max-width: 768px) {
+            .venue-actions {
+                padding-left: 0;
+                padding-top: 10px;
+            }
+        }
+        
+        .unban-btn {
+    background-color: #ff4d4f; /* 红色调代表“解除警告状态” */
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition);
+    margin-top: 8px;
+}
+
+.unban-btn:hover {
+    background-color: #d9363e;
+}
+.venue-actions {
+    display: flex;
+    gap: 10px; /* 添加按钮间隔 */
+    justify-content: flex-start; /* 按钮从左侧开始排列 */
+}
+.ban-btn {
+    background-color: #ffc107;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition);
+}
+.ban-btn:hover {
+    background-color: #d9363e;
+}
+
+    </style> 
+</head> 
+ 
+<body> 
+    <div class="container"> 
+        <div class="card"> 
+            <div class="card-title">场地管理</div> 
+            <button class="add-btn" id="add-venue-btn">添加场地</button> 
+            <input list="venue_options" id="venue_search" placeholder="输入场地名称搜索" autocomplete="off" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px;">
+            <datalist id="venue_options"></datalist>
+
+
+            <form class="add-venue-form" id="add-venue-form"> 
+                
+                <input type="text" name="venue_name" placeholder="场地名称"> 
+                <input type="text" name="image_url" value="https://ruoche.oss-cn-beijing.aliyuncs.com/app/img/wj.jpg" placeholder="场地图片链接"> 
+                <input type="text" name="venue_description" value="新开场地，敬请期待" placeholder="场地描述"> 
+                <select name="venue_tags"> 
+                    <option value="自营">自营</option> 
+                    <option value="推荐">推荐</option> 
+                    <option value="内测">内测</option> 
+                </select> 
+                <select name="venue_type"> 
+                    <option value="1">默认</option> 
+                    <option value="2">竞速</option> 
+                    <option value="3">工程车</option> 
+                </select> 
+                
+                <input type="text" name="start_time" value="10:00-21:00" placeholder="开放时间（格式：10:00 - 21:00）"> 
+              
+                <!-- 修改为下拉框选择开放状态 --> 
+                <select name="venue_status"> 
+                    <option value="休息中">休息中</option> 
+                    <option value="营业中">营业中</option> 
+                </select> 
+                <input type="text" name="live_stream_url" value="snssdk1128://user/profile/" placeholder="直播链接"> 
+                <input type="number" name="show_live_stream" value="0" placeholder="是否显示直播（0或1）"> 
+                <button type="submit">提交</button> 
+            </form> 
+            <div id="venue-list"> 
+                <!-- 场地信息将动态加载 --> 
+            </div> 
+            <div id="loading" class="loading" style="display: none;">正在加载...</div> 
+        </div> 
+    </div> 
+ 
+    <script> 
+    // 打开封禁模态框
+        function openBanModal(venueId) {
+            document.getElementById('banVenueId').value = venueId;
+            document.getElementById('banModal').style.display = 'block';
+        }
+
+
+        document.addEventListener('DOMContentLoaded',  function () { 
+            const addVenueBtn = document.getElementById('add-venue-btn');  
+            const addVenueForm = document.getElementById('add-venue-form');  
+            const venueList = document.getElementById('venue-list');  
+            const loading = document.getElementById('loading');  
+ 
+            // 显示/隐藏添加场地表单 
+            // addVenueBtn.addEventListener('click',  function () { 
+            //     if (addVenueForm.style.display  === 'none') { 
+            //         addVenueForm.style.display  = 'block'; 
+            //     } else { 
+            //         addVenueForm.style.display  = 'none'; 
+            //     } 
+            // }); 
+            addVenueBtn.addEventListener('click', function () {
+                const isHidden = window.getComputedStyle(addVenueForm).display === 'none';
+                addVenueForm.style.display = isHidden ? 'block' : 'none';
+                
+                  // ✅ 控制搜索框的显示/隐藏
+                document.getElementById('venue_search').style.display = isHidden ? 'none' : 'block';
+            });
+
+            // 加载场地数据 
+            function loadVenues() { 
+                loading.style.display  = 'block'; 
+                // 创建 FormData 对象并添加 action 参数 
+                const formData = new FormData(); 
+                formData.append('action',  'loadingdata'); 
+ 
+                fetch('https://open.rcwulian.cn/api/venue/VenuesManagement.php',  { 
+                    method: 'POST', 
+                    body: formData 
+                }) 
+               .then(response => response.json())  
+               .then(data => { 
+                    loading.style.display  = 'none'; 
+                    if (data.code  === 200) { 
+                        const venues = data.data;  
+                        // 保存role值供后续使用  
+                        window.role = data.role;
+                        const venueOptions = document.getElementById('venue_options');
+                        venueOptions.innerHTML = '';
+                        venueMap.clear();
+                        
+                        venues.forEach(venue => {
+                            const option = document.createElement('option');
+                            option.value = `${venue.id} - ${venue.venue_name}`;
+                            venueOptions.appendChild(option);
+                            venueMap.set(venue.id, venue.venue_name);
+                        });
+                        // ${venue.is_banned_venue ? `<button class="unban-btn" onclick="unbanVenue(${venue.id})">解封场地</button>` : ''}
+                        const venueHTML = venues.map(venue  => ` 
+                            <div class="venue-card"> 
+                                <img class="venue-img" src="${venue.image_url  || 'default-image.jpg'}">  
+                                <div class="venue-info"> 
+                                    <span class="venue-name">ID:${venue.id}-${venue.venue_name}</span>  
+                                    <span>${venue.venue_description}</span>  
+                                    <span>标签: ${venue.venue_tags}</span>  
+                                    <span>类型: ${venue.venue_type  === 1 ? '默认' : venue.venue_type  === 2 ? '竞速' : '工程车'}</span> 
+                                    <span>开放时间: ${venue.start_time}</span>  
+                                    <span>排队人数: ${venue.queue_length}</span>  
+                                    <span>开放状态: ${venue.venue_status}</span>  
+                                </div>
+                                <div class="venue-actions">
+                                
+                                ${venue.is_banned_venue 
+                                    ? `<button class="unban-btn" onclick="unbanVenue(${venue.id})">解封场地</button>` 
+                                    : `<button class="ban-btn" onclick="openBanModal(${venue.id})">封禁场地</button>`}
+
+                                    <button class="edit-btn" onclick="editVenue(${venue.id})">修改场地信息</button>
+
+                                </div>
+                            </div> 
+                        `).join(''); 
+                        venueList.insertAdjacentHTML('beforeend',  venueHTML); 
+                    } else { 
+                        console.error(data.msg);  
+                    } 
+                }) 
+               .catch(error => { 
+                    loading.style.display  = 'none'; 
+                    console.error('  数据加载出错:', error); 
+                }); 
+            } 
+ 
+            // 提交添加场地表单 
+            addVenueForm.addEventListener('submit',  function (e) { 
+                e.preventDefault();  
+                const formData = new FormData(this); 
+                formData.append('action',  'addvenues'); 
+                fetch('https://open.rcwulian.cn/api/venue/VenuesManagement.php',  { 
+                    method: 'POST', 
+                    body: formData 
+                }) 
+               .then(response => response.json())  
+               .then(data => { 
+                    if (data.code  === 0) { 
+                        alert('场地添加成功'); 
+                        addVenueForm.reset();  
+                        addVenueForm.style.display  = 'none'; 
+                        loadVenues(); 
+                    } else { 
+                        alert(data.msg);  
+                    } 
+                }) 
+               .catch(error => { 
+                    console.error('  添加场地出错:', error); 
+                }); 
+            }); 
+ 
+            // 初始加载场地数据 
+            loadVenues(); 
+            // 关闭模态框
+document.querySelector('.modal-close').addEventListener('click', () => {
+    document.getElementById('banModal').style.display = 'none';
+});
+window.addEventListener('click', function (event) {
+    const modal = document.getElementById('banModal');
+    if (event.target === modal) modal.style.display = 'none';
+});
+
+// 提交封禁请求（使用 XMLHttpRequest 方式）
+document.getElementById('banForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const venueId = document.getElementById('banVenueId').value;
+    const duration = document.getElementById('banDuration').value;
+    const reason = document.getElementById('banReason').value;
+
+    if (!reason.trim()) {
+        alert('请填写封禁原因');
+        return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.code === 0) {
+                        alert('封禁成功');
+                        document.getElementById('banModal').style.display = 'none';
+                        location.reload(); // 刷新页面以更新按钮状态
+                    } else {
+                        alert('封禁失败: ' + response.msg);
+                    }
+                } catch (err) {
+                    console.error('响应解析失败:', err);
+                    alert('服务器响应格式错误');
+                }
+            } else {
+                alert('请求失败，状态码: ' + xhr.status);
+            }
+        }
+    };
+
+    // 按照你提供的接口结构组织 JSON 数据
+    const data = {
+        ban: true,
+        id:1,
+        venue_id: venueId,                  // 场地 ID，充当标识
+        banType: 'venue',               // 明确是场地封禁
+        ban_duration: parseFloat(duration), // 封禁时长（小时）
+        ban_reason: reason.trim()
+        // 可根据需要扩展 additionalData 字段
+    };
+
+    xhr.send(JSON.stringify(data));
+});
+
+        }); 
+
+        function editVenue(venueId) {
+            // 
+            window.location.href = `venue.html?id=${venueId}`;
+        }
+        
+        function unbanVenue(venueId) {
+            if (!confirm(`确定要解封场地ID ${venueId} 吗？`)) return;
+        
+            const formData = new FormData();
+            formData.append('action', 'unban_venue');
+            formData.append('venue_id', venueId);
+        
+            fetch('https://open.rcwulian.cn/api/venue/VenuesManagement.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                    alert('解封成功');
+                    location.reload(); // 刷新页面
+                } else {
+                    alert('解封失败：' + data.msg);
+                }
+            })
+            .catch(err => {
+                alert('请求异常：' + err);
+            });
+        }
+    
+// 保存场地映射表（id -> name）
+const venueMap = new Map();
+// 模糊搜索场地下拉选项
+document.getElementById('venue_search').addEventListener('input', function () {
+    const keyword = this.value.trim();
+    const cards = document.querySelectorAll('.venue-card');
+
+    if (!keyword) {
+        // 用户清空输入框 → 显示全部卡片
+        cards.forEach(card => card.style.display = 'flex');
+        return;
+    }
+
+    // 查找匹配的 id
+    let matchedId = '';
+    for (let [id, name] of venueMap.entries()) {
+        if (`${id} - ${name}` === keyword) {
+            matchedId = id;
+            break;
+        }
+    }
+
+    // 筛选卡片
+    cards.forEach(card => {
+        const idText = card.querySelector('.venue-name')?.textContent || '';
+        const matches = matchedId && idText.includes(`ID:${matchedId}-`);
+        card.style.display = matches ? 'flex' : 'none';
+    });
+});
+
+
+// document.getElementById('venue_id').addEventListener('change', function () {
+//     const selectedId = this.value;
+//     const cards = document.querySelectorAll('.venue-card');
+//     cards.forEach(card => {
+//         const idText = card.querySelector('.venue-name')?.textContent || '';
+//         const matches = selectedId === '' || idText.includes(`ID:${selectedId}-`);
+//         card.style.display = matches ? 'flex' : 'none';
+//     });
+// });
+
+
+    </script> 
+<!-- 封禁模态框 -->
+<div id="banModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000;">
+    <div class="modal-content" style="background: #fff; width: 400px; margin: 10% auto; padding: 20px; border-radius: 8px; position: relative;">
+        <span class="modal-close" style="position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer;">&times;</span>
+        <h2>封禁场地</h2>
+        <form id="banForm">
+            <input type="hidden" id="banVenueId">
+            <div class="form-group">
+                <label for="banDuration">封禁时长</label>
+                <select id="banDuration" required>
+                    <option value="0.1667">10分钟</option>
+                    <option value="0.3333">20分钟</option>
+                    <option value="0.5">30分钟</option>
+                    <option value="1">一小时</option>
+                    <option value="12">半天</option>
+                    <option value="24">一天</option>
+                    <option value="72">三天</option>
+                    <option value="168">一周</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="banReason">封禁原因</label>
+                <textarea id="banReason" rows="3" style="width: 100%;">场地存在违规行为,依照安全管理条例给予相应处罚,请尽快更改调整!</textarea>
+            </div>
+            <button type="submit" class="modify-btn" style="margin-top: 10px; background-color: #ff4d4f; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer;">确认封禁</button>
+        </form>
+    </div>
+</div>
+    
+</body> 
+ 
+</html> 

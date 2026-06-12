@@ -1,0 +1,278 @@
+<script type="text/html" template>
+  <link rel="stylesheet" href="{{ layui.setter.paths.core }}css/login.css?v={{ layui.admin.v }}" media="all">
+</script>
+
+
+<div class="layadmin-user-login layadmin-user-display-show" id="LAY-user-login" style="display: none;">
+
+  <div class="layadmin-user-login-main">
+    <div class="layadmin-user-login-box layadmin-user-login-header">
+      <h2>rc物联管理后台</h2>
+      <p> </p>
+    </div>
+    <div class="layadmin-user-login-box layadmin-user-login-body layui-form">
+      <div class="layui-form-item">
+        <label class="layadmin-user-login-icon layui-icon layui-icon-username" for="LAY-user-login-username"></label>
+        <input type="text" name="username" id="LAY-user-login-username" lay-verify="required" placeholder="手机号" class="layui-input">
+      </div>
+      <div class="layui-form-item">
+        <label class="layadmin-user-login-icon layui-icon layui-icon-password" for="LAY-user-login-password"></label>
+        <input type="password" name="password" id="LAY-user-login-password" lay-verify="required" placeholder="密码" class="layui-input">
+      </div>
+      
+      <div class="layui-form-item">
+        <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="LAY-user-login-submit">登 入</button>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="layui-trans layadmin-user-login-footer">
+    
+    <p>© All Rights Reserved</p>
+  </div>
+  
+
+  
+</div>
+
+<script>
+layui.use(['admin', 'form'], function(){
+  var $ = layui.$
+  ,admin = layui.admin
+  ,form = layui.form;
+
+  // ===============================
+  // 本地缓存 key
+  // ===============================
+  var USERNAME_CACHE_KEY = 'rc_admin_last_username';
+  var PASSWORD_CACHE_KEY = 'rc_admin_last_password';
+  var SAVED_AT_CACHE_KEY = 'rc_admin_login_saved_at';
+  var LOGIN_SUCCESS_AT_KEY = 'rc_admin_login_success_at';
+
+  // ===============================
+  // 工具函数
+  // ===============================
+  function nowSecond() {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  function trimStr(v) {
+    return $.trim(v || '');
+  }
+
+  function safeDecode(v) {
+    try {
+      return decodeURIComponent((v || '').replace(/\+/g, '%20'));
+    } catch (e) {
+      return v || '';
+    }
+  }
+
+  // 读取 hash 参数：
+  // https://open.rcwulian.cn/#/user/login?username=xxx
+  function getHashParam(name) {
+    var hash = window.location.hash || '';
+    var qIndex = hash.indexOf('?');
+
+    if (qIndex === -1) {
+      return '';
+    }
+
+    var query = hash.substring(qIndex + 1);
+    var arr = query.split('&');
+
+    for (var i = 0; i < arr.length; i++) {
+      var item = arr[i].split('=');
+      var key = safeDecode(item[0] || '');
+      var val = safeDecode(item.slice(1).join('=') || '');
+
+      if (key === name) {
+        return val;
+      }
+    }
+
+    return '';
+  }
+
+  // 读取普通 query 参数：
+  // https://open.rcwulian.cn/?username=xxx#/user/login
+  function getSearchParam(name) {
+    var query = window.location.search || '';
+
+    if (query.indexOf('?') === 0) {
+      query = query.substring(1);
+    }
+
+    if (!query) {
+      return '';
+    }
+
+    var arr = query.split('&');
+
+    for (var i = 0; i < arr.length; i++) {
+      var item = arr[i].split('=');
+      var key = safeDecode(item[0] || '');
+      var val = safeDecode(item.slice(1).join('=') || '');
+
+      if (key === name) {
+        return val;
+      }
+    }
+
+    return '';
+  }
+
+  function getLocalItem(key) {
+    try {
+      return localStorage.getItem(key) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function setLocalItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {}
+  }
+
+  function removeLocalItem(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {}
+  }
+
+  function saveLoginCache(username, password) {
+    username = trimStr(username);
+    password = password || '';
+
+    if (username) {
+      setLocalItem(USERNAME_CACHE_KEY, username);
+    }
+
+    // 按你要求：密码也缓存
+    if (password) {
+      setLocalItem(PASSWORD_CACHE_KEY, password);
+    }
+
+    setLocalItem(SAVED_AT_CACHE_KEY, String(nowSecond()));
+  }
+
+  function clearLoginCache() {
+    removeLocalItem(USERNAME_CACHE_KEY);
+    removeLocalItem(PASSWORD_CACHE_KEY);
+    removeLocalItem(SAVED_AT_CACHE_KEY);
+    removeLocalItem(LOGIN_SUCCESS_AT_KEY);
+  }
+
+  function initLoginFormCache() {
+    var usernameFromUrl = getHashParam('username') || getSearchParam('username');
+    var usernameFromCache = getLocalItem(USERNAME_CACHE_KEY);
+    var passwordFromCache = getLocalItem(PASSWORD_CACHE_KEY);
+
+    var initUsername = usernameFromUrl || usernameFromCache;
+
+    if (initUsername) {
+      $('#LAY-user-login-username').val(initUsername);
+    }
+
+    if (passwordFromCache) {
+      $('#LAY-user-login-password').val(passwordFromCache);
+    }
+
+    form.render();
+  }
+
+  // ===============================
+  // 初始化表单
+  // ===============================
+  form.render();
+
+  // 初始化缓存账号密码
+  initLoginFormCache();
+
+  // 输入账号时实时缓存账号
+  $('#LAY-user-login-username').on('input blur', function(){
+    var username = trimStr(this.value);
+
+    if (username) {
+      setLocalItem(USERNAME_CACHE_KEY, username);
+      setLocalItem(SAVED_AT_CACHE_KEY, String(nowSecond()));
+    }
+  });
+
+  // 输入密码时也实时缓存密码
+  $('#LAY-user-login-password').on('input blur', function(){
+    var password = this.value || '';
+
+    if (password) {
+      setLocalItem(PASSWORD_CACHE_KEY, password);
+      setLocalItem(SAVED_AT_CACHE_KEY, String(nowSecond()));
+    }
+  });
+
+  // ===============================
+  // 提交登录
+  // ===============================
+  form.on('submit(LAY-user-login-submit)', function(obj){
+    var username = trimStr(obj.field.username || '');
+    var password = obj.field.password || '';
+
+    if (!username) {
+      layer.msg('请输入手机号', {icon: 2});
+      return false;
+    }
+
+    if (!password) {
+      layer.msg('请输入密码', {icon: 2});
+      return false;
+    }
+
+    // 提交前先缓存一次，避免 WebView 被杀后丢失
+    saveLoginCache(username, password);
+
+    admin.req({
+      url: '/api/login/login.php',
+      method: 'post',
+      data: obj.field,
+      done: function(res){
+        if (res.code === 0) {
+          // 登录成功后再次保存账号密码
+          saveLoginCache(username, password);
+          setLocalItem(LOGIN_SUCCESS_AT_KEY, String(nowSecond()));
+
+          // 写入 layuiAdmin access_token
+          if (res.data && res.data.access_token) {
+            layui.data('layuiAdmin', {
+              key: 'access_token',
+              value: res.data.access_token
+            });
+          }
+
+          layer.msg('登录成功，即将跳转...', {
+            offset: '15px',
+            icon: 1,
+            time: 1000
+          }, function(){
+            location.hash = '/';
+          });
+
+        } else {
+          layer.msg(res.msg || '登录失败', {icon: 2});
+        }
+      },
+      error: function(){
+        layer.msg('请求失败，请检查网络', {icon: 2});
+      }
+    });
+
+    return false;
+  });
+
+  // 暴露一个清理方法，后面需要时可以在控制台执行：
+  // window.clearRcAdminLoginCache()
+  window.clearRcAdminLoginCache = clearLoginCache;
+
+});
+</script>

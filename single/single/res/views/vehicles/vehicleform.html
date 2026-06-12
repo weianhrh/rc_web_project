@@ -1,0 +1,35 @@
+<!-- 编辑车辆的表单模板 (vehicleform) -->
+<form class="layui-form" id="edit-vehicle-form">
+  <div class="layui-form-item">
+    <label class="layui-form-label">车辆名称</label>
+    <div class="layui-input-block">
+      <input type="text" name="name" placeholder="请输入车辆名称" class="layui-input">
+    </div>
+  </div>
+  <div class="layui-form-item">
+    <label class="layui-form-label">前图传</label>
+    <div class="layui-input-block">
+      <input type="text" name="image_device_serial" placeholder="请输入前图传" class="layui-input">
+    </div>
+  </div>
+  <div class="layui-form-item">
+    <label class="layui-form-label">后图传</label>
+    <div class="layui-input-block">
+      <input type="text" name="bk_image_device_serial" placeholder="请输入后图传" class="layui-input">
+    </div>
+  </div>
+  <div class="layui-form-item">
+    <label class="layui-form-label">分享状态</label>
+    <div class="layui-input-block">
+      <select name="sharing_status">
+        <option value="正在共享">正在共享</option>
+        <option value="私有">私有</option>
+      </select>
+    </div>
+  </div>
+  <div class="layui-form-item">
+    <div class="layui-input-block">
+      <button class="layui-btn" lay-submit lay-filter="LAY-vehicle-front-submit">保存</button>
+    </div>
+  </div>
+</form>

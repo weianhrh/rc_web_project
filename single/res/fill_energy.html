@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>挂车占有管理</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+:root{
+  --primary:#5b8cff;
+  --bg:#f5f7fb;
+  --card:#fff;
+  --border:#e5e7eb;
+  --text:#1f2937;
+  --sub:#6b7280;
+  --warn:#fff7ed;
+  --warn-border:#fdba74;
+  --ok:#16a34a;
+  --danger:#ef4444;
+}
+*{box-sizing:border-box;font-family:"PingFang SC",system-ui}
+body{
+  background:var(--bg);
+  padding:20px;
+  color:var(--text);
+}
+.card{
+  background:var(--card);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 6px 24px rgba(0,0,0,.08);
+}
+.card-title{
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:14px;
+}
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+button{
+  padding:10px 14px;
+  border:none;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  cursor:pointer;
+}
+button:disabled{
+  background:#c7cbd3;
+  cursor:not-allowed;
+}
+.restore-btn{
+  background:#f59e0b;
+}
+.restore-btn:hover{
+  background:#d97706;
+}
+select{
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  width:100%;
+  background:#fff;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:12px;
+  background:#fff;
+}
+th,td{
+  border:1px solid var(--border);
+  padding:12px 10px;
+  text-align:center;
+}
+th{
+  background:#f9fafb;
+}
+.status{
+  margin-top:12px;
+}
+.policy-box{
+  margin:12px 0;
+  padding:12px 14px;
+  border-radius:10px;
+  background:var(--warn);
+  border:1px solid var(--warn-border);
+  color:#9a3412;
+  line-height:1.7;
+}
+.muted{
+  color:var(--sub);
+  font-size:13px;
+}
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+.badge.ok{
+  background:rgba(22,163,74,.12);
+  color:var(--ok);
+}
+.badge.danger{
+  background:rgba(239,68,68,.12);
+  color:var(--danger);
+}
+.badge.normal{
+  background:rgba(91,140,255,.12);
+  color:var(--primary);
+}
+.player-busy{
+  color:#ef4444;
+  font-weight:600;
+}
+.empty{
+  padding:24px;
+  text-align:center;
+  color:var(--sub);
+}
+@media (max-width: 900px){
+  .table-wrap{
+    overflow:auto;
+  }
+  table{
+    min-width:720px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <div class="card-title">挂车占有管理</div>
+
+  <div id="venueSelectWrapper" style="display:none;margin-bottom:12px">
+    <select id="venue_id"></select>
+  </div>
+
+  <div id="policyTips" class="policy-box">加载中...</div>
+
+  <div class="toolbar">
+    <button onclick="loadVehicles()">刷新列表</button>
+  </div>
+
+  <div class="muted">
+   系统挂车占有显示“恢复在线”，真实玩家占有显示“玩家占有中”。
+  </div>
+
+  <div id="result" class="status"></div>
+</div>
+
+<script>
+let CURRENT_ROLE = 0;
+let CAN_CHOOSE_VENUE = false;
+let CAN_OPERATE = false;
+
+document.addEventListener('DOMContentLoaded', init);
+
+function escapeHtml(str){
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function statusBadgeClass(text){
+  const t = String(text || '');
+  if (t.includes('占有')) return 'danger';
+  if (t.includes('在线')) return 'ok';
+  return 'normal';
+}
+
+async function init(){
+  const meta = await fetch('/api/operat/energy_renew_or_config.php?action=meta').then(r => r.json());
+
+  if(meta.code !== 0){
+    document.getElementById('result').innerText = meta.msg || '加载失败';
+    return;
+  }
+
+  const data = meta.data || {};
+  CURRENT_ROLE = Number(data.role_id || 0);
+  CAN_CHOOSE_VENUE = !!data.can_choose_venue;
+  CAN_OPERATE = !!data.can_operate;
+
+  if(CAN_CHOOSE_VENUE){
+    const wrap = document.getElementById('venueSelectWrapper');
+    const sel  = document.getElementById('venue_id');
+    wrap.style.display = 'block';
+    sel.innerHTML = '';
+
+    (data.venues || []).forEach(v => {
+      const o = document.createElement('option');
+      o.value = v.id;
+      o.textContent = `${v.id} - ${v.venue_name}`;
+      sel.appendChild(o);
+    });
+
+    sel.value = data.venue_id || '';
+    sel.onchange = loadVehicles;
+  }
+
+  renderPolicyBox();
+  await loadVehicles();
+}
+
+function selectedVenueId(){
+  return CAN_CHOOSE_VENUE ? (document.getElementById('venue_id').value || '') : '';
+}
+
+function renderPolicyBox(){
+  const box = document.getElementById('policyTips');
+
+  if(CURRENT_ROLE === 1){
+    box.innerHTML = `
+      当前模式：管理员<br>
+      可切换场地查看车辆列表<br>
+      可对当前选中场地车辆执行“一键占有 / 恢复在线”
+    `;
+    return;
+  }
+
+  if(CURRENT_ROLE === 2){
+    box.innerHTML = `
+      当前模式：管理员 / 运营<br>
+      仅可查看自己场地设备<br>
+      可对自己场地车辆执行“一键占有 / 恢复在线”
+    `;
+    return;
+  }
+
+  if(CURRENT_ROLE === 3 || CURRENT_ROLE === 4){
+    box.innerHTML = `
+      离线车辆设备占有无效<br>
+      可对自己场地车辆执行“一键占有 / 恢复在线”
+    `;
+    return;
+  }
+
+  box.innerHTML = `
+    当前模式：普通查看<br>
+    仅查看自己场地车辆，不提供操作
+  `;
+}
+
+async function loadVehicles(){
+  const res = await fetch(`/api/operat/energy_renew_or_config.php?action=check&venue_id=${selectedVenueId()}`);
+  const json = await res.json();
+
+  if(json.code !== 0){
+    document.getElementById('result').innerText = json.msg || '查询失败';
+    return;
+  }
+
+  const data = json.data || {};
+  const rows = data.vehicles || [];
+
+  if(rows.length === 0){
+    document.getElementById('result').innerHTML = '<div class="empty">当前场地暂无设备</div>';
+    return;
+  }
+
+  let html = `
+    <div class="table-wrap">
+      <table>
+        <tr>
+          <th>车辆名称</th>
+          <th>设备序列号</th>
+          <th>当前状态</th>
+          <th>操作</th>
+        </tr>
+  `;
+
+  rows.forEach(row => {
+    const canOp = !!data.can_operate;
+    const statusText = escapeHtml(row.current_status || '-');
+    const badgeClass = statusBadgeClass(row.current_status || '');
+
+    let opHtml = '-';
+
+    if (canOp) {
+      if (row.is_system_hold) {
+        opHtml = `<button class="restore-btn" onclick="restoreVehicle(${Number(row.id || 0)}, '${escapeHtml(row.name || '')}')">恢复在线</button>`;
+      } else if (row.is_real_player_occupied) {
+        opHtml = `<span class="player-busy">玩家占有中</span>`;
+      } else {
+        opHtml = `<button onclick="occupyVehicle(${Number(row.id || 0)}, '${escapeHtml(row.name || '')}')">一键占有</button>`;
+      }
+    }
+
+    html += `
+      <tr>
+        <td>${escapeHtml(row.name || '-')}</td>
+        <td>${escapeHtml(row.serial_number || '-')}</td>
+        <td><span class="badge ${badgeClass}">${statusText}</span></td>
+        <td>${opHtml}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+      </table>
+    </div>
+  `;
+
+  document.getElementById('result').innerHTML = html;
+}
+
+async function occupyVehicle(vehicleId, vehicleName){
+  if(!vehicleId){
+    alert('缺少 vehicle_id');
+    return;
+  }
+
+  const ok = confirm(`确定对【${vehicleName || '该车辆'}】执行一键占有吗？`);
+  if(!ok) return;
+
+  const res = await fetch('/api/operat/energy_renew_or_config.php?action=occupy', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `venue_id=${encodeURIComponent(selectedVenueId())}&vehicle_id=${encodeURIComponent(vehicleId)}`
+  });
+
+  const json = await res.json();
+  if(json.code !== 0){
+    alert(json.msg || '操作失败');
+    return;
+  }
+
+  const v = (json.data && json.data.vehicle) || {};
+  alert(
+    `${json.msg || '一键占有成功'}\n` +
+    `车辆：${v.name || '-'}\n` +
+    `序列号：${v.serial_number || '-'}\n` +
+    `driver_id：${v.driver_id || '-'}\n` +
+    `driver：${v.driver || '-'}\n` +
+    `状态：${v.current_status || '-'}`
+  );
+
+  await loadVehicles();
+}
+
+async function restoreVehicle(vehicleId, vehicleName){
+  if(!vehicleId){
+    alert('缺少 vehicle_id');
+    return;
+  }
+
+  const ok = confirm(`确定将【${vehicleName || '该车辆'}】恢复为在线吗？`);
+  if(!ok) return;
+
+  const res = await fetch('/api/operat/energy_renew_or_config.php?action=restore', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `venue_id=${encodeURIComponent(selectedVenueId())}&vehicle_id=${encodeURIComponent(vehicleId)}`
+  });
+
+  const json = await res.json();
+  if(json.code !== 0){
+    alert(json.msg || '恢复失败');
+    return;
+  }
+
+  const v = (json.data && json.data.vehicle) || {};
+  alert(
+    `恢复在线成功\n` +
+    `车辆：${v.name || '-'}\n` +
+    `序列号：${v.serial_number || '-'}\n` +
+    `driver_id：${v.driver_id ?? 'NULL'}\n` +
+    `driver：${v.driver ?? 'NULL'}\n` +
+    `状态：${v.current_status || '-'}`
+  );
+
+  await loadVehicles();
+}
+</script>
+
+</body>
+</html>

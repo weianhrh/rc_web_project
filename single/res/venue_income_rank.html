@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>场地收益排行</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
+
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 16px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      text-align: left;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--secondary);
+      font-weight: 500;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    /* period pills */
+    .period-bar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin: 6px 0 14px;
+    }
+    .pill{
+      border: 1px solid rgba(91,140,255,.28);
+      background: rgba(91,140,255,.08);
+      color: #2a66e0;
+      padding: 8px 12px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-size: 14px;
+      font-weight: 700;
+      transition: var(--transition);
+      user-select:none;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .pill:hover{ background: rgba(91,140,255,.12); }
+    .pill.active{
+      background: var(--primary);
+      color:#fff;
+      border-color: var(--primary);
+      box-shadow: 0 8px 16px rgba(91,140,255,.20);
+    }
+
+    /* form */
+    .form-container{
+      border: 1px solid rgba(0,0,0,.06);
+      background: rgba(255,255,255,.7);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(17,24,39,.06);
+      margin-bottom: 14px;
+    }
+    #queryForm{
+      display:grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 12px;
+      align-items:end;
+    }
+    .form-item{ display:flex; flex-direction:column; gap: 8px; }
+    .form-label{ font-size: 12px; color: var(--secondary); font-weight: 700; }
+    .form-input{
+      height: 38px;
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 10px;
+      padding: 0 12px;
+      font-size: 14px;
+      outline: none;
+      background:#fff;
+      transition: var(--transition);
+    }
+    .form-input:focus{
+      border-color: rgba(91,140,255,.55);
+      box-shadow: 0 0 0 4px rgba(91,140,255,.12);
+    }
+    .form-button{
+      height: 38px;
+      border:none;
+      border-radius: 10px;
+      padding: 0 14px;
+      background: var(--primary);
+      color:#fff;
+      cursor:pointer;
+      font-weight: 800;
+      font-size: 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      transition: var(--transition);
+      white-space:nowrap;
+    }
+    .form-button:hover{ filter: brightness(.97); transform: translateY(-1px); }
+    .ghost-button{
+      height: 38px;
+      border-radius: 10px;
+      padding: 0 14px;
+      border: 1px solid rgba(0,0,0,.12);
+      background:#fff;
+      color: #334155;
+      cursor:pointer;
+      font-weight: 800;
+      font-size: 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      transition: var(--transition);
+      white-space:nowrap;
+    }
+    .ghost-button:hover{ background: var(--hover-bg); }
+
+    @media (max-width: 860px){
+      #queryForm{ grid-template-columns: 1fr 1fr; }
+      .form-button, .ghost-button{ width: 100%; }
+    }
+
+    /* list */
+    .rank-list{ display:flex; flex-direction:column; gap: 12px; }
+    .venue-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 12px;
+      transition: var(--transition);
+      align-items:center;
+    }
+    .venue-card:hover { background-color: var(--hover-bg); }
+
+    .rank-badge{
+      width: 60px;
+      height: 60px;
+      border-radius: 14px;
+      background: rgba(91,140,255,.10);
+      border: 1px solid rgba(91,140,255,.20);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap: 2px;
+    }
+    .rank-badge .no{ font-size: 18px; font-weight: 900; color: #2a66e0; line-height: 1; }
+    .rank-badge .txt{ font-size: 11px; color: var(--secondary); font-weight: 700; }
+
+    .venue-info{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .venue-info .venue-name{
+      font-size: 16px;
+      font-weight: 900;
+      color: #1f2d3d;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .venue-info .venue-sub{
+      font-size: 12px;
+      color: var(--secondary);
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+    }
+
+    .money{
+      text-align:right;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap: 6px;
+      padding-left: 10px;
+    }
+    .money .val{
+      font-size: 18px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .money .unit{
+      font-size: 12px;
+      color: var(--secondary);
+      font-weight: 700;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      color: var(--primary);
+      padding: 18px;
+      font-weight: 800;
+    }
+    .empty{
+      text-align:center;
+      color: var(--secondary);
+      padding: 26px 10px;
+      font-weight: 700;
+    }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(15,23,42,.92);
+      color:#fff;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
+      display:none;
+      max-width: 92vw;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">
+        <span>场地收益排行</span>
+        <div class="meta" id="metaText">—</div>
+      </div>
+
+      <div class="period-bar" id="periodBar">
+        <div class="pill active" data-period="day"><i class="far fa-sun"></i> 日</div>
+        <div class="pill" data-period="week"><i class="far fa-calendar-alt"></i> 周</div>
+        <div class="pill" data-period="month"><i class="far fa-calendar"></i> 月</div>
+      </div>
+
+      <div class="form-container">
+        <form id="queryForm">
+          <div class="form-item">
+            <label class="form-label">开始日期</label>
+            <input type="date" class="form-input" id="startDate" name="start_date">
+          </div>
+          <div class="form-item">
+            <label class="form-label">结束日期</label>
+            <input type="date" class="form-input" id="endDate" name="end_date">
+          </div>
+          <div class="form-item">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="form-button">
+              <i class="fas fa-search"></i> 查询
+            </button>
+          </div>
+          <div class="form-item">
+            <label class="form-label">&nbsp;</label>
+            <button type="button" class="ghost-button" id="btnReset">
+              <i class="fas fa-undo"></i> 重置
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div id="list" class="rank-list"></div>
+      <div id="loading" class="loading" style="display:none;">加载中...</div>
+      <div id="empty" class="empty" style="display:none;">暂无数据</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /**
+     * ✅ 你只要改这里：接口地址
+     * 例如：/api/operat/venue_income_rank.php
+     */
+    const API_URL = "/api/venue/venue_income_rank.php";
+
+    const listEl = document.getElementById("list");
+    const loadingEl = document.getElementById("loading");
+    const emptyEl = document.getElementById("empty");
+    const metaTextEl = document.getElementById("metaText");
+
+    const periodBar = document.getElementById("periodBar");
+    const startDateEl = document.getElementById("startDate");
+    const endDateEl = document.getElementById("endDate");
+    const formEl = document.getElementById("queryForm");
+    const btnReset = document.getElementById("btnReset");
+
+    const toastEl = document.getElementById("toast");
+
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.style.display = "block";
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(()=> toastEl.style.display="none", 1800);
+    }
+
+    function setActivePeriod(period){
+      [...periodBar.querySelectorAll(".pill")].forEach(p => {
+        p.classList.toggle("active", p.dataset.period === period);
+      });
+      // period变化时，如果用户之前填了自定义日期，我们不强制清空，但会以“用户是否提交日期”为准
+    }
+
+    function getActivePeriod(){
+      const el = periodBar.querySelector(".pill.active");
+      return el ? el.dataset.period : "day";
+    }
+
+    function fmtMoney(n){
+      const num = Number(n || 0);
+      return num.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderList(rows){
+      listEl.innerHTML = "";
+      if (!rows || rows.length === 0){
+        emptyEl.style.display = "block";
+        return;
+      }
+      emptyEl.style.display = "none";
+
+      rows.forEach((r, idx) => {
+        const rank = idx + 1;
+        const total = fmtMoney(r.total);
+        const venueName = r.venue_name ?? ("场地#" + (r.venue_id ?? ""));
+        const venueId = r.venue_id ?? "";
+
+        const card = document.createElement("div");
+        card.className = "venue-card";
+        card.innerHTML = `
+          <div class="rank-badge">
+            <div class="no">#${rank}</div>
+            <div class="txt">排名</div>
+          </div>
+
+          <div class="venue-info">
+            <div class="venue-name" title="${escapeHtml(venueName)}">${escapeHtml(venueName)}</div>
+            <div class="venue-sub">
+              <span><i class="fas fa-map-marker-alt" style="color:#94a3b8"></i> venue_id：${escapeHtml(String(venueId))}</span>
+            </div>
+          </div>
+
+          <div class="money">
+            <div class="val">${total}</div>
+            <div class="unit">元</div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+    }
+
+    function buildParams(){
+      const period = getActivePeriod();
+      const start = (startDateEl.value || "").trim();
+      const end = (endDateEl.value || "").trim();
+
+      const params = new URLSearchParams();
+      params.set("period", period);
+      params.set("limit", "100");
+
+      // ✅ 只要用户填了 start_date，就走自定义（和你后端逻辑一致）
+      if (start) params.set("start_date", start);
+      if (end) params.set("end_date", end);
+
+      return params;
+    }
+
+    async function load(){
+      loadingEl.style.display = "block";
+      try{
+        const params = buildParams();
+        const url = API_URL + "?" + params.toString();
+
+        const res = await fetch(url, { credentials: "include" });
+        const json = await res.json();
+
+        if (!json || json.code !== 0){
+          renderList([]);
+          metaTextEl.textContent = "加载失败";
+          toast((json && json.msg) ? json.msg : "加载失败");
+          return;
+        }
+
+        // meta
+        const m = json.meta || {};
+        const label = m.label || "";
+        const start = (m.start || "").replace(" 00:00:00","");
+        // end_exclusive 是“开区间”，这里显示给用户看时，减一天更直观
+        let endShow = "";
+        if (m.end_exclusive){
+          const d = new Date(m.end_exclusive.replace(" ", "T"));
+          d.setDate(d.getDate() - 1);
+          const y = d.getFullYear();
+          const mm = String(d.getMonth()+1).padStart(2,"0");
+          const dd = String(d.getDate()).padStart(2,"0");
+          endShow = `${y}-${mm}-${dd}`;
+        }
+
+        metaTextEl.textContent = `${label} · ${start}${endShow ? (" ~ " + endShow) : ""}`;
+
+        renderList(json.data || []);
+      }catch(e){
+        renderList([]);
+        metaTextEl.textContent = "加载失败";
+        toast("网络或接口异常");
+      }finally{
+        loadingEl.style.display = "none";
+      }
+    }
+
+    // period点击：切换并立即加载（不强制清空日期；如果你想“切换 period 自动清空日期”，把那两行注释解除即可）
+    periodBar.addEventListener("click", (ev)=>{
+      const pill = ev.target.closest(".pill");
+      if (!pill) return;
+
+      setActivePeriod(pill.dataset.period);
+
+      // 如果你希望切 period 时强制走默认区间（清空自定义日期），打开下面两行：
+      // startDateEl.value = "";
+      // endDateEl.value = "";
+
+      load();
+    });
+
+    // 表单提交：自定义区间优先
+    formEl.addEventListener("submit", (ev)=>{
+      ev.preventDefault();
+      const s = (startDateEl.value || "").trim();
+      if (!s){
+        toast("请选择开始日期");
+        return;
+      }
+      load();
+    });
+
+    // 重置：清空日期 + 回到“日”并加载
+    btnReset.addEventListener("click", ()=>{
+      startDateEl.value = "";
+      endDateEl.value = "";
+      setActivePeriod("day");
+      load();
+    });
+
+    // ✅ 页面打开先加载一次（默认 day）
+    load();
+  </script>
+</body>
+</html>

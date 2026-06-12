@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>专区管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 你的样式放这里 👇 -->
+    <style>
+    
+        /* 引用你提供的完整样式 */
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            text-align: left;
+        }
+
+        .venue-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            transition: var(--transition);
+        }
+
+        .venue-card:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .venue-img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .venue-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+
+        .venue-info .venue-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .venue-info span {
+            display: block;
+        }
+
+        .venue-actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 15px;
+            gap: 8px;
+        }
+        
+
+        .edit-btn {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .edit-btn:hover {
+            background-color: #4a77e4;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 16px;
+            color: var(--primary);
+            padding: 20px;
+        }
+        
+  .modal {
+    display: none;  /* ✅ 默认隐藏，等待点击按钮后用 JS 设置为 flex 显示 */
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 30px 20px;
+    border-radius: 12px;
+    width: 400px; /* ⭐ 设置固定宽度，避免太小 */
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.modal-content input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    transition: border-color 0.3s;
+}
+
+.modal-content input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">
+        专区管理
+        <button class="edit-btn" style="float:right;" onclick="openAddModal()">➕ 添加专区</button>
+      </div>
+      <div id="zone-list">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 -->
+  <div class="modal" id="addModal" onclick="closeAddModal()">
+    <div class="card modal-content" onclick="event.stopPropagation()">
+      <div class="card-title" id="modalTitle">添加专区</div>
+      <input type="hidden" id="editZoneId" />
+      <input type="text" placeholder="专区名称" id="addName" />
+      <input type="number" placeholder="分区数量" id="addPartition"  />
+      <input type="number" placeholder="车辆数量" id="addVehicle"  />
+      <input type="text" placeholder="图片URL" id="addImage" />
+      <input type="number" placeholder="排序" id="addSort" />
+      <button class="edit-btn" onclick="submitZone()">提交</button>
+      <button class="edit-btn" style="background:#ccc;color:#000;" onclick="closeAddModal()">取消</button>
+    </div>
+  </div>
+
+  <script>
+    let mode = 'add';
+    let zoneDataList = [];
+
+    function openAddModal() {
+      mode = 'add';
+      document.getElementById('modalTitle').innerText = '添加专区';
+      document.getElementById('editZoneId').value = '';
+      document.getElementById('addName').value = '';
+      document.getElementById('addPartition').value = '0';
+      document.getElementById('addImage').value = '';
+      document.getElementById('addSort').value = '0';
+      document.getElementById('addModal').style.display = 'flex';
+      document.getElementById('addVehicle').value;
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    async function submitZone() {
+      const name = document.getElementById('addName').value.trim();
+      const count = document.getElementById('addPartition').value;
+      const image = document.getElementById('addImage').value;
+      const sort = document.getElementById('addSort').value;
+      const zoneId = document.getElementById('editZoneId').value;
+      const vehicle = document.getElementById('addVehicle').value;
+
+      const params = new URLSearchParams({
+        partition_name: name,
+        partition_count: count,
+        vehicle_count: vehicle,
+        zone_image: image,
+        sort_order: sort,
+        is_visible: 1
+      });
+
+      let url = '';
+      if (mode === 'add') {
+        url = 'https://open.rcwulian.cn/api/venue/zones.php?action=add';
+      } else {
+        url = 'https://open.rcwulian.cn/api/venue/zones.php?action=edit';
+        params.append('zone_id', zoneId);
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: params
+      });
+
+      const result = await res.json();
+      if (result.code === 0) {
+        closeAddModal();
+        loadZones();
+      } else {
+        alert((mode === 'add' ? '添加' : '编辑') + '失败：' + result.msg);
+      }
+    }
+
+    async function loadZones() {
+      const res = await fetch('https://open.rcwulian.cn/api/venue/zones.php');
+      const data = await res.json();
+      const container = document.getElementById('zone-list');
+      container.innerHTML = '';
+      zoneDataList = data.data;
+
+      data.data.forEach(zone => {
+        const card = document.createElement('div');
+        card.className = 'venue-card';
+        card.innerHTML = `
+          <img class="venue-img" src="${zone.zone_image}" alt="专区图" />
+          <div class="venue-info">
+            <div class="venue-name">${zone.partition_name}</div>
+            <span>分区数：${zone.partition_count}</span>
+            <span>车辆数：${zone.vehicle_count}</span>
+            <span>排序：${zone.sort_order}</span>
+          </div>
+          <div class="venue-actions">
+            <button class="edit-btn" onclick="location.href='zone_detail.html?zone_id=${zone.zone_id}'">详情</button>
+            <button class="edit-btn" onclick="editZone(${zone.zone_id})">修改</button>
+            <button class="edit-btn" style="background:#f44336;" onclick="confirmDelete(${zone.zone_id})">删除</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function editZone(id) {
+      const zone = zoneDataList.find(z => z.zone_id == id);
+      if (!zone) return alert('未找到该专区数据');
+
+      mode = 'edit';
+      document.getElementById('modalTitle').innerText = '编辑专区';
+      document.getElementById('editZoneId').value = zone.zone_id;
+      document.getElementById('addName').value = zone.partition_name;
+      document.getElementById('addPartition').value = zone.partition_count;
+      document.getElementById('addImage').value = zone.zone_image;
+      document.getElementById('addSort').value = zone.sort_order;
+      document.getElementById('addVehicle').value = zone.vehicle_count;
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function confirmDelete(id) {
+      if (confirm('确定要删除该专区吗？此操作不可恢复！')) {
+        deleteZone(id);
+      }
+    }
+
+    async function deleteZone(id) {
+      const form = new URLSearchParams({ action: 'delete', zone_id: id });
+      const res = await fetch('https://open.rcwulian.cn/api/venue/zones.php?action=delete', {
+        method: 'POST',
+        body: form
+      });
+      const result = await res.json();
+      if (result.code === 0) {
+        loadZones();
+      } else {
+        alert('删除失败：' + result.msg);
+      }
+    }
+
+    // 初始化
+    loadZones();
+  </script>
+</body>
+</html>

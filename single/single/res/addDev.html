@@ -1,0 +1,259 @@
+<!DOCTYPE html> 
+<html lang="zh-CN"> 
+ 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>批量添加设备</title> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">   
+    <style> 
+        :root { 
+            --primary: #5b8cff; 
+            --secondary: #7f8fa4; 
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+            --background-gradient-start: #f8f9ff; 
+            --background-gradient-end: #f0f3ff; 
+            --card-bg: #ffffff; 
+            --border-color: #ddd; 
+            --text-color: #333; 
+            --hover-bg: #f9f9f9; 
+            --highlight-bg: #eff4ff; 
+            --transition: all 0.3s ease; 
+        } 
+ 
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: "PingFang SC", system-ui; 
+        } 
+ 
+        body { 
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+        } 
+ 
+        .container { 
+            max-width: 1200px; 
+            width: 100%; 
+        } 
+ 
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+            transition: var(--transition); 
+        } 
+ 
+        .card:hover { 
+            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16); 
+        } 
+ 
+        .card-title-container { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        } 
+ 
+        .card-title { 
+            font-size: 24px; 
+            color: var(--text-color); 
+            font-weight: 600; 
+            /*border-bottom: 2px solid var(--primary); */
+            padding-bottom: 10px; 
+            flex-grow: 1; 
+        } 
+ 
+        .form-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        } 
+ 
+        .form-group label { 
+            font-size: 14px; 
+            color: var(--text-color); 
+        } 
+ 
+        .form-group input, 
+        .form-group textarea, 
+        .form-group select { 
+            background-color: #f8f9ff; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd; 
+            width: 100%; 
+        } 
+ 
+        .action-button { 
+            background-color: var(--primary); 
+            color: #fff; 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            margin-right: 10px; 
+            transition: 0.3s; 
+        } 
+ 
+        .action-button:hover { 
+            background-color: #4a77e4; 
+        } 
+ 
+        @media (max-width: 768px) { 
+            .card { 
+                padding: 16px; 
+            } 
+ 
+            .form-group label { 
+                font-size: 12px; 
+            } 
+ 
+            .action-button { 
+                font-size: 12px; 
+            } 
+        } 
+    </style> 
+</head> 
+ 
+<body> 
+    <div class="container"> 
+        <div class="card"> 
+            <div class="card-title-container"> 
+                <h2 class="card-title">批量添加设备</h2> 
+                <button type="submit" form="addDeviceForm" class="action-button">提交</button> 
+            </div> 
+            <form id="addDeviceForm"> 
+                <div class="form-group"> 
+                    <label for="serial_number">设备序列号（每行一个）</label> 
+                    <textarea id="serial_number" name="serial_number" rows="8" required></textarea> 
+                </div> 
+                <div class="form-group"> 
+                    <label for="image_device_serial">图像设备序列号（每行一个）</label> 
+                    <textarea id="image_device_serial" name="image_device_serial" rows="8"></textarea> 
+                </div> 
+                <div class="form-group"> 
+                    <label for="name">设备名称</label> 
+                    <input type="text" id="name" name="name"> 
+                </div> 
+                <div class="form-group"> 
+                    <label for="bind_site">绑定场地 ID</label> 
+                    <select id="bind_site" name="bind_site" required></select> 
+                </div> 
+                
+                <div class="form-group"> 
+                    <label for="sharing_status">共享状态</label> 
+                    <select id="sharing_status" name="sharing_status"> 
+                        <option value="正在共享">正在共享</option> 
+                        <option value="未共享">未共享</option> 
+                    </select> 
+                </div> 
+                <div class="form-group">
+                    <label for="photo_url">照片类型</label>
+                    <select id="photo_url" name="photo_url">
+                        <option value="https://rcwulian.cn/img/m1282.jpg" selected>🚗 汽车图片</option>
+                        <option value="https://rcwulian.cn/app/img/tl.png">🛡️ 坦克图片</option>
+                        <option value="https://rcwulian.cn/img/wj01.jpg">⛏️ 挖掘机图片</option>
+                        <option value="https://rcwulian.cn/app/img/583.jpg">🚜 推土机图片</option>
+                        <option value="https://rcwulian.cn/app/img/573.jpg">🚚 翻斗车图片</option>
+                    </select>
+                </div>
+
+                <div class="form-group"> 
+                    <label for="uid">UID</label> 
+                    <input type="number" id="uid" name="uid" value="10107"> 
+                </div> 
+                <div class="form-group"> 
+                    <label for="throttle_max">最大油门</label> 
+                    <input type="number" id="throttle_max" name="throttle_max" value="1640"> 
+                </div> 
+                <div class="form-group"> 
+                    <label for="throttle_min">最小油门</label> 
+                    <input type="number" id="throttle_min" name="throttle_min" value="1305"> 
+                </div> 
+                <div class="form-group"> 
+                    <label for="direction">方向</label> 
+                    <select id="direction" name="direction"> 
+                        <option value="true">true</option> 
+                        <option value="false">false</option> 
+                    </select> 
+                </div> 
+            </form> 
+        </div> 
+    </div> 
+ 
+    <script> 
+        // 填充场地下拉框选项 
+        const venueSelect = document.getElementById('bind_site');  
+        fetch('https://open.rcwulian.cn/api/franchise/FranchiseManagement.php',  { 
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded' 
+            }, 
+            body: 'action=get_venues' 
+        }) 
+       .then(response => response.json())    
+       .then(venueData => { 
+                if (venueData.code  === 200) { 
+                    const venues = venueData.data.sort((a,  b) => b.id  - a.id);  // 降序排序 
+                    venues.forEach(item  => { 
+                        const option = document.createElement('option');    
+                        option.value  = item.id;    
+                        option.textContent  = `${item.id}-${item.venue_name}`;    
+                        venueSelect.appendChild(option);    
+                    }); 
+                } else { 
+                    console.error(venueData.msg);    
+                } 
+            }) 
+       .catch(error => { 
+                console.error('  请求出错:', error); 
+            }); 
+ 
+        document.getElementById('addDeviceForm').addEventListener('submit',   function (e) { 
+            e.preventDefault();   // 阻止表单默认提交行为 
+ 
+            const form = this; 
+            const formData = new FormData(form); 
+ 
+            // 获取输入的值 
+            const serialNumber = document.getElementById('serial_number').value;   
+            const imageDeviceSerial = document.getElementById('image_device_serial').value;   
+            const bindSite = document.getElementById('bind_site').value;   
+            const name = document.getElementById('name').value;   
+ 
+            // 检查是否缺少必要参数 
+            if (serialNumber === '' || bindSite === '' || name === '') { 
+                alert('缺少必要参数，请检查输入！'); 
+                return; 
+            } 
+ 
+            // 使用 fetch API 发送异步请求 
+            fetch('https://open.rcwulian.cn/api/devMgr/addDev.php',  { 
+                method: 'POST', 
+                body: formData 
+            }) 
+              .then(response => response.json())   
+              .then(data => { 
+                    alert(data.msg);   // 弹出后端返回的消息 
+                    if (data.code   === 200) { 
+                        // 提交成功后跳转回本页 
+                        window.location.href   = window.location.href;   
+                    } 
+                }) 
+              .catch(error => { 
+                    alert('请求发生错误：' + error.message);   
+                }); 
+        }); 
+    </script> 
+</html> 

@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收入明细</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+            --highlight-bg: #eff4ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        .total-amount {
+            float: right;
+            font-size: 16px;
+            font-weight: normal;
+            color: var(--primary);
+        }
+
+        .order-type-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--primary);
+            background: #fff;
+            color: var(--primary);
+            border-radius: 999px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(91, 140, 255, 0.24);
+        }
+
+        .date-filter {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-filter input {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .date-filter button,
+        .pagination button {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .order-item {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            transition: var(--transition);
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .order-item:hover {
+            background-color: var(--highlight-bg);
+        }
+
+        .field {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .label {
+            color: var(--secondary);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .value {
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: 400;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .payment-amount {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .datetime {
+            font-size: 12px;
+            color: var(--text-color);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pagination input {
+            width: 60px;
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            font-size: 16px;
+            color: var(--primary);
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 16px;
+            }
+
+            .field {
+                font-size: 12px;
+            }
+
+            .payment-amount {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .date-filter {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .date-filter input,
+            .date-filter button {
+                width: 100%;
+            }
+
+            .date-filter span {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .pagination {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .pagination button,
+            .pagination input,
+            .pagination span {
+                width: 100%;
+                text-align: center;
+            }
+
+            .pagination input {
+                max-width: 100%;
+            }
+
+            .total-amount {
+                display: block;
+                float: none;
+                margin-top: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-title">
+                收入明细
+                <span id="total-amount" class="total-amount">累计设备收入：0.00 元</span>
+            </div>
+
+            <div class="order-type-tabs">
+                <button id="deviceTab" class="tab-btn active" onclick="switchOrderType('device')">设备订单</button>
+                <button id="giftTab" class="tab-btn" onclick="switchOrderType('gift')">礼物订单</button>
+            </div>
+
+            <div class="date-filter">
+                <input type="datetime-local" id="startDate" class="date-input">
+                <span>至</span>
+                <input type="datetime-local" id="endDate" class="date-input">
+                <button onclick="filterByDate()">筛选</button>
+            </div>
+
+            <div id="income-details"></div>
+
+            <div class="pagination">
+                <button onclick="prevPage()" id="prevBtn">上一页</button>
+                <span id="pageInfo" style="line-height: 35px;"></span>
+                <button onclick="nextPage()" id="nextBtn">下一页</button>
+                <span>跳转至</span>
+                <input id="jumpPage" type="number" min="1">
+                <button onclick="goToPage()">跳转</button>
+            </div>
+
+            <div id="loading" class="loading" style="display: none;">正在加载...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const limit = 10;
+        let startDate = '';
+        let endDate = '';
+        let totalPages = 1;
+        let currentOrderType = 'device'; // 默认设备订单
+        let currentRoleId = 0;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const now = new Date();
+            const yyyy_mm_dd = getLocalYmd(now);
+
+            document.getElementById('startDate').value = `${yyyy_mm_dd}T00:00`;
+            document.getElementById('endDate').value = `${yyyy_mm_dd}T23:59`;
+
+            startDate = `${yyyy_mm_dd} 00:00:00`;
+            endDate = `${yyyy_mm_dd} 23:59:59`;
+
+            loadIncomeData(currentPage);
+        });
+
+        function getLocalYmd(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, function (char) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char];
+            });
+        }
+
+        function formatDateTimeLocal(value) {
+            if (!value) return '';
+            return value.replace('T', ' ') + ':00';
+        }
+
+        function formatMoney(value) {
+            const num = Number(value || 0);
+            return num.toFixed(2);
+        }
+
+        function getActualArrivalHtml(paymentAmount) {
+            if (Number(currentRoleId) !== 4) {
+                return '';
+            }
+        
+            const actualAmount = Number(paymentAmount || 0) * 0.8;
+        
+            return `
+                <div class="field">
+                    <div class="label">实际到账金额:</div>
+                    <div class="value payment-amount">${formatMoney(actualAmount)} 元</div>
+                </div>
+            `;
+        }
+
+        function switchOrderType(type) {
+            currentOrderType = type === 'gift' ? 'gift' : 'device';
+            currentPage = 1;
+            document.getElementById('jumpPage').value = '';
+
+            document.getElementById('deviceTab').classList.toggle('active', currentOrderType === 'device');
+            document.getElementById('giftTab').classList.toggle('active', currentOrderType === 'gift');
+
+            loadIncomeData(currentPage);
+        }
+
+        function buildApiUrl(page) {
+            const params = new URLSearchParams({
+                page: page,
+                limit: limit,
+                order_type: currentOrderType,
+                order_number: '',
+                start_time: startDate,
+                end_time: endDate,
+                exclude_energy: 'on',
+                uid: ''
+            });
+
+            return `https://open.rcwulian.cn/api/venue/GetDrivingOrdersv2.php?${params.toString()}`;
+        }
+
+        function loadIncomeData(page) {
+            const url = buildApiUrl(page);
+            console.log('请求URL:', url);
+
+            const loading = document.getElementById('loading');
+            const incomeDetails = document.getElementById('income-details');
+
+            loading.textContent = '正在加载...';
+            loading.style.display = 'block';
+            incomeDetails.innerHTML = '';
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        currentRoleId = Number(data.role_id || 0);
+                        updateTotalAmount(data);
+
+                        totalPages = Math.max(1, Math.ceil((Number(data.count) || 0) / limit));
+                        updatePagination();
+
+                        if (Array.isArray(data.data) && data.data.length > 0) {
+                            if (currentOrderType === 'gift') {
+                                displayGiftDetails(data.data);
+                            } else {
+                                displayDeviceDetails(data.data);
+                            }
+                            loading.style.display = 'none';
+                        } else {
+                            loading.textContent = '没有更多数据了';
+                        }
+                    } else {
+                        loading.textContent = data.msg || '加载失败，请重试';
+                    }
+                })
+                .catch(error => {
+                    console.error('数据加载失败:', error);
+                    loading.textContent = '加载失败，请重试';
+                    setTimeout(() => loading.style.display = 'none', 2000);
+                });
+        }
+
+function updateTotalAmount(data) {
+    const totalNum = Number(data.total_income || 0);
+    const total = formatMoney(totalNum);
+    const actualTotal = formatMoney(totalNum * 0.8);
+
+    const totalAmountEl = document.getElementById('total-amount');
+
+    if (currentOrderType === 'gift') {
+        totalAmountEl.textContent = `累计礼物收益：${total} 元`;
+    } else {
+        if (Number(currentRoleId) === 4) {
+            totalAmountEl.textContent = `累计设备收入：${total} 元　实际到账累计：${actualTotal} 元`;
+        } else {
+            totalAmountEl.textContent = `累计设备收入：${total} 元`;
+        }
+    }
+}
+
+        function updatePagination() {
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+
+            prevBtn.style.opacity = currentPage <= 1 ? '0.5' : '1';
+            nextBtn.style.opacity = currentPage >= totalPages ? '0.5' : '1';
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadIncomeData(currentPage);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadIncomeData(currentPage);
+            }
+        }
+
+        function filterByDate() {
+            const startInput = document.getElementById('startDate').value;
+            const endInput = document.getElementById('endDate').value;
+
+            if (startInput && endInput && startInput > endInput) {
+                alert('开始日期不能大于结束日期');
+                return;
+            }
+
+            startDate = formatDateTimeLocal(startInput);
+            endDate = formatDateTimeLocal(endInput);
+
+            currentPage = 1;
+            loadIncomeData(currentPage);
+        }
+
+        function displayDeviceDetails(orders) {
+            const incomeDetailsContainer = document.getElementById('income-details');
+            incomeDetailsContainer.innerHTML = '';
+
+            orders.forEach(order => {
+                const orderItem = document.createElement('div');
+                orderItem.classList.add('order-item');
+
+                const startTime = new Date(order.start_time);
+                const endTime = new Date(order.end_time);
+                const durationMs = endTime - startTime;
+                const totalSeconds = Number.isFinite(durationMs) && durationMs > 0 ? Math.floor(durationMs / 1000) : 0;
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+
+                orderItem.innerHTML = `
+                    <div class="field">
+                        <div class="label">订单编号:</div>
+                        <div class="value">${escapeHtml(order.order_id)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">用户信息:</div>
+                        <div class="value">${escapeHtml(order.uid)} - ${escapeHtml(order.nickname)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">支付金额:</div>
+                        <div class="value payment-amount">${formatMoney(order.payment_amount)} 元</div>
+                    </div>
+                    ${getActualArrivalHtml(order.payment_amount)}
+                    <div class="field">
+                        <div class="label">支付类型:</div>
+                        <div class="value">${escapeHtml(order.pays_type)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">套餐驾驶时长:</div>
+                        <div class="value">${escapeHtml(order.billing_rules)} 分钟</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">实际驾驶时长:</div>
+                        <div class="value">${minutes} 分 ${seconds} 秒</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">驾驶时间:</div>
+                        <div class="value datetime">${escapeHtml(order.start_time)} - ${escapeHtml(order.end_time)}</div>
+                    </div>
+                `;
+                incomeDetailsContainer.appendChild(orderItem);
+            });
+        }
+
+        function displayGiftDetails(orders) {
+            const incomeDetailsContainer = document.getElementById('income-details');
+            incomeDetailsContainer.innerHTML = '';
+
+            orders.forEach(order => {
+                const orderItem = document.createElement('div');
+                orderItem.classList.add('order-item');
+
+                orderItem.innerHTML = `
+                    <div class="field">
+                        <div class="label">礼物订单ID:</div>
+                        <div class="value">${escapeHtml(order.id)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">送礼时间:</div>
+                        <div class="value datetime">${escapeHtml(order.send_time)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">用户信息:</div>
+                        <div class="value">${escapeHtml(order.uid)} - ${escapeHtml(order.nickname)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">支付金额:</div>
+                        <div class="value payment-amount">${formatMoney(order.payment_amount)}</div>
+                    </div>
+                    ${getActualArrivalHtml(order.payment_amount)}
+                    <div class="field">
+                        <div class="label">支付类型:</div>
+                        <div class="value">${escapeHtml(order.pays_type)}</div>
+                    </div>
+           <!--         <div class="field">
+                        <div class="label">场地收益:</div>
+                        <div class="value payment-amount">${formatMoney(order.venue_income)} 元</div>
+                    </div>
+                    -->
+                    <div class="field">
+                        <div class="label">礼物ID:</div>
+                        <div class="value">${escapeHtml(order.gift_id)}</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">订单状态:</div>
+                        <div class="value">${escapeHtml(order.status)}</div>
+                    </div>
+                `;
+                incomeDetailsContainer.appendChild(orderItem);
+            });
+        }
+
+        function goToPage() {
+            const pageInput = document.getElementById('jumpPage').value;
+            const pageNum = parseInt(pageInput, 10);
+
+            if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+                currentPage = pageNum;
+                loadIncomeData(currentPage);
+            } else {
+                alert(`请输入 1 到 ${totalPages} 之间的有效页码`);
+            }
+        }
+    </script>
+</body>
+
+</html>

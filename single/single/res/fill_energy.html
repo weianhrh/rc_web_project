@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>挂车能量续满</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+.card-title {
+  font-size: 24px;
+  color: var(--text-color);
+  margin-bottom: 20px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 10px;
+  text-align: left;
+  /*display: flex;*/
+  flex-direction: column; /* 改为竖排 */
+  align-items: stretch;    /* 让子项撑满 */
+  gap: 12px;
+}
+
+.card-title .btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.edit-btn {
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: var(--transition);
+  width: 100%; /* 撑满父级 */
+}
+    
+    .edit-btn:hover {
+      background-color: #4a77e4;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #f5f7fa;
+    }
+
+    .loading, .status {
+      text-align: center;
+      font-size: 15px;
+      color: var(--primary);
+      margin-top: 10px;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .fail {
+      color: red;
+    }
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .user-card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 12px 16px;
+      font-size: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .user-id span, .user-energy span {
+      font-weight: bold;
+      color: #333;
+    }
+@media (max-width: 480px) {
+  .card-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-title .btn-group {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .edit-btn {
+    width: 100%; /* 按钮在手机端单独一行 */
+  }
+}
+.edit-btn:disabled {
+  background-color: #ccc !important;
+  cursor: not-allowed !important;
+}
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.modal-content h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: var(--text-color);
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  margin-bottom: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 10px;
+  font-size: 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modal-buttons button:first-child {
+  background-color: var(--primary);
+  color: white;
+}
+
+.modal-buttons button:last-child {
+  background-color: #ccc;
+}
+
+.modal-tip {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">
+      挂车能量自动续满
+      <div>
+          <button class="edit-btn" onclick="fillEnergy()">自动续满</button>
+        <button class="edit-btn" onclick="promptAddUsers()">添加固定用户</button>
+        
+      </div>
+    </div>
+
+ 
+      <div id="result"></div>
+    </div>
+  </div>
+
+<script>
+ document.addEventListener('DOMContentLoaded', async () => {
+  const checkRes = await fetch('/api/operat/energy_renew_or_config.php?action=check');
+  const checkData = await checkRes.json();
+
+  if (checkData.code !== 0 || !checkData.data?.users?.length) {
+    document.getElementById('result').innerHTML = `
+      <div class="status fail">❗ 该场地暂无固定挂车用户</div>
+    `;
+  } else {
+      await viewEnergy(); // 展示用户能量
+      await toggleAddButtonState(); // 初始加载按钮状态
+  }
+});
+
+
+  async function checkAndPromptUsers() {
+    const res = await fetch('/api/operat/energy_renew_or_config.php?action=check');
+    const data = await res.json();
+    if (data.code === 0 && data.data.count === 0) {
+      if (confirm('你的场地暂时没有挂车用户，是否立即添加？')) {
+        await promptAddUsers();
+      }
+    }
+  }
+async function toggleAddButtonState() {
+  const res = await fetch('/api/operat/energy_renew_or_config.php?action=check');
+  const data = await res.json();
+
+  const btn = document.querySelector('.edit-btn[onclick="promptAddUsers()"]');
+  if (data.code === 0 && data.data.count >= 5) {
+    btn.disabled = true;
+    btn.innerText = '已达上限 (5人)';
+    btn.style.backgroundColor = '#ccc';
+    btn.style.cursor = 'not-allowed';
+  } else {
+    btn.disabled = false;
+    btn.innerText = '添加固定用户';
+    btn.style.backgroundColor = ''; // 恢复原样式
+    btn.style.cursor = '';
+  }
+}
+
+// async function promptAddUsers() {
+//   const checkRes = await fetch('/api/operat/energy_renew_or_config.php?action=check');
+//   const checkData = await checkRes.json();
+//   const currentCount = checkData.data?.count ?? 0;
+
+//   for (let i = currentCount; i < 4; i++) {
+//     const user_uid = prompt(`请输入第 ${i + 1} 个挂车用户UID（留空取消）`);
+//     if (!user_uid) break;
+
+//     const res = await fetch('/api/operat/energy_renew_or_config.php?action=add', {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+//       body: `user_uid=${encodeURIComponent(user_uid)}`
+//     });
+//     const json = await res.json();
+//     alert(json.msg);
+
+//     // 如果成功添加，自动刷新 UI
+//     if (json.code === 0) {
+//       await viewEnergy();
+//     }
+
+//     // 如果添加失败（如重复），停止添加
+//     if (json.code !== 0) break;
+//   }
+
+//   // 再次检查是否需要禁用按钮
+//   await toggleAddButtonState();
+// }
+let remainingSlots = 5;
+
+async function promptAddUsers() {
+  const checkRes = await fetch('/api/operat/energy_renew_or_config.php?action=check');
+  const checkData = await checkRes.json();
+  remainingSlots = 5 - (checkData.data?.count ?? 0);
+
+  if (remainingSlots <= 0) {
+    alert('已达挂车用户上限（5人）');
+    return;
+  }
+
+  document.getElementById('userRemainCount').innerText = remainingSlots;
+  document.getElementById('userUidInput').value = '';
+  document.getElementById('addUserModal').style.display = 'flex';
+}
+
+async function submitUserUid() {
+  const uid = document.getElementById('userUidInput').value.trim();
+  if (!uid) {
+    alert('请输入 UID');
+    return;
+  }
+
+  const res = await fetch('/api/operat/energy_renew_or_config.php?action=add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `user_uid=${encodeURIComponent(uid)}`
+  });
+  const json = await res.json();
+  alert(json.msg);
+
+  if (json.code === 0) {
+    remainingSlots--;
+    await viewEnergy();
+    await toggleAddButtonState();
+
+    if (remainingSlots <= 0) {
+      closeModal();
+    } else {
+      document.getElementById('userUidInput').value = '';
+      document.getElementById('userRemainCount').innerText = remainingSlots;
+    }
+  } else {
+    closeModal();
+  }
+}
+
+function closeModal() {
+  document.getElementById('addUserModal').style.display = 'none';
+}
+
+
+async function fillEnergy() {
+  const resultBox = document.getElementById('result');
+  resultBox.innerHTML = '<div class="status">⏳ 正在执行能量续满...</div>';
+
+  try {
+    const res = await fetch('/api/operat/energy_renew_or_config.php');
+    const data = await res.json();
+
+    if (data.code === 0) {
+      const after = data.data.after || [];
+      const inserted = data.data.inserted || [];
+      const updated = data.data.updated || [];
+
+      let html = `<div class="status success">✅ 能量续满成功</div>`;
+      html += `<table><thead><tr><th>用户ID</th><th>状态</th><th>当前能量</th></tr></thead><tbody>`;
+
+      after.forEach(row => {
+        const uid = row.user_uid;
+        const status = inserted.includes(uid) ? '🔵 新增' : (updated.includes(uid) ? '🟢 更新' : '🟡 未变更');
+        html += `<tr><td>${uid}</td><td>${status}</td><td>${row.energy}</td></tr>`;
+      });
+
+      html += '</tbody></table>';
+      resultBox.innerHTML = html;
+    } else {
+      resultBox.innerHTML = `<div class="status fail">❌ ${data.msg}</div>`;
+    }
+} catch (err) {
+  console.error('fetch error:', err);
+  resultBox.innerHTML = `<div class="status fail">❌ 请求失败，${err.message || '请检查网络或登录状态'}</div>`;
+}
+// ✅ 成功后延迟刷新能量列表
+setTimeout(() => {
+  viewEnergy();
+}, 1600); // 延迟 1500 毫秒
+
+
+}
+
+async function viewEnergy() {
+  const resultBox = document.getElementById('result');
+  resultBox.innerHTML = '<div class="status">⏳ 正在获取挂车用户能量...</div>';
+
+  try {
+    const checkRes = await fetch('/api/operat/energy_renew_or_config.php?action=check');
+    const checkData = await checkRes.json();
+
+    console.log('checkData:', checkData); // ✅ 加个调试点
+
+    if (checkData.code !== 0 || !Array.isArray(checkData.data?.users) || checkData.data.users.length === 0) {
+      resultBox.innerHTML = `<div class="status fail">❌ ${checkData.msg || '没有挂车用户'}</div>`;
+      return;
+    }
+
+    const userIds = checkData.data.users.map(u => u.user_uid);
+    const paramStr = userIds.map(uid => `user_ids[]=${uid}`).join('&');
+
+    const energyRes = await fetch('/api/operat/energy_renew_or_config.php?action=preview', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: paramStr
+    });
+
+    const energyData = await energyRes.json();
+
+    console.log('energyData:', energyData); // ✅ 再加一个调试
+
+if (energyData.code === 0) {
+  const records = energyData.data || [];
+  const recordMap = {};
+  records.forEach(r => {
+    recordMap[r.user_uid] = r.energy;
+  });
+
+  const allUsers = checkData.data.users.map(u => u.user_uid);
+
+  let html = `<div class="status success">✅ 当前挂车用户能量如下：</div>`;
+  html += `<table><thead><tr><th>用户ID</th><th>当前能量</th></tr></thead><tbody>`;
+
+  allUsers.forEach(uid => {
+    const energy = recordMap[uid] ?? 0; // ❗ 如果没有查到 energy，显示为 0
+    html += `<tr><td>${uid}</td><td>${energy}</td></tr>`;
+  });
+
+  html += '</tbody></table>';
+  resultBox.innerHTML = html;
+
+
+
+
+    } else {
+      resultBox.innerHTML = `<div class="status fail">❌ ${energyData.msg}</div>`;
+    }
+
+  } catch (err) {
+    console.error('viewEnergy 出错:', err);
+    resultBox.innerHTML = `<div class="status fail">❌ 网络异常或未登录</div>`;
+  }
+}
+
+
+
+</script>
+<!-- 添加用户模态框 -->
+<div id="addUserModal" class="modal">
+  <div class="modal-content">
+    <h3>添加挂车用户 UID</h3>
+    <input type="text" id="userUidInput" placeholder="请输入用户 UID" />
+    <div class="modal-buttons">
+      <button onclick="submitUserUid()">添加</button>
+      <button onclick="closeModal()">取消</button>
+    </div>
+    <div class="modal-tip">剩余可添加数量：<span id="userRemainCount">5</span></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- v3-full-width-notices 2026-06-06 -->
+  <title>主页二 - 真实接口版</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: #0f172a;
+      background: radial-gradient(1200px 800px at 10% 0%, #f3f7ff 0%, #f7f8fc 45%, #f5f6fb 100%);
+    }
+
+    :root {
+      --nd-card: #fff;
+      --nd-text: #0f172a;
+      --nd-muted: #64748b;
+      --nd-border: rgba(15, 23, 42, .08);
+      --nd-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+      --nd-radius: 16px;
+      --nd-primary: #5b8cff;
+      --nd-warn: #f59e0b;
+      --nd-danger: #ef4444;
+      --nd-gray: #64748b;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .card,
+    .header-card {
+      background: var(--nd-card);
+      border: 1px solid var(--nd-border);
+      border-radius: var(--nd-radius);
+      box-shadow: var(--nd-shadow);
+      overflow: hidden;
+    }
+
+    .header-card { margin-bottom: 18px; }
+
+    .breadcrumb {
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      color: var(--nd-muted);
+      font-size: 14px;
+    }
+
+    .breadcrumb .current {
+      color: var(--nd-text);
+      font-weight: 600;
+    }
+
+
+    .grid-top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .card-header {
+      padding: 14px 18px;
+      font-weight: 600;
+      color: var(--nd-text);
+      border-bottom: 1px solid var(--nd-border);
+      background: linear-gradient(180deg, rgba(91, 140, 255, .10) 0%, rgba(91, 140, 255, 0) 70%);
+    }
+
+    .card-body { padding: 18px; }
+
+    .section-bottom { margin-top: 18px; }
+
+    /* 官方通知在 PC 端横跨整行，不留右侧空白 */
+    .notices-col {
+      grid-column: 1 / -1;
+    }
+
+    .notices-col.section-bottom {
+      margin-top: 0;
+    }
+
+    /* 轮播 */
+    .carousel-wrap { position: relative; }
+
+    .carousel {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(15, 23, 42, .06);
+      background: rgba(255, 255, 255, .72);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .45s ease;
+      background: #fff;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #fff;
+    }
+
+    .carousel-placeholder,
+    .empty,
+    .loading,
+    .error-box {
+      padding: 18px;
+      color: var(--nd-muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .error-box { color: #b91c1c; }
+
+    .carousel-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .45);
+      color: #fff;
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 38px;
+      z-index: 5;
+      display: none;
+    }
+
+    .carousel-wrap.has-slides .carousel-arrow { display: block; }
+    .carousel-arrow:hover { background: rgba(15, 23, 42, .62); }
+    .carousel-arrow.left { left: 12px; }
+    .carousel-arrow.right { right: 12px; }
+
+    .indicators {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .indicators span {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .65);
+      border: 1px solid rgba(15, 23, 42, .08);
+      cursor: pointer;
+    }
+
+    .indicators span.active {
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(255, 255, 255, .18);
+    }
+
+    /* 列表 */
+    .log-scroll {
+      height: 316px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .log-scroll::-webkit-scrollbar { width: 8px; }
+    .log-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,.06); border-radius: 999px; }
+    .log-scroll::-webkit-scrollbar-thumb { background: rgba(100,116,139,.35); border-radius: 999px; }
+    .log-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,.55); }
+
+    .nd-item,
+    .nd-log-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px dashed rgba(15, 23, 42, .08);
+    }
+
+    .nd-item:last-child,
+    .nd-log-item:last-child { border-bottom: 0; }
+
+    .nd-item__dot,
+    .nd-log-item__dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-top: 8px;
+      flex: 0 0 10px;
+      background: var(--dot, rgba(91, 140, 255, .95));
+      box-shadow: 0 0 0 6px rgba(91, 140, 255, .12);
+    }
+
+    .nd-item__body,
+    .nd-log-item__body {
+      flex: 1;
+      min-width: 0;
+      background: rgba(255, 255, 255, .78);
+      border: 1px solid rgba(15, 23, 42, .06);
+      border-radius: 14px;
+      padding: 12px 12px 10px;
+    }
+
+    .nd-item__row,
+    .nd-log-item__row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .nd-item__left,
+    .nd-log-item__left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .nd-badge,
+    .nd-log-badge {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid rgba(15, 23, 42, .08);
+      background: rgba(255, 255, 255, .85);
+      color: #334155;
+    }
+
+    .nd-item__title,
+    .nd-log-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--nd-text);
+    }
+
+    .nd-item__time,
+    .nd-log-time {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      font-size: 12px;
+      color: var(--nd-muted);
+    }
+
+    .nd-item__content,
+    .nd-log-content {
+      font-size: 13px;
+      line-height: 1.7;
+      color: rgba(15, 23, 42, .86);
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .nd-item__content a,
+    .nd-log-content a,
+    .modal-content a {
+      color: #3f6edc;
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(63, 110, 220, .6);
+      word-break: break-all;
+    }
+
+    .nd-item__actions,
+    .nd-log-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding-top: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 30px;
+      line-height: 30px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: .2s ease;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .btn-primary { background: var(--nd-primary); color: #fff; }
+    .btn-primary:hover { filter: brightness(.96); }
+    .btn-light { background: #fff; border: 1px solid rgba(15, 23, 42, .10); color: #334155; }
+    .btn-light:hover { background: #f8fafc; }
+
+    .nd-item--info .nd-item__dot { background: rgba(91, 140, 255, .95); box-shadow: 0 0 0 6px rgba(91, 140, 255, .12); }
+    .nd-item--warn .nd-item__dot { background: rgba(245, 158, 11, .95); box-shadow: 0 0 0 6px rgba(245, 158, 11, .14); }
+    .nd-item--danger .nd-item__dot { background: rgba(239, 68, 68, .95); box-shadow: 0 0 0 6px rgba(239, 68, 68, .14); }
+    .nd-item--gray .nd-item__dot { background: rgba(100, 116, 139, .9); box-shadow: 0 0 0 6px rgba(100, 116, 139, .12); }
+
+    .nd-item--info .nd-badge { border-color: rgba(91, 140, 255, .25); color: #2f5fd0; background: rgba(91, 140, 255, .08); }
+    .nd-item--warn .nd-badge { border-color: rgba(245, 158, 11, .28); color: #a16207; background: rgba(245, 158, 11, .10); }
+    .nd-item--danger .nd-badge { border-color: rgba(239, 68, 68, .28); color: #b91c1c; background: rgba(239, 68, 68, .10); }
+    .nd-item--gray .nd-badge,
+    .nd-log-badge { border-color: rgba(100, 116, 139, .22); color: #475569; background: rgba(100, 116, 139, .10); }
+
+    .nd-log-item__dot { background: rgba(100, 116, 139, .9); box-shadow: 0 0 0 6px rgba(100, 116, 139, .12); }
+    .nd-log-item--active .nd-log-item__dot { background: rgba(91, 140, 255, .95); box-shadow: 0 0 0 6px rgba(91, 140, 255, .12); }
+    .nd-log-item--active .nd-log-badge { border-color: rgba(91, 140, 255, .25); color: #2f5fd0; background: rgba(91, 140, 255, .08); }
+
+    /* 弹窗 */
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(15, 23, 42, .45);
+      z-index: 9999;
+    }
+
+    .modal-mask.show { display: flex; }
+
+    .modal {
+      width: min(860px, 100%);
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .18);
+    }
+
+    .modal-header {
+      padding: 18px 20px 12px;
+      border-bottom: 1px solid #eef2f7;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .modal-content {
+      padding: 16px 20px;
+      overflow: auto;
+      white-space: pre-wrap;
+      line-height: 1.8;
+      color: #334155;
+      word-break: break-word;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 14px 20px 18px;
+      border-top: 1px solid #eef2f7;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%) translateY(-12px);
+      max-width: min(92vw, 560px);
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .92);
+      color: #fff;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s ease;
+      z-index: 10000;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, .18);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 1080px) {
+      .page { padding: 14px; }
+      .grid-top { grid-template-columns: 1fr; }
+      .carousel-col { order: 1; }
+      .notices-col { order: 2; grid-column: 1 / -1; }
+      .logs-col { order: 3; }
+      .section-bottom { margin-top: 0; }
+      .carousel { height: 200px; }
+      .slide img { object-fit: contain; height: 200px; }
+      .log-scroll { height: auto; overflow: visible; padding-right: 0; }
+      .nd-item,
+      .nd-log-item { gap: 10px; padding: 10px 0; }
+      .nd-item__body,
+      .nd-log-item__body { padding: 10px 10px 8px; border-radius: 12px; }
+      .nd-item__row,
+      .nd-log-item__row { flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
+      .nd-item__title,
+      .nd-log-title { max-width: 9em; }
+      .nd-item__time,
+      .nd-log-time { font-size: 11px; opacity: .9; }
+      .nd-item__content,
+      .nd-log-content { font-size: 12.5px; line-height: 1.6; -webkit-line-clamp: 2; }
+      .nd-item__actions,
+      .nd-log-actions { padding-top: 8px; }
+      .btn { height: 28px; line-height: 28px; padding: 0 12px; }
+      .modal-header { font-size: 18px; }
+    }
+
+
+    /* ===== 强制修复：官方通知必须占满整行 ===== */
+    .grid-top > .notices-col,
+    .grid-top > .notices-col.section-bottom {
+      grid-column: 1 / -1 !important;
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    .grid-top > .notices-col > .card {
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header-card">
+      <div class="breadcrumb">
+        <span>主页</span>
+        <span>›</span>
+        <span>场地名称：</span>
+        <span class="current" id="daily-order-venue_name">加载中...</span>
+      </div>
+    </div>
+
+
+    <div class="grid-top">
+      <div class="carousel-col">
+        <div class="card">
+          <div class="card-header">RC物联</div>
+          <div class="card-body">
+            <div class="carousel-wrap" id="carouselWrap">
+              <div class="carousel" id="carousel">
+                <div class="carousel-placeholder">轮播加载中...</div>
+              </div>
+              <button class="carousel-arrow left" id="prevBtn" aria-label="上一张">‹</button>
+              <button class="carousel-arrow right" id="nextBtn" aria-label="下一张">›</button>
+              <div class="indicators" id="indicators"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="logs-col">
+        <div class="card">
+          <div class="card-header">更新日志</div>
+          <div class="card-body log-scroll" id="logs-container">
+            <div class="loading">更新日志加载中...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notices-col section-bottom">
+        <div class="card">
+          <div class="card-header">官方通知</div>
+          <div class="card-body" id="notices-container">
+            <div class="loading">官方通知加载中...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="noticeModal">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header" id="modalTitle">通知详情</div>
+      <div class="modal-content" id="modalContent"></div>
+      <div class="modal-footer">
+        <button class="btn btn-light" type="button" id="closeModalBtn">关闭</button>
+        <button class="btn btn-primary" type="button" id="markReadBtn">标记已读</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /*
+      真实接口版说明：
+      1. 页面必须放在你项目的 Web 目录里，保证 ./api/index/*.php 能访问。
+      2. 不建议直接 file:// 双击打开，因为真实接口和登录态通常需要同域 Web 环境。
+      3. 如果你的新页面放在子目录，需要把 API_BASE 改成正确相对路径，例如 '../api/index/'。
+    */
+    const API_BASE = '/api/index/';
+    const API = {
+      carousel: API_BASE + 'AppImages.php',
+      msg: API_BASE + 'Msg.php',
+      stats: API_BASE + 'DailySummaryStats.php'
+    };
+
+    const state = {
+      carousel: [],
+      notices: [],
+      logs: [],
+      currentSlide: 0,
+      carouselTimer: null,
+      currentNoticeId: null
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    function toast(message) {
+      const el = $('#toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(el.__timer);
+      el.__timer = setTimeout(() => el.classList.remove('show'), 2400);
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function stripTrailingPunct(url) {
+      return url.replace(/[。．\.，,；;！!？\?\)\]】》」'"]+$/u, '');
+    }
+
+    function linkify(text) {
+      if (!text) return '';
+      const urlRe = /(https?:\/\/[^\s<>"']+)/g;
+      const raw = String(text);
+      const out = [];
+      let last = 0;
+
+      raw.replace(urlRe, function(m, _1, offset) {
+        out.push(escapeHtml(raw.slice(last, offset)));
+        const clean = stripTrailingPunct(m);
+        const trailing = m.slice(clean.length);
+        let label = clean;
+        try { label = decodeURI(clean); } catch(e) {}
+        out.push('<a href="' + escapeHtml(clean) + '" target="_blank" rel="noopener noreferrer nofollow">' + escapeHtml(label) + '</a>');
+        out.push(escapeHtml(trailing));
+        last = offset + m.length;
+        return m;
+      });
+
+      out.push(escapeHtml(raw.slice(last)));
+      return out.join('');
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      let value = dateStr;
+
+      if (/^\d+$/.test(String(value))) {
+        let n = Number(value);
+        if (String(value).length === 10) n *= 1000;
+        value = n;
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      return y + '年' + m + '月' + d + '日 ' + hh + ':' + mm;
+    }
+
+    function levelMeta(n) {
+      const imp = Number((n && n.importance) || 1);
+      if (imp === 4) return { text: '处罚', cls: 'danger', def: '#7c3aed' };
+      if (imp === 3) return { text: '紧急', cls: 'danger', def: '#ef4444' };
+      if (imp === 2) return { text: '重要', cls: 'warn', def: '#f59e0b' };
+      return { text: '普通', cls: 'info', def: '#5b8cff' };
+    }
+
+    function safeColor(color, fallback) {
+      const c = String(color || '').trim();
+      if (!c) return fallback;
+      return /^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+)$/.test(c) ? c : fallback;
+    }
+
+    async function requestJson(url, options = {}) {
+      const res = await fetch(url, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        ...options,
+        headers: {
+          ...(options.headers || {})
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('HTTP ' + res.status);
+      }
+
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('接口返回不是 JSON：', text);
+        throw new Error('接口返回不是 JSON');
+      }
+    }
+
+    function normalizeImageUrl(url) {
+      const u = String(url || '').trim();
+      if (!u) return '';
+      return u;
+    }
+
+    async function loadCarousel() {
+      const carousel = $('#carousel');
+      const wrap = $('#carouselWrap');
+
+      try {
+        const params = new URLSearchParams({ type: '2', limit: '10' });
+        const res = await requestJson(API.carousel + '?' + params.toString());
+
+        if (Number(res.code) !== 0) {
+          carousel.innerHTML = '<div class="empty">暂无轮播</div>';
+          wrap.classList.remove('has-slides');
+          return;
+        }
+
+        state.carousel = Array.isArray(res.data) ? res.data : [];
+        renderCarousel();
+      } catch (err) {
+        console.error(err);
+        carousel.innerHTML = '<div class="error-box">轮播加载失败，请确认接口可访问：' + escapeHtml(API.carousel) + '</div>';
+        wrap.classList.remove('has-slides');
+      }
+    }
+
+    function renderCarousel() {
+      const list = state.carousel || [];
+      const carousel = $('#carousel');
+      const indicators = $('#indicators');
+      const wrap = $('#carouselWrap');
+
+      stopCarouselAuto();
+      state.currentSlide = 0;
+
+      if (!list.length) {
+        carousel.innerHTML = '<div class="empty">暂无轮播</div>';
+        indicators.innerHTML = '';
+        wrap.classList.remove('has-slides');
+        return;
+      }
+
+      carousel.innerHTML = list.map((it, idx) => {
+        const img = normalizeImageUrl(it.image_url || it.image || it.url || '');
+        const link = it.redirect_url || it.link || '';
+        return '<div class="slide ' + (idx === 0 ? 'active' : '') + '" data-index="' + idx + '" data-link="' + escapeHtml(link) + '">' +
+          '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(it.title || '') + '" onerror="this.style.objectFit=\'contain\';this.alt=\'图片加载失败\';" />' +
+        '</div>';
+      }).join('');
+
+      indicators.innerHTML = list.map((_, idx) => '<span class="' + (idx === 0 ? 'active' : '') + '" data-index="' + idx + '"></span>').join('');
+      wrap.classList.toggle('has-slides', list.length > 1);
+
+      $$('#carousel .slide').forEach(slide => {
+        slide.addEventListener('click', function() {
+          const url = this.getAttribute('data-link');
+          if (url) window.open(url, '_blank', 'noopener');
+        });
+      });
+
+      $$('#indicators span').forEach(dot => {
+        dot.addEventListener('click', function() {
+          goToSlide(Number(this.getAttribute('data-index')) || 0);
+          startCarouselAuto();
+        });
+      });
+
+      if (list.length > 1) startCarouselAuto();
+    }
+
+    function goToSlide(index) {
+      const slides = $$('#carousel .slide');
+      const dots = $$('#indicators span');
+      const total = slides.length;
+      if (!total) return;
+
+      state.currentSlide = (index + total) % total;
+      slides.forEach((s, i) => s.classList.toggle('active', i === state.currentSlide));
+      dots.forEach((d, i) => d.classList.toggle('active', i === state.currentSlide));
+    }
+
+    function nextSlide() { goToSlide(state.currentSlide + 1); }
+    function prevSlide() { goToSlide(state.currentSlide - 1); }
+
+    function startCarouselAuto() {
+      stopCarouselAuto();
+      if ((state.carousel || []).length > 1) {
+        state.carouselTimer = setInterval(nextSlide, 4000);
+      }
+    }
+
+    function stopCarouselAuto() {
+      if (state.carouselTimer) {
+        clearInterval(state.carouselTimer);
+        state.carouselTimer = null;
+      }
+    }
+
+    $('#nextBtn').addEventListener('click', function() {
+      nextSlide();
+      startCarouselAuto();
+    });
+
+    $('#prevBtn').addEventListener('click', function() {
+      prevSlide();
+      startCarouselAuto();
+    });
+
+    async function loadMessages() {
+      const noticesBox = $('#notices-container');
+      const logsBox = $('#logs-container');
+
+      try {
+        const res = await requestJson(API.msg);
+        if (Number(res.code) !== 0) {
+          const msg = escapeHtml(res.msg || '获取数据失败');
+          noticesBox.innerHTML = '<div class="error-box">' + msg + '</div>';
+          logsBox.innerHTML = '<div class="error-box">' + msg + '</div>';
+          return;
+        }
+
+        state.notices = Array.isArray(res.data && res.data.notices) ? res.data.notices : [];
+        state.logs = Array.isArray(res.data && res.data.logs) ? res.data.logs : [];
+        renderNotices();
+        renderLogs();
+      } catch (err) {
+        console.error(err);
+        noticesBox.innerHTML = '<div class="error-box">官方通知请求失败，请检查接口：' + escapeHtml(API.msg) + '</div>';
+        logsBox.innerHTML = '<div class="error-box">更新日志请求失败，请检查接口：' + escapeHtml(API.msg) + '</div>';
+      }
+    }
+
+    function renderNotices() {
+      const box = $('#notices-container');
+      const list = state.notices || [];
+
+      if (!list.length) {
+        box.innerHTML = '<div class="empty">暂无通知</div>';
+        return;
+      }
+
+      box.innerHTML = list.map(function(notice) {
+        const lv = levelMeta(notice);
+        const dot = safeColor(notice.color, lv.def);
+        const id = Number(notice.id) || 0;
+
+        return '<div class="nd-item nd-item--' + lv.cls + '" style="--dot:' + escapeHtml(dot) + '">' +
+          '<div class="nd-item__dot"></div>' +
+          '<div class="nd-item__body">' +
+            '<div class="nd-item__row">' +
+              '<div class="nd-item__left">' +
+                '<span class="nd-badge">' + lv.text + '</span>' +
+                '<div class="nd-item__title">' + escapeHtml(notice.title || '官方通知') + '</div>' +
+              '</div>' +
+              '<div class="nd-item__time">' + escapeHtml(formatDate(notice.publish_time)) + '</div>' +
+            '</div>' +
+            '<div class="nd-item__content">' + linkify(notice.content || '') + '</div>' +
+            '<div class="nd-item__actions">' +
+              '<button class="btn btn-primary" type="button" onclick="showNoticePopup(' + id + ')">查看详情</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function renderLogs() {
+      const box = $('#logs-container');
+      const list = state.logs || [];
+
+      if (!list.length) {
+        box.innerHTML = '<div class="empty">暂无更新日志</div>';
+        return;
+      }
+
+      box.innerHTML = list.map(function(log, idx) {
+        const active = idx === 0 ? ' nd-log-item--active' : '';
+        return '<div class="nd-log-item' + active + '">' +
+          '<div class="nd-log-item__dot"></div>' +
+          '<div class="nd-log-item__body">' +
+            '<div class="nd-log-item__row">' +
+              '<div class="nd-log-item__left">' +
+                '<span class="nd-log-badge">' + escapeHtml(log.platform || '平台') + '</span>' +
+                '<div class="nd-log-title">' + escapeHtml(log.version || '更新日志') + '</div>' +
+              '</div>' +
+              '<div class="nd-log-time">' + escapeHtml(formatDate(log.publish_time)) + '</div>' +
+            '</div>' +
+            '<div class="nd-log-content">' + linkify(log.content || '') + '</div>' +
+            '<div class="nd-log-actions">' +
+              '<button class="btn btn-light" type="button" onclick="showFeedbackTip()">反馈</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    window.showFeedbackTip = function() {
+      toast('反馈入口可以在这里替换成你的真实反馈页面或弹窗');
+    };
+
+    async function loadDailySummaryStats() {
+      try {
+        const res = await requestJson(API.stats);
+        if (Number(res.code) !== 0) {
+          toast('获取场地名称失败：' + (res.msg || '未知错误'));
+          $('#daily-order-venue_name').textContent = '非法数据';
+          return;
+        }
+
+        const data = res.data || {};
+        $('#daily-order-venue_name').textContent = data.venue_name || '非法数据';
+      } catch (err) {
+        console.error(err);
+        $('#daily-order-venue_name').textContent = '接口异常';
+      }
+    }
+
+    async function checkUnreadNotices() {
+      try {
+        const body = new URLSearchParams({ action: 'getUnreadNotices' });
+        const res = await requestJson(API.msg, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body
+        });
+
+        if (Number(res.code) === 0 && Array.isArray(res.data) && res.data.length > 0) {
+          const first = res.data[0];
+          if (first && typeof first === 'object') {
+            openNoticeModal(first);
+          }
+        }
+      } catch (err) {
+        console.error('检查未读通知失败：', err);
+      }
+    }
+
+    window.showNoticePopup = function(noticeId) {
+      const id = Number(noticeId) || 0;
+      const notice = (state.notices || []).find(n => Number(n.id) === id);
+      if (!notice) {
+        toast('未找到通知详情');
+        return;
+      }
+      openNoticeModal(notice);
+    };
+
+    function openNoticeModal(notice) {
+      state.currentNoticeId = Number(notice.id) || 0;
+      $('#modalTitle').textContent = notice.title || '通知详情';
+      $('#modalContent').innerHTML = linkify(notice.content || '');
+      $('#noticeModal').classList.add('show');
+    }
+
+    function closeNoticeModal() {
+      $('#noticeModal').classList.remove('show');
+    }
+
+    async function markAsRead() {
+      const noticeId = Number(state.currentNoticeId) || 0;
+      if (!noticeId) {
+        closeNoticeModal();
+        return;
+      }
+
+      try {
+        const body = new URLSearchParams({
+          action: 'markNoticeAsRead',
+          notice_id: String(noticeId)
+        });
+
+        const res = await requestJson(API.msg, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+          body
+        });
+
+        if (Number(res.code) === 0) {
+          closeNoticeModal();
+          await checkUnreadNotices();
+        } else {
+          toast('标记已读失败：' + (res.msg || '未知错误'));
+        }
+      } catch (err) {
+        console.error(err);
+        toast('标记已读请求失败');
+      }
+    }
+
+    $('#closeModalBtn').addEventListener('click', closeNoticeModal);
+    $('#markReadBtn').addEventListener('click', markAsRead);
+    $('#noticeModal').addEventListener('click', function(e) {
+      if (e.target === this) closeNoticeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeNoticeModal();
+    });
+
+    async function init() {
+      await Promise.all([
+        loadCarousel(),
+        loadMessages(),
+        loadDailySummaryStats()
+      ]);
+      await checkUnreadNotices();
+    }
+
+    init();
+  </script>
+</body>
+</html>

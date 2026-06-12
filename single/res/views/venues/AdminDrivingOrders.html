@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!--res/views/venues/AdminDrivingOrders.html-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>驾驶记录查询</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">     
+
+<style>
+:root {
+  --primary: #4f7cff;
+  --primary-dark: #3f68df;
+  --primary-light: #eef4ff;
+
+  --text: #172033;
+  --sub-text: #334155;
+  --muted: #7b8aa0;
+  --light-muted: #a0aec0;
+
+  --border: #e5ebf5;
+  --soft-border: #eef2f8;
+  --page-bg: #f5f7ff;
+
+  --success: #16a34a;
+  --success-bg: #ecfdf3;
+
+  --warning: #f59e0b;
+  --warning-bg: #fff7e6;
+
+  --danger: #ff4d4f;
+  --danger-dark: #d9363e;
+
+  --gray-btn: #64748b;
+  --gray-btn-dark: #475569;
+
+  --shadow: 0 12px 32px rgba(91, 140, 255, .10);
+  --card-shadow: 0 4px 14px rgba(15, 23, 42, .045);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  padding: 16px;
+  color: var(--text);
+  background: linear-gradient(135deg, #f8faff 0%, #eef3ff 100%);
+}
+
+/* 外层 */
+.dashboard-card {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px;
+  background: rgba(255, 255, 255, .98);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  position: relative;
+  margin-bottom: 16px;
+  padding-left: 12px;
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.card-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 4px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--primary);
+  transform: translateY(-50%);
+}
+
+/* 查询区域 */
+.form-container {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid #dfe8f8;
+}
+
+.form-item {
+  position: relative;
+  margin: 0;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.form-input {
+  width: 180px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d6e0f0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: .18s ease;
+}
+
+.form-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, .12);
+}
+
+.form-button {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: .18s ease;
+}
+
+.form-button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.form-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 列表 */
+.cards-container {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+/* 新订单卡片 */
+.order-card {
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+  transition: .18s ease;
+}
+
+.order-card:hover {
+  border-color: #c9d8ff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .07);
+  transform: translateY(-1px);
+}
+
+/* 顶部主信息 */
+.order-head {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 90px 100px auto;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--soft-border);
+}
+
+.order-no {
+  min-width: 0;
+}
+
+.order-no-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.order-no-value {
+  display: block;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-money {
+  text-align: left;
+}
+
+.order-money-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.order-money-value {
+  display: block;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+/* 状态标签 */
+.status-badge {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status-completed {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid #bbf7d0;
+}
+
+.status-pending {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid #ffe0a3;
+}
+
+/* 顶部按钮 */
+.order-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-actions .form-button {
+  min-width: 76px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.cancel-refund-btn {
+  background: var(--danger) !important;
+}
+
+.cancel-refund-btn:hover {
+  background: var(--danger-dark) !important;
+}
+
+/* 锁定/解锁按钮基础样式 */
+.lock-btn {
+  color: #fff !important;
+  border: none;
+}
+
+/* 未锁定：显示“锁定”，用深灰色 */
+.lock-action-btn {
+  background: #475569 !important;
+}
+
+.lock-action-btn:hover {
+  background: #334155 !important;
+}
+
+/* 已锁定：显示“解锁”，用橙色，更醒目 */
+.unlock-action-btn {
+  background: #f59e0b !important;
+}
+
+.unlock-action-btn:hover {
+  background: #d97706 !important;
+}
+
+/* 信息区 */
+.order-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.order-field {
+  min-width: 0;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.field-value {
+  display: block;
+  min-width: 0;
+  color: var(--sub-text);
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-value.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.field-value.money {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.field-value.empty {
+  color: #94a3b8;
+}
+
+/* 分页 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+#pageInfo {
+  min-width: 120px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 联想 */
+.suggestions-container {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: 280px;
+  max-height: 220px;
+  display: none;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d8e2f3;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .12);
+  z-index: 1000;
+}
+
+.suggestion-item {
+  padding: 9px 12px;
+  cursor: pointer;
+  color: #334155;
+  font-size: 13px;
+}
+
+.suggestion-item:hover {
+  background: #f0f3ff;
+}
+
+/* 手机端 */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+    background: #f4f7ff;
+  }
+
+  .dashboard-card {
+    padding: 14px;
+    border-radius: 18px;
+    box-shadow: none;
+  }
+
+  .card-title {
+    margin-bottom: 12px;
+    font-size: 19px;
+  }
+
+  .form-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 72px;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 15px;
+  }
+
+  .form-item {
+    min-width: 0;
+  }
+
+  .form-input {
+    width: 100%;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .form-button {
+    width: 100%;
+    height: 38px;
+    padding: 0;
+    font-size: 13px;
+  }
+
+  .order-card {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .order-head {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding-bottom: 10px;
+  }
+
+  .order-no {
+    grid-column: 1 / -1;
+  }
+
+  .order-money {
+    grid-column: 1 / 2;
+  }
+
+  .order-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .order-actions .form-button {
+    width: 100%;
+    height: 36px;
+  }
+
+  .order-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px 10px;
+  }
+
+  .field-label {
+    font-size: 12px;
+  }
+
+  .field-value {
+    font-size: 14px;
+  }
+
+  .field-value.mono {
+    font-size: 13px;
+  }
+
+  .suggestions-container {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .form-container {
+    grid-template-columns: 1fr;
+  }
+
+  .order-body {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field-value {
+    white-space: normal;
+    word-break: break-all;
+  }
+
+  #pageInfo {
+    min-width: auto;
+  }
+}
+
+.lock-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lock-status-badge.locked {
+  color: #d97706;
+  background: #fff7e6;
+  border: 1px solid #fed7aa;
+}
+
+.lock-status-badge.normal {
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+</style>
+</head>
+
+<body>
+
+    <div class="dashboard-card">
+        <!--<h1 class="card-title">驾驶记录查询</h1>-->
+        <h1 class="card-title" id="pageTitle">订单记录查询</h1>
+        
+        <div class="form-container">
+            <div class="form-item">
+                <label class="form-label">用户ID</label>
+                <input type="text" id="uid" class="form-input" placeholder="请输入用户ID">
+            </div>
+            <div class="form-item">
+                <label class="form-label">订单类型</label>
+                <select id="orderType" class="form-input">
+                    <option value="drive">驾驶订单</option>
+                    <option value="gift">礼物订单</option>
+                </select>
+            </div>
+            <div class="form-item">
+                <label class="form-label">场地</label>
+                <select id="venue_id" class="form-input">
+                    <option value="">全部场地</option>
+                </select>
+            </div>
+            <div class="form-item">
+                <label class="form-label">订单编号</label>
+                <input type="text" id="orderNumber" class="form-input" placeholder="请输入订单编号">
+                <div id="suggestions" class="suggestions-container"></div>
+            </div>
+            <div class="form-item">
+                <label class="form-label">&nbsp;</label>
+                <button onclick="searchOrders()" class="form-button">查询</button>
+            </div>
+        </div>
+
+        <div class="cards-container" id="orderCardsContainer">
+            <!-- 数据将通过 JavaScript 动态插入 -->
+        </div>
+
+        <!-- 添加分页控件 -->
+        <div class="pagination">
+            <button id="prevPage" class="form-button" style="margin-right: 10px;">上一页</button>
+            <span id="pageInfo" style="margin: 0 10px;"></span>
+            <button id="nextPage" class="form-button" style="margin-left: 10px;">下一页</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 5;
+        let totalOrders = [];
+        let totalCount = 0;
+        let orderCache = []; // 用于缓存所有订单数据
+
+ 
+        let hasMorePage = false;
+        let orderAbortController = null;
+        let orderLoading = false;
+        
+function searchOrders(resetPage = true) {
+    if (resetPage) currentPage = 1;
+
+    if (orderAbortController) {
+        orderAbortController.abort();
+    }
+
+    orderAbortController = new AbortController();
+    orderLoading = true;
+
+    const uid = document.getElementById('uid').value.trim();
+    const orderNumber = document.getElementById('orderNumber').value.trim();
+    const orderType = document.getElementById('orderType').value || 'drive';
+    const venueId = document.getElementById('venue_id') ? document.getElementById('venue_id').value : '';
+
+    const params = new URLSearchParams();
+    params.set('order_type', orderType);
+    params.set('page', currentPage);
+    params.set('page_size', pageSize);
+
+    // 关键：告诉后端不要 COUNT 全量，只返回当前页和 has_more
+    params.set('fast', '1');
+
+    if (uid) {
+        params.set('uid', uid);
+    }
+
+    if (orderNumber) {
+        params.set('order_number', orderNumber);
+    }
+
+    if (venueId) {
+        params.set('venue_id', venueId);
+    }
+
+    const url = '/api/finance/getDrivOrder.php?' + params.toString();
+
+    document.getElementById('pageTitle').textContent =
+        orderType === 'gift' ? '礼物订单查询' : '驾驶订单查询';
+
+    fetch(url, {
+        credentials: 'include',
+        signal: orderAbortController.signal
+    })
+        .then(async response => {
+            const text = await response.text();
+
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('接口返回的不是JSON，原始内容：', text);
+                throw e;
+            }
+        })
+        .then(data => {
+            if (data.code === 0) {
+                const list = Array.isArray(data.data) ? data.data : [];
+
+                totalOrders = list.sort((a, b) => {
+                    const bt = b.sort_time || b.start_time || b.send_time || '';
+                    const at = a.sort_time || a.start_time || a.send_time || '';
+                    return new Date(bt) - new Date(at);
+                });
+
+                hasMorePage = !!data.has_more;
+
+                // fast 模式不需要真实总数，只用于前端页码展示兜底
+                totalCount = (currentPage - 1) * pageSize + totalOrders.length + (hasMorePage ? 1 : 0);
+
+                orderCache = totalOrders;
+
+                displayOrders();
+            } else {
+                alert(data.msg || '查询失败');
+            }
+        })
+        .catch(error => {
+            if (error.name === 'AbortError') {
+                return;
+            }
+
+            console.error('Error:', error);
+            alert('查询失败，请稍后重试');
+        })
+        .finally(() => {
+            orderLoading = false;
+        });
+}
+
+        // function displayOrders() {
+        //     const container = document.getElementById('orderCardsContainer');
+        //     container.innerHTML = '';
+
+        //     // 计算当前页的数据
+        //     const startIndex = (currentPage - 1) * pageSize;
+        //     const endIndex = startIndex + pageSize;
+        //     const currentPageOrders = totalOrders.slice(startIndex, endIndex);
+
+        //     // 更新分页信息
+        //     const totalPages = Math.ceil(totalOrders.length / pageSize);
+        //     document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            
+        //     // 更新按钮状态
+        //     document.getElementById('prevPage').disabled = currentPage === 1;
+        //     document.getElementById('nextPage').disabled = currentPage === totalPages;
+
+        //     currentPageOrders.forEach(order => {
+        //         const card = document.createElement('div');
+        //         card.className = 'order-card';
+                
+        //         const statusClass = order.status === '已完成' ? 'status-completed' : 'status-pending';
+                
+        //         card.innerHTML = `
+        //             <div class="order-item">
+        //                 <span class="item-label">订单编号</span>
+        //                 <span class="item-value">${order.order_id}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">用户ID</span>
+        //                 <span class="item-value">${order.uid}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">用户昵称</span>
+        //                 <span class="item-value">${order.nickname}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">设备ID</span>
+        //                 <span class="item-value">${order.serial_number}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">订单状态</span>
+        //                 <span class="item-value status-badge ${statusClass}">${order.status}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">驾驶场地</span>
+        //                 <span class="item-value">${order.venue_name}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">可驾驶时长</span>
+        //                 <span class="item-value">${order.billing_rules}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">支付类型</span>
+        //                 <span class="item-value">${order.pays_type}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">支付金额</span>
+        //                 <span class="item-value">¥ ${parseFloat(order.payment_amount || 0).toFixed(2)}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">驾驶开始时间</span>
+        //                 <span class="item-value">${order.start_time}</span>
+        //             </div>
+        //             <div class="order-item">
+        //                 <span class="item-label">驾驶结束时间</span>
+        //                 <span class="item-value">${order.end_time}</span>
+        //             </div>
+        //         `;
+        //         container.appendChild(card);
+        //     });
+        // }
+    function displayOrders() {
+        const container = document.getElementById('orderCardsContainer');
+        container.innerHTML = '';
+    
+        const currentPageOrders = totalOrders;
+    
+document.getElementById('pageInfo').textContent =
+    hasMorePage ? `第 ${currentPage} 页 / 还有下一页` : `第 ${currentPage} 页 / 已到最后`;
+
+document.getElementById('prevPage').disabled = currentPage === 1;
+document.getElementById('nextPage').disabled = !hasMorePage;
+    
+        currentPageOrders.forEach(order => {
+                const card = document.createElement('div');
+                card.className = 'order-card';
+        
+                const statusClass = order.status === '已完成' ? 'status-completed' : 'status-pending';
+        // ==========================
+// 礼物订单卡片
+// ==========================
+if (order.order_type === 'gift') {
+  const giftGold = Number(order.payment_amount || 0);
+  const giftAmount = giftGold / 10;
+  const venueIncome = giftAmount * 0.6;
+
+  card.innerHTML = `
+    <div class="order-head">
+      <div class="order-no">
+        <span class="order-no-label">礼物订单编号</span>
+        <span class="order-no-value">${order.order_id || '-'}</span>
+      </div>
+
+      <span class="status-badge ${statusClass}">${order.status || '-'}</span>
+
+      <div class="order-money">
+        <span class="order-money-label">礼物金币</span>
+        <span class="order-money-value">${giftGold.toFixed(2)}</span>
+      </div>
+
+      <div class="order-actions"></div>
+    </div>
+
+    <div class="order-body">
+      <div class="order-field">
+        <span class="field-label">用户ID</span>
+        <span class="field-value">${order.uid || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">用户昵称</span>
+        <span class="field-value">${order.nickname || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">礼物ID</span>
+        <span class="field-value">${order.gift_id || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">礼物名称</span>
+        <span class="field-value">${order.gift_name || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">场地</span>
+        <span class="field-value">${order.venue_name || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">支付方式</span>
+        <span class="field-value">${order.pays_type || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">用户消费折算</span>
+        <span class="field-value money">¥ ${giftAmount.toFixed(2)}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">场地礼物收益</span>
+        <span class="field-value money">¥ ${venueIncome.toFixed(2)}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">赠送时间</span>
+        <span class="field-value mono">${order.send_time || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">备注</span>
+        <span class="field-value">${order.note || '-'}</span>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(card);
+  return;
+}
+                // === 根据 refund_status 设置按钮文字 ===
+               // === 根据 refund_status 映射成两种按钮：退款 / 已退款 ===
+                // let refundBtnHtml = `
+                //   <button class="form-button refund-btn"
+                //           data-order-id="${order.order_id}"
+                //           data-uid="${order.uid}"
+                //           data-amount="${order.payment_amount ?? ''}">
+                //     退款
+                //   </button>`;
+
+        
+                // if (order.refund_status === 'applied' || order.refund_status === 'approved') {
+                //   refundBtnHtml = `<button class="form-button" disabled>已退款</button>`;
+                // }
+const hasRefundRecord = order.refund_status === 'applied' || order.refund_status === 'approved';
+
+let refundBtnHtml = `
+  <button class="form-button ${hasRefundRecord ? 'cancel-refund-btn' : 'refund-btn'}"
+          data-order-id="${order.order_id}"
+          data-uid="${order.uid}"
+          data-amount="${order.payment_amount ?? ''}"
+          style="${hasRefundRecord ? 'background-color:#ff4d4f;' : ''}">
+    ${hasRefundRecord ? '取消退款' : '退款'}
+  </button>`;
+
+let lockBtnHtml = '';
+if ((order.pays_type || '').trim() !== '能量') {
+  const isLocked = Number(order.lock_status) === 1;
+
+  lockBtnHtml = `
+    <button class="form-button lock-btn ${isLocked ? 'unlock-action-btn' : 'lock-action-btn'}"
+            data-order-id="${order.order_id}"
+            data-lock-status="${isLocked ? 1 : 2}">
+      ${isLocked ? '解锁' : '锁定'}
+    </button>`;
+}
+                // === 卡片内容 ===
+card.innerHTML = `
+  <div class="order-head">
+    <div class="order-no">
+      <span class="order-no-label">订单编号</span>
+      <span class="order-no-value">${order.order_id || '-'}</span>
+    </div>
+
+    <span class="status-badge ${statusClass}">${order.status || '-'}</span>
+
+    <div class="order-money">
+      <span class="order-money-label">支付金额</span>
+      <span class="order-money-value">¥ ${parseFloat(order.payment_amount || 0).toFixed(2)}</span>
+    </div>
+
+    <div class="order-actions">
+      ${refundBtnHtml}
+      ${lockBtnHtml}
+    </div>
+  </div>
+
+  <div class="order-body">
+    <div class="order-field">
+      <span class="field-label">用户ID</span>
+      <span class="field-value">${order.uid || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">用户昵称</span>
+      <span class="field-value">${order.nickname || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">设备ID</span>
+      <span class="field-value mono">${order.serial_number || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">驾驶场地</span>
+      <span class="field-value">${order.venue_name || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">可驾驶时长</span>
+      <span class="field-value">${order.billing_rules || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">支付类型</span>
+      <span class="field-value">${order.pays_type || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">驾驶开始时间</span>
+      <span class="field-value mono">${order.start_time || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">驾驶结束时间</span>
+      <span class="field-value mono">${order.end_time || '-'}</span>
+    </div>
+
+    <div class="order-field">
+      <span class="field-label">退款状态</span>
+<span class="field-value refund-status-text ${
+  (order.refund_status === 'applied' || order.refund_status === 'approved') ? '' : 'empty'
+}">
+        ${
+          (order.refund_status === 'applied' || order.refund_status === 'approved') ? '已记录退款' : '—'
+        }
+      </span>
+    </div>
+
+<div class="order-item">
+  <span class="item-label">锁定状态</span>
+  <span class="item-value">
+    ${
+Number(order.lock_status) === 1
+  ? '<span class="lock-status-badge lock-status-text locked">已锁定</span>'
+  : '<span class="lock-status-badge lock-status-text normal">未锁定</span>'
+    }
+  </span>
+</div>
+  </div>
+`;
+                container.appendChild(card);
+            });
+        
+document.querySelectorAll('.refund-btn').forEach(btn => {
+    btn.addEventListener('click', onRefundClick);
+});
+
+document.querySelectorAll('.cancel-refund-btn').forEach(btn => {
+    btn.addEventListener('click', onCancelRefundClick);
+});
+
+document.querySelectorAll('.lock-btn').forEach(btn => {
+    btn.addEventListener('click', onLockClick);
+});
+        }
+
+           
+//         // 在加载页面时获取所有订单数据,用于联想查询
+// fetch('https://open.rcwulian.cn/api/finance/getDrivOrder.php?order_type=drive')
+//             .then(response => response.json())
+//             .then(data => {
+//                 if (data.code === 0) {
+//                     orderCache = data.data;
+//                 }
+//             });
+
+function updateRefundUI(btn, hasRefund) {
+  const card = btn.closest('.order-card');
+
+  btn.disabled = false;
+  btn.classList.remove('refund-btn', 'cancel-refund-btn');
+  btn.removeEventListener('click', onRefundClick);
+  btn.removeEventListener('click', onCancelRefundClick);
+
+  if (hasRefund) {
+    btn.classList.add('cancel-refund-btn');
+    btn.style.backgroundColor = '#ff4d4f';
+    btn.textContent = '取消退款';
+    btn.addEventListener('click', onCancelRefundClick);
+  } else {
+    btn.classList.add('refund-btn');
+    btn.style.backgroundColor = '';
+    btn.textContent = '退款';
+    btn.addEventListener('click', onRefundClick);
+  }
+
+  const refundText = card ? card.querySelector('.refund-status-text') : null;
+  if (refundText) {
+    refundText.textContent = hasRefund ? '已记录退款' : '—';
+    refundText.classList.toggle('empty', !hasRefund);
+  }
+}
+
+function updateLockUI(btn, isLocked) {
+  const card = btn.closest('.order-card');
+
+  btn.disabled = false;
+  btn.setAttribute('data-lock-status', isLocked ? '1' : '2');
+
+  btn.classList.remove('lock-action-btn', 'unlock-action-btn');
+  btn.classList.add(isLocked ? 'unlock-action-btn' : 'lock-action-btn');
+
+  btn.textContent = isLocked ? '解锁' : '锁定';
+
+  const lockText = card ? card.querySelector('.lock-status-text') : null;
+  if (lockText) {
+    lockText.className = 'lock-status-badge lock-status-text ' + (isLocked ? 'locked' : 'normal');
+    lockText.textContent = isLocked ? '已锁定' : '未锁定';
+  }
+}
+      async function onRefundClick(e) {
+          const btn = e.currentTarget;
+          const orderId = btn.getAttribute('data-order-id');
+          const uid = parseInt(btn.getAttribute('data-uid'), 10);
+          const rawAmt = (btn.getAttribute('data-amount') || '').trim();
+          const refundAmount = rawAmt === '' ? null : Number(parseFloat(rawAmt).toFixed(2));
+        
+          const reason = prompt(`为订单【${orderId}】填写退款原因：`, '该订单存在问题已被平台退款');
+          if (reason === null) return;
+        
+          const ok = confirm(`确认提交退款记录？\n订单：${orderId}\n金额：${refundAmount ?? '（未填写）'}\n原因：${reason.trim() || '（空）'}`);
+          if (!ok) return;
+        
+          try {
+            btn.disabled = true;
+            btn.textContent = '提交中...';
+        
+            const resp = await fetch('/api/finance/addRefundRecord.php', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              credentials: 'include',
+              body: JSON.stringify({
+                order_id: orderId,
+                uid: uid,
+                refund_amount: refundAmount,
+                reason: reason && reason.trim() ? reason.trim() : null
+              })
+            });
+            const data = await resp.json();
+        
+            if (data.code === 0) {
+              alert('已记录退款');
+            //   searchOrders(false);
+             updateRefundUI(btn, true);
+            } else if (data.code === 3001) {
+              alert('该订单已推送过退款或写入失败');
+            //   searchOrders(false);
+             updateRefundUI(btn, true);
+            } else if (data.code === 1001) {
+              alert('请先登录后再操作');
+              btn.textContent = '退款';
+              btn.disabled = false;
+            } else if (data.code === 1002) {
+              alert('权限不足，无法退款');
+              btn.textContent = '退款';
+              btn.disabled = false;
+            } else if (data.code === 2005) {
+              alert('该订单已锁定，请先解锁后再退款');
+              btn.textContent = '退款';
+              btn.disabled = false;
+            } else {
+              alert(data.msg || '提交失败');
+              btn.textContent = '退款';
+              btn.disabled = false;
+            }
+                        
+          } catch (err) {
+            console.error(err);
+            alert('网络异常，稍后再试');
+            btn.textContent = '退款';
+            btn.disabled = false;
+          }
+        }
+async function onCancelRefundClick(e) {
+  const btn = e.currentTarget;
+  const orderId = btn.getAttribute('data-order-id');
+  const uid = parseInt(btn.getAttribute('data-uid'), 10);
+
+  const ok = confirm(`确认取消订单【${orderId}】的退款记录吗？\n取消后按钮会恢复为“退款”。`);
+  if (!ok) return;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = '取消中...';
+
+    const resp = await fetch('/api/finance/cancelRefundRecord.php', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({
+        order_id: orderId,
+        uid: uid
+      })
+    });
+
+    const data = await resp.json();
+
+    if (data.code === 0) {
+      alert(data.msg || '已取消退款记录');
+    //   searchOrders(false);
+     updateRefundUI(btn, false);
+    } else if (data.code === 1001) {
+      alert('请先登录后再操作');
+      btn.disabled = false;
+      btn.textContent = '取消退款';
+    } else if (data.code === 1002) {
+      alert('权限不足，无法取消退款');
+      btn.disabled = false;
+      btn.textContent = '取消退款';
+    } else if (data.code === 2002) {
+      alert('退款记录不存在或已取消');
+    //   searchOrders(false);
+     updateRefundUI(btn, false);
+    } else {
+      alert(data.msg || '取消退款失败');
+      btn.disabled = false;
+      btn.textContent = '取消退款';
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert('网络异常，稍后再试');
+    btn.disabled = false;
+    btn.textContent = '取消退款';
+  }
+}
+async function onLockClick(e) {
+  const btn = e.currentTarget;
+  const orderId = btn.getAttribute('data-order-id');
+  const oldStatus = Number(btn.getAttribute('data-lock-status') || 2);
+  const actionText = oldStatus === 1 ? '解锁' : '锁定';
+
+  const ok = confirm(`确认要${actionText}订单【${orderId}】吗？`);
+  if (!ok) return;
+
+  try {
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+
+    const resp = await fetch('/api/finance/toggleOrderLock.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({ order_id: orderId })
+    });
+
+    const data = await resp.json();
+
+    if (data.code === 0) {
+      alert(data.msg || '操作成功');
+    //   searchOrders(); // 直接刷新当前列表最省事
+    // oldStatus === 1 代表原来是已锁定，这次操作后就是未锁定
+    // oldStatus !== 1 代表原来未锁定，这次操作后就是已锁定
+  updateLockUI(btn, oldStatus !== 1);
+    } else {
+      alert(data.msg || '操作失败');
+      btn.disabled = false;
+      btn.textContent = oldStatus === 1 ? '解锁' : '锁定';
+    }
+  } catch (err) {
+    console.error(err);
+    alert('网络异常，稍后再试');
+    btn.disabled = false;
+    btn.textContent = oldStatus === 1 ? '解锁' : '锁定';
+  }
+}
+        function updateSuggestions(searchText) {
+            const suggestionsDiv = document.getElementById('suggestions');
+            suggestionsDiv.innerHTML = '';
+
+            if (searchText.length < 3) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            // 从缓存中筛选匹配的订单,使用模糊匹配
+const matchedOrders = orderCache.filter(order => {
+    return String(order.order_id || '').includes(searchText);
+}).slice(0, 10);
+
+            if (matchedOrders.length > 0) {
+                matchedOrders.forEach(order => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    // 显示完整订单号,但高亮匹配部分
+                    // const orderNumber = order.order_id;
+                    const orderNumber = String(order.order_id || '');
+                    const highlightedNumber = orderNumber.replace(
+                        new RegExp(searchText, 'g'),
+                        `<span style="color: var(--primary); font-weight: bold;">${searchText}</span>`
+                    );
+                    
+                    div.innerHTML = highlightedNumber;
+                    div.addEventListener('click', () => {
+                        document.getElementById('orderNumber').value = order.order_id;
+                        suggestionsDiv.style.display = 'none';
+                        searchOrders();
+                    });
+                    suggestionsDiv.appendChild(div);
+                });
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        // 修改订单号输入联想处理
+        const orderInput = document.getElementById('orderNumber');
+        const suggestionsDiv = document.getElementById('suggestions');
+
+        let debounceTimer;
+        orderInput.addEventListener('input', function(e) {
+            const value = e.target.value.trim();
+            
+            clearTimeout(debounceTimer);
+            
+            debounceTimer = setTimeout(() => {
+                updateSuggestions(value);
+            }, 300);
+        });
+
+        // 点击外部时关闭建议列表
+        document.addEventListener('click', function(e) {
+            if (!orderInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+
+        // 处理键盘导航
+        orderInput.addEventListener('keydown', function(e) {
+            const items = suggestionsDiv.getElementsByClassName('suggestion-item');
+            let currentFocus = -1;
+
+            if (e.key === 'ArrowDown') {
+                currentFocus = Math.min(currentFocus + 1, items.length - 1);
+                highlightItem(items, currentFocus);
+            } else if (e.key === 'ArrowUp') {
+                currentFocus = Math.max(currentFocus - 1, 0);
+                highlightItem(items, currentFocus);
+            } else if (e.key === 'Enter') {
+                e.preventDefault(); // 防止表单提交
+                if (items.length > 0) { // 如果有建议项
+                    orderInput.value = items[0].textContent; // 选择第一条
+                    suggestionsDiv.style.display = 'none';
+                    searchOrders(); // 执行搜索
+                }
+            }
+        });
+
+        function highlightItem(items, index) {
+            Array.from(items).forEach((item, idx) => {
+                if (idx === index) {
+                    item.style.backgroundColor = '#f0f3ff';
+                } else {
+                    item.style.backgroundColor = '';
+                }
+            });
+        }
+        document.getElementById('orderType').addEventListener('change', () => {
+          currentPage = 1;
+          totalOrders = [];
+          orderCache = [];
+        
+          document.getElementById('orderNumber').value = '';
+          document.getElementById('orderCardsContainer').innerHTML =
+            '<div style="text-align:center;color:#7b8aa0;padding:20px;">加载中...</div>';
+          document.getElementById('pageInfo').textContent = '';
+        
+          searchOrders();
+        });
+        // 添加分页事件处理
+document.getElementById('prevPage').addEventListener('click', () => {
+    if (currentPage > 1) {
+        currentPage--;
+        searchOrders(false);
+    }
+});
+
+document.getElementById('nextPage').addEventListener('click', () => {
+    if (hasMorePage) {
+        currentPage++;
+        searchOrders(false);
+    }
+});
+
+function loadVenues() {
+    const venueSelect = document.getElementById('venue_id');
+    if (!venueSelect) return;
+
+    fetch('/api/operat/EnergyGift.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        credentials: 'include',
+        body: 'action=get_venues'
+    })
+    .then(response => response.json())
+    .then(response => {
+        if (response.code === 0 && Array.isArray(response.data)) {
+            response.data.forEach(venue => {
+                const option = document.createElement('option');
+                option.value = venue.id;
+                option.textContent = `${venue.id} - ${venue.venue_name}`;
+                venueSelect.appendChild(option);
+            });
+        }
+    })
+    .catch(err => {
+        console.error('加载场地失败：', err);
+    });
+}
+
+document.getElementById('venue_id').addEventListener('change', () => {
+    currentPage = 1;
+    searchOrders();
+});
+        function getQueryParam(name){
+          const u = new URL(window.location.href);
+          return (u.searchParams.get(name) || '').trim();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+  loadVenues();
+
+  const fromUid = getQueryParam('user_id') || getQueryParam('uid');
+
+  if (fromUid) {
+    document.getElementById('uid').value = fromUid;
+  }
+
+  currentPage = 1;
+  searchOrders();
+});
+    </script>
+
+</body>
+
+</html>

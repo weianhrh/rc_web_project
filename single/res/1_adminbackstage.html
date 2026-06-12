@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能工作台</title>
+    <!-- 引入Font Awesome图标库 -->
+    <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">-->
+    <link rel="stylesheet" href="/res/fa/css/all.min.css">
+    <!--<script src="https://cdn.jsdelivr.net/npm/whatwg-fetch@3.0.0/fetch.js"></script>-->
+
+    <!--<script src="color.js"></script>-->
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 数据指标区 */
+        .metrics-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+.metrics-grid {
+    display: grid;
+    gap: 16px;
+}
+
+.metrics-grid-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 16px;
+}
+
+.metrics-grid-bottom {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+.metrics-grid-bottom.no-doll-revenue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.metric-item {
+    background: #f8f9ff;
+    border-radius: 12px;
+    padding: 16px;
+    min-height: 108px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.metric-label {
+    color: var(--secondary);
+    font-size: 14px;
+    line-height: 1.45;
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    color: var(--primary);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+#dollRevenueWrap {
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 12px;
+    }
+
+    .dashboard-card {
+        padding: 16px;
+        border-radius: 18px;
+    }
+
+    .metrics-grid-top,
+    .metrics-grid-bottom {
+        gap: 12px;
+    }
+
+    .metrics-grid-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-bottom: 12px;
+    }
+
+    .metrics-grid-bottom {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* ✅ 娃娃机收益手机端独占一整行 */
+    #dollRevenueWrap {
+        grid-column: 1 / -1;
+    }
+
+    .metric-item {
+        padding: 14px;
+        min-height: 92px;
+    }
+
+    .metric-label {
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+
+    .metric-value {
+        font-size: 20px;
+    }
+}
+/* 不要再把 390px 这种手机强制变一列了 */
+@media (max-width: 420px) {
+    .metrics-grid-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metrics-grid-bottom {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* ✅ 超小屏也独占整行 */
+    #dollRevenueWrap {
+        grid-column: 1 / -1;
+    }
+
+    .metric-item {
+        min-height: 86px;
+        padding: 12px;
+    }
+
+    .metric-label {
+        font-size: 12px;
+    }
+
+    .metric-value {
+        font-size: 18px;
+    }
+}
+
+        /* 导航区 */
+        .nav-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr); /* 每行 4 个 */
+          gap: 12px;
+          padding-top: 24px;
+        }
+
+
+        .nav-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .nav-text {
+            color: #666;
+            font-size: 10px;
+        }
+        /*body, html {*/
+        /*    height: 100%;*/
+        /*    margin: 0;*/
+        /*    overflow: hidden;*/
+        /*    cursor: none; */
+        /*}*/
+        /*.custom-cursor {*/
+        /*    position: absolute;*/
+        /*    width: 15px; */
+        /*    height: 15px;*/
+        /*    pointer-events: none; */
+        /*    background: url('https://rcwulian.cn/app/img/huaji.png') no-repeat center center;*/
+        /*    background-size: contain; */
+        /*}*/
+		
+        /* 日历组件样式 */
+        .calendar-widget {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            position: fixed;
+            right: 24px;
+            top: -100%;
+            width: 280px;
+            box-shadow: var(--shadow);
+            transition: top 0.3s ease;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        .calendar-widget.show {
+            top: 24px;  /* 显示时的位置 */
+        }
+
+        /* 触发按钮样式 */
+        .calendar-trigger {
+            position: fixed;
+            right: 24px;
+            top: 24px;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+
+        .calendar-trigger:hover {
+            transform: scale(1.1);
+        }
+
+        .calendar-trigger i {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .calendar-date {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .calendar-solar {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            white-space: nowrap;  /* 防止换行 */
+        }
+
+        .calendar-lunar {
+            font-size: 14px;
+            color: var(--secondary);
+            margin-top: 8px;
+            white-space: nowrap;  /* 防止换行 */
+        }
+
+        .calendar-info {
+            font-size: 14px;
+            color: var(--secondary);
+            padding-top: 12px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex;  /* 使用flex布局 */
+            flex-wrap: wrap;  /* 允许换行 */
+            gap: 8px;  /* 元素之间的间距 */
+        }
+
+        .calendar-info div {
+            flex: 1;  /* 平均分配空间 */
+            min-width: 45%;  /* 最小宽度 */
+            text-align: center;  /* 文字居中 */
+            padding: 4px;  /* 内边距 */
+        }
+        
+        /* 点击波纹样式 */
+        .ripple {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(100, 200, 255, 0.5);
+            animation: rippleExpand 1s ease-out;
+            pointer-events: none;
+            z-index: 9999;
+        }
+ 
+        @keyframes rippleExpand {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(6); opacity: 0; }
+        }
+ 
+        /* 背景跟随波纹 */
+        #waveCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 9998;
+        }
+        .nav-card {
+    position: relative;
+    display: inline-block;
+}
+
+.badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background-color: #ff3b3b;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+/* 页面加载时先隐藏，防止 role=2 闪一下 */
+body.loading [data-role-hide="2"] { display: none; }
+
+/* 真正 role=2 才隐藏 */
+body.role-2 [data-role-hide="2"] { display: none; }
+/* ✅ 今日异常用户数（左上角提示，可点击） */
+.abnormal-tip{
+  color:#ff3b3b;
+  font-size:14px;
+  font-weight:700;
+  margin: 0 0 10px;
+  cursor:pointer;
+  user-select:none;
+}
+.abnormal-tip:hover{ text-decoration: underline; }
+.abnormal-tip .muted{
+  color:#ff3b3b;
+  opacity:.85;
+  font-weight:600;
+  margin-left:6px;
+  font-size:12px;
+}
+
+/* ✅ 异常用户数：0 时淡绿色，>0 时红色 */
+.abnormal-tip.is-zero{
+  color:#16a34a;              /* 绿色文字 */
+}
+.abnormal-tip.is-zero .muted{
+  color:#16a34a;
+  opacity:.75;
+}
+.abnormal-tip.is-zero #abnormal-count{
+  color:#16a34a;
+}
+
+/* 非 0：保持红色（你原来就是红色，这里只是更明确） */
+.abnormal-tip.is-bad{
+  color:#ff3b3b;
+}
+.abnormal-tip.is-bad .muted{
+  color:#ff3b3b;
+  opacity:.85;
+}
+.abnormal-tip.is-bad #abnormal-count{
+  color:#ff3b3b;
+}
+#shippingAlert {
+    position: fixed;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border: 2px solid #5b8cff;
+    padding: 40px 60px;
+    z-index: 9999;
+    box-shadow: 0 0 30px rgba(91, 140, 255, 0.25);
+    display: none;
+    text-align: center;
+    border-radius: 12px;
+    width: auto;
+    max-width: 400px;
+    word-break: break-word;
+}
+
+#shippingAlertClose {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    color: #5b8cff;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10000;
+}
+
+#shippingAlertMessage {
+    font-size: 24px;
+    color: #5b8cff;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+#shippingAlert button {
+    padding: 12px 30px;
+    font-size: 18px;
+    background-color: #5b8cff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+@media (max-width: 870px) {
+    #shippingAlert {
+        width: 90vw;
+        padding: 20px 10px;
+    }
+
+    #shippingAlertMessage {
+        font-size: 18px;
+    }
+
+    #shippingAlert button {
+        width: 100%;
+        font-size: 16px;
+    }
+}
+@media (max-width: 768px) {
+    #dollRevenueWrap {
+        grid-column: 1 / -1;
+        align-items: center;
+        text-align: center;
+    }
+
+    #dollRevenueWrap .metric-label,
+    #dollRevenueWrap .metric-value {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 420px) {
+    #dollRevenueWrap {
+        grid-column: 1 / -1;
+        align-items: center;
+        text-align: center;
+    }
+
+    #dollRevenueWrap .metric-label,
+    #dollRevenueWrap .metric-value {
+        width: 100%;
+        text-align: center;
+    }
+}
+    </style>
+</head>
+<body class="loading">
+
+    <canvas id="waveCanvas"></canvas>
+    <div id="cursor" class="custom-cursor"></div>
+
+    <div class="dashboard-card">
+        <!-- 数据区 -->
+        <div class="metrics-container">
+             <!-- ✅ 新增：今日异常用户数（点击跳转 finance_demo.html） -->
+    <div class="abnormal-tip" id="abnormal-tip" style="display:none;">
+      今日异常用户数：<span id="abnormal-count">0</span>
+      <span class="muted">（点击查看）</span>
+    </div>
+            <div class="card-title" id="venue-name">加载中...</div>
+            <div class="metrics-grid metrics-grid-top">
+                <div class="metric-item" data-role-hide="2">
+                    <div class="metric-label">今日APP注册用户</div>
+                    <div class="metric-value" id="registerCount">0人</div>
+                </div>
+            
+                <div class="metric-item" data-role-hide="2">
+                    <div class="metric-label">今日活跃用户数</div>
+                    <div class="metric-value" id="ActiveUsers">0人</div>
+                </div>
+            
+                <div class="metric-item" data-role-hide="2">
+                    <div class="metric-label">今日平台总收益</div>
+                    <div class="metric-value" id="totalRechargeFromBalanceChanges">¥0.00</div>
+                </div>
+            
+                <div class="metric-item" data-role-hide="2">
+                    <div class="metric-label">今日用户实际总消费</div>
+                    <div class="metric-value" id="totalUserConsumption">¥0.00</div>
+                </div>
+            </div>
+            
+            <div class="metrics-grid-bottom">
+          
+            
+                <div class="metric-item">
+                    <div class="metric-label">申诉待处理</div>
+                    <div class="metric-value" id="appeal_count">0</div>
+                </div>
+            
+                <div class="metric-item">
+                    <div class="metric-label">投诉待处理</div>
+                    <div class="metric-value" id="reservationCount">0人</div>
+                </div>
+                <div class="metric-item" id="dollRevenueWrap" data-role-hide="2">
+                    <div class="metric-label">娃娃机收益</div>
+                    <div class="metric-value" id="dollRevenueToday">¥0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航区 -->
+        <div class="nav-grid" id="navGrid"></div>
+
+    </div>
+    <div id="shippingAlert">
+    <div id="shippingAlertClose" onclick="closeShippingAlert()">×</div>
+    <div id="shippingAlertMessage">当前有待发货记录，是否立即前往？</div>
+    <button onclick="goToPendingShippingPage()">立即处理</button>
+</div>
+<script>
+(async function initDashboard() {
+  try {
+    // 1) 先拿 role_id 和指标数据
+    const res = await fetch('/api/index/adminbackstage.php');
+    const ret = await res.json();
+
+    if (ret.code !== 0) throw new Error('adminbackstage.php 返回 code != 0');
+    const data = ret.data || {};
+    const roleId = Number(data.role_id || 0);
+    window.__ROLE_ID__ = roleId;
+    console.log('role_id=', roleId);
+
+    // 2) 如果不是 role=2，把默认隐藏的块显示出来（避免 role=1/管理员也被隐藏）
+ document.body.classList.remove('loading');
+document.body.classList.toggle('role-2', roleId === 2);
+
+
+    // 3) 填充指标
+    document.getElementById('venue-name').textContent = data.venue_name || '';
+    document.getElementById('registerCount').textContent = `${data.registerCount || 0}人`;
+    document.getElementById('ActiveUsers').textContent = `${data.activeUserCount || 0}人`;
+    document.getElementById('totalRechargeFromBalanceChanges').textContent = `¥${data.totalRechargeFromBalanceChanges || '0.00'}`;
+    document.getElementById('totalUserConsumption').textContent = `¥${data.totalUserConsumption || '0.00'}`;
+const dollRevenue = Number(data.dollRevenueToday || 0);
+document.getElementById('dollRevenueToday').textContent = `¥${dollRevenue.toFixed(2)}`;
+
+const dollRevenueWrap = document.getElementById('dollRevenueWrap');
+const metricsGridBottom = document.querySelector('.metrics-grid-bottom');
+
+if (dollRevenueWrap) {
+  const hasDollRevenue = dollRevenue > 0;
+
+  dollRevenueWrap.style.display = hasDollRevenue ? 'flex' : 'none';
+
+  if (metricsGridBottom) {
+    metricsGridBottom.classList.toggle('no-doll-revenue', !hasDollRevenue);
+  }
+}
+    const reportCount = Number(data.reportCount || 0);
+    document.getElementById('reservationCount').textContent = `${reportCount}`;
+    if (reportCount >= 1) document.getElementById('reservationCount').style.color = 'red';
+
+    const appealCount = Number(data.appeal_count || 0);
+    document.getElementById('appeal_count').textContent = `${appealCount}`;
+    if (appealCount >= 1) document.getElementById('appeal_count').style.color = 'red';
+// ✅ 异常用户数：role=2 也显示
+try {
+  const tipEl = document.getElementById('abnormal-tip');
+  const cntEl = document.getElementById('abnormal-count');
+
+  // 拉取 count（推荐后端支持 only_count=1；否则也兼容 data.length）
+  const r = await fetch('/api/finance/demo.php?only_count=1&_=' + Date.now());
+  const j = await r.json();
+
+  const c = Number(j.count ?? (Array.isArray(j.data) ? j.data.length : 0)) || 0;
+
+  cntEl.textContent = c;
+  tipEl.style.display = 'block';
+/* ✅ 0：淡绿色；>0：红色 */
+tipEl.classList.toggle('is-zero', c === 0);
+tipEl.classList.toggle('is-bad',  c > 0);
+
+/* 可选：0 时也稍微淡一点（如果你想 0 更“弱提示”） */
+tipEl.style.opacity = c === 0 ? '0.75' : '1';
+
+  tipEl.onclick = () => {
+    window.location.href = 'finance_demo.html?_=' + Date.now(); // 防缓存
+  };
+} catch (e) {
+  console.warn('异常用户数加载失败:', e);
+}
+
+    // 4) 再渲染导航（此时 roleId 已经确定，不会抢跑）
+    function renderNavGrid(navItems, containerId = 'navGrid') {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      navItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'nav-card';
+        card.id = (item.id || '').trim(); // ✅ 防止 id 有空格导致匹配失败
+        card.innerHTML = `
+          <i class="${item.icon} nav-icon"></i>
+          <div class="nav-text">${item.title || item.label || ''}</div>
+          ${item.badgeId ? `<span class="badge" id="${item.badgeId}">0</span>` : ''}
+        `;
+        card.addEventListener('click', () => {
+          window.location.href = item.href || `${item.page}.html`;
+        });
+        container.appendChild(card);
+      });
+    }
+
+    const navRes = await fetch('/res/navItems.json');
+    const navItems = await navRes.json();
+
+    const hideIdsForRole2 = new Set([
+      'Withdrawal-approval',
+      'Performance-ranking',
+      'item_1759975475005',
+      'RefundQequest'
+    ]);
+
+    // ✅ 关键：trim 一下，避免 JSON 里 id 有空格
+    const filtered = (roleId === 2)
+      ? navItems.filter(it => !hideIdsForRole2.has(String(it.id || '').trim()))
+      : navItems;
+
+    console.log('nav before=', navItems.map(x => x.id));
+    console.log('nav after =', filtered.map(x => x.id));
+
+    renderNavGrid(filtered);
+
+    // 5) 徽章（必须在渲染后）
+    // 图文审核徽章
+    fetch('/api/venue/getPendingImages.php')
+      .then(r => r.json())
+      .then(d => {
+        const badge = document.getElementById('pending-count');
+        if (badge && d.code === 0) {
+          badge.textContent = d.count;
+          badge.style.display = d.count > 0 ? 'inline-block' : 'none';
+        }
+      });
+
+    // 加盟待审核徽章
+    fetch('/api/franchise/FranchiesList.php')
+      .then(r => r.json())
+      .then(d => {
+        const badge = document.getElementById('franchise-count');
+        if (badge && d.code === 200 && Array.isArray(d.data)) {
+          badge.textContent = d.data.length;
+          badge.style.display = d.data.length > 0 ? 'inline-block' : 'none';
+        }
+      });
+
+    // 提现审批徽章（如果该卡片被隐藏/没渲染，getElementById 会拿不到，不会报错）
+    const approvalBadge = document.getElementById('approval-count');
+    if (approvalBadge) {
+      approvalBadge.textContent = Number(data.totalPendingwithdrawalapproval || 0);
+      approvalBadge.style.display = Number(data.totalPendingwithdrawalapproval || 0) > 0 ? 'inline-block' : 'none';
+    }
+
+    // 6) 点击跳转
+    document.getElementById('appeal_count').addEventListener('click', () => {
+      window.location.href = 'order_report.html';
+    });
+    document.getElementById('reservationCount').addEventListener('click', () => {
+      window.location.href = 'reporthand.html';
+    });
+    document.getElementById('totalRechargeFromBalanceChanges').addEventListener('click', () => {
+      window.location.href = 'https://open.rcwulian.cn/api/index/recharge_detail.php';
+    });
+
+     document.getElementById('registerCount').addEventListener('click', () => {
+      window.location.href = 'https://open.rcwulian.cn/api/index/user_register_detail.php';
+    });
+      document.getElementById('ActiveUsers').addEventListener('click', () => {
+      window.location.href = 'https://open.rcwulian.cn/api/index/user_active_detail.php';
+    });
+    
+     document.getElementById('dollRevenueWrap').addEventListener('click', () => {
+      window.location.href = 'claw_orders_dashboard.html';
+    });
+    
+    document.getElementById('totalUserConsumption').addEventListener('click', () => {
+      window.location.href = 'user_orders.html';
+    });
+    document.addEventListener('selectstart', e => e.preventDefault());
+
+  } catch (e) {
+    console.error('初始化失败:', e);
+  }
+})();
+</script>
+
+<script>
+let shippingAlertShown = false;
+let shippingAlertTimer = null;
+let lastPendingShippingCount = 0;
+
+// localStorage 控制：1分钟最多弹一次（刷新页面也有效）
+const SHIPPING_ALERT_STORAGE_KEY = 'pending_shipping_alert_last_time';
+const SHIPPING_ALERT_COOLDOWN = 60 * 3000; // 1分钟
+
+function closeShippingAlert() {
+    const box = document.getElementById('shippingAlert');
+    if (box) box.style.display = 'none';
+    shippingAlertShown = false;
+
+    if (shippingAlertTimer) {
+        clearTimeout(shippingAlertTimer);
+        shippingAlertTimer = null;
+    }
+}
+
+function goToPendingShippingPage() {
+    window.location.href = "pending-shipping.html";
+}
+
+function canShowShippingAlert() {
+    const lastTime = Number(localStorage.getItem(SHIPPING_ALERT_STORAGE_KEY) || 0);
+    return Date.now() - lastTime >= SHIPPING_ALERT_COOLDOWN;
+}
+
+function markShippingAlertShown() {
+    localStorage.setItem(SHIPPING_ALERT_STORAGE_KEY, String(Date.now()));
+}
+
+function showShippingAlert(count) {
+    const box = document.getElementById('shippingAlert');
+    const msg = document.getElementById('shippingAlertMessage');
+    if (!box || !msg) return;
+
+    msg.textContent = `当前有 ${count} 条待发货记录，是否立即前往？`;
+    box.style.display = 'block';
+    shippingAlertShown = true;
+
+    // 记录本次弹窗时间到 localStorage
+    markShippingAlertShown();
+
+    // 每次弹出时重新计时，30秒自动关闭
+    if (shippingAlertTimer) clearTimeout(shippingAlertTimer);
+    shippingAlertTimer = setTimeout(() => {
+        closeShippingAlert();
+    }, 30000);
+}
+
+function checkPendingShippingCount() {
+    fetch('/api/dolls/getPendingShipmentCount.php', {
+        credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.code === 0) {
+            const count = Number(data.result || 0);
+
+            // 只要有待发货，并且当前没在显示，且满足 localStorage 的 1 分钟冷却，就弹
+            if (count > 0 && !shippingAlertShown && canShowShippingAlert()) {
+                showShippingAlert(count);
+            }
+
+            lastPendingShippingCount = count;
+        }
+    })
+    .catch(err => {
+        console.error('待发货数量检查失败:', err);
+    });
+}
+
+// 首次检查
+checkPendingShippingCount();
+
+// 每30秒轮询一次
+setInterval(checkPendingShippingCount, 30000);
+</script>
+
+
+</body>
+</html>

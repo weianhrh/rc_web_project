@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>加盟申请</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .pricing-item {
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .pricing-item .label {
+            color: var(--secondary);
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .pricing-item .value {
+            color: #333;
+            font-size: 16px;
+            text-align: right;
+        }
+
+        .edit-btn,
+        .save-btn {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 16px;
+        }
+
+        .edit-btn:hover,
+        .save-btn:hover {
+            background-color: #4c6ef5;
+        }
+
+        .edit-input {
+            background-color: #f8f9ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .pricing-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <h2 class="card-title">加盟申请</h2>
+            <div id="franchise-list">
+                <!-- 这里将通过 JavaScript 动态加载加盟商信息 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded',  function () {
+            // 发送请求获取加盟商信息
+            fetch('https://open.rcwulian.cn/api/franchise/FranchiesList.php')  // 替换为你的 PHP 文件路径
+              .then(response => response.json()) 
+              .then(data => {
+                    const franchiseList = document.getElementById('franchise-list');
+                    
+                    // 显示暂无数据的函数
+                    const showNoData = () => {
+                        const noDataDiv = document.createElement('div');
+                        noDataDiv.style.textAlign = 'center';
+                        noDataDiv.style.color = 'var(--secondary)';
+                        noDataDiv.style.padding = '20px';
+                        noDataDiv.textContent = '暂无加盟申请数据';
+                        franchiseList.appendChild(noDataDiv);
+                    };
+
+                    if (data.code === 200) {
+                        if (data.data.length === 0) {
+                            showNoData();
+                        } else {
+                            data.data.forEach(submission  => {
+                                const item = document.createElement('div'); 
+                                item.classList.add('pricing-item'); 
+
+                                // 姓名
+                                const nameLabel = document.createElement('div'); 
+                                nameLabel.classList.add('label'); 
+                                nameLabel.textContent  = '姓名';
+                                const nameValue = document.createElement('div'); 
+                                nameValue.classList.add('value'); 
+                                nameValue.textContent  = submission.name; 
+                                item.appendChild(nameLabel); 
+                                item.appendChild(nameValue); 
+
+                                // 邮箱
+                                const emailLabel = document.createElement('div'); 
+                                emailLabel.classList.add('label'); 
+                                emailLabel.textContent  = '邮箱';
+                                const emailValue = document.createElement('div'); 
+                                emailValue.classList.add('value'); 
+                                emailValue.textContent  = submission.email; 
+                                item.appendChild(emailLabel); 
+                                item.appendChild(emailValue); 
+
+                                // 消息
+                                const messageLabel = document.createElement('div'); 
+                                messageLabel.classList.add('label'); 
+                                messageLabel.textContent  = '消息';
+                                const messageValue = document.createElement('div'); 
+                                messageValue.classList.add('value'); 
+                                messageValue.textContent  = submission.message; 
+                                item.appendChild(messageLabel); 
+                                item.appendChild(messageValue); 
+
+                                // 提交时间
+                                const submittedAtLabel = document.createElement('div'); 
+                                submittedAtLabel.classList.add('label'); 
+                                submittedAtLabel.textContent  = '提交时间';
+                                const submittedAtValue = document.createElement('div'); 
+                                submittedAtValue.classList.add('value'); 
+                                submittedAtValue.textContent  = submission.submitted_at; 
+                                item.appendChild(submittedAtLabel); 
+                                item.appendChild(submittedAtValue); 
+
+                                // 处理按钮
+                                const processButton = document.createElement('button'); 
+                                processButton.classList.add('edit-btn'); 
+                                processButton.textContent  = '标记为已处理';
+                                processButton.addEventListener('click',  function () {
+                                    // 发送请求更新状态
+                                    fetch('https://open.rcwulian.cn/api/franchise/FranchiesList.php',  {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/x-www-form-urlencoded'
+                                        },
+                                        body: `id=${submission.id}` 
+                                    })
+                                      .then(response => response.json()) 
+                                      .then(updateData => {
+                                            if (updateData.code  === 200) {
+                                                alert('成功更新加盟信息申请状态');
+                                                // 移除已处理的项
+                                                item.remove(); 
+                                            } else {
+                                                alert(updateData.msg); 
+                                            }
+                                        })
+                                      .catch(error => {
+                                            alert('请求出错: ' + error.message); 
+                                        });
+                                });
+                                item.appendChild(processButton); 
+
+                                franchiseList.appendChild(item); 
+                            });
+                        }
+                    } else if (data.code === 1003) {
+                        // 当返回 1003 代码时也显示暂无数据
+                        showNoData();
+                    } else {
+                        alert(data.msg); 
+                    }
+                })
+              .catch(error => {
+                    alert('请求出错: ' + error.message); 
+                });
+        });
+    </script>
+</body>
+
+</html>

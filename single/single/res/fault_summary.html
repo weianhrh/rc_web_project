@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>故障汇总统计</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start), var(--background-gradient-end));
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header label {
+            font-weight: 500;
+        }
+
+        .header select,
+        .header input[type="datetime-local"] {
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .header button {
+            background: var(--primary);
+            color: #fff;
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fault-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .fault-item {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            background: #fff;
+        }
+
+        .fault-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .fault-content {
+            margin-top: 6px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .fault-title {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="page-title">
+            <span>故障设备记录</span>
+        </div>
+
+        <div class="header">
+            <label for="venue_id">场地：</label>
+            <select id="venue_id">
+                <option value="">请选择场地</option>
+            </select>
+            <label>开始时间：</label>
+            <input type="datetime-local" id="startTime">
+            <label>结束时间：</label>
+            <input type="datetime-local" id="endTime">
+            <button onclick="loadFaults()">筛选</button>
+        </div>
+
+        <div id="faultList" class="fault-list">
+            <!-- 加载后动态插入 -->
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentRoleId = null;
+    let currentVenueId = null;
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        setDefaultDateRange();
+
+        // 获取当前用户信息
+        const res = await fetch('/api/operat/get_current_user.php', { credentials: 'include' });
+        const userInfo = await res.json();
+
+        if (userInfo.code !== 0) {
+            alert('未登录，请重新登录');
+            return;
+        }
+
+        currentRoleId = userInfo.data.role_id;
+        currentVenueId = userInfo.data.venue_id;
+
+        const venueSelect = document.getElementById('venue_id');
+        const venueLabel = document.querySelector('label[for="venue_id"]');
+
+        if (currentRoleId == 1) {
+            // 超管加载场地下拉框
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://open.rcwulian.cn/api/operat/EnergyGift.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.code === 0) {
+                        response.data.forEach(venue => {
+                            const option = document.createElement('option');
+                            option.value = venue.id;
+                            option.textContent = `${venue.id} - ${venue.venue_name}`;
+                            venueSelect.appendChild(option);
+                        });
+                        venueSelect.value = '10'; // 默认选中 10
+                        venueSelect.addEventListener('change', loadFaults);
+                        loadFaults();
+                    }
+                }
+            };
+            xhr.send('action=get_venues');
+        } else {
+            // 非超管：隐藏场地下拉框
+            venueSelect.style.display = 'none';
+            venueLabel.style.display = 'none';
+            loadFaults(); // 用用户所属 venue_id 请求
+        }
+    });
+
+    async function loadFaults() {
+        const start = document.getElementById('startTime').value;
+        const end = document.getElementById('endTime').value;
+
+        let venueId = '';
+        if (currentRoleId == 1) {
+            venueId = document.getElementById('venue_id').value;
+        } else {
+            venueId = currentVenueId;
+        }
+
+        const params = new URLSearchParams();
+        if (start) params.append('start', start + ':00');
+        if (end) params.append('end', end + ':59');
+        if (venueId) params.append('venue_id', venueId);
+
+        const res = await fetch(`/api/devMgr/get_fault_summary.php?` + params.toString(), {
+            credentials: 'include'
+        });
+        const data = await res.json();
+
+        const list = document.getElementById('faultList');
+        list.innerHTML = '';
+
+        if (data.code !== 0 || !data.data.length) {
+            list.innerHTML = '<div>暂无数据</div>';
+            return;
+        }
+
+        data.data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'fault-item';
+            div.innerHTML = `
+                <div class="fault-title">${item.vehicle_name} (${item.serial_number})</div>
+                <div class="fault-content">
+                    故障原因（${Object.keys(item.reason_count).length}类，共${Object.values(item.reason_count).reduce((a, b) => a + b, 0)}次）：<br>
+                    ${item.fault_reasons}
+                </div>
+                
+
+
+            `;
+            list.appendChild(div);
+        });
+        // 展开收起功能绑定
+    // document.querySelectorAll('.toggle-users').forEach(btn => {
+    //     btn.addEventListener('click', function () {
+    //         const more = this.previousElementSibling;
+    //         const isExpanded = more.style.display === 'block';
+    //         more.style.display = isExpanded ? 'none' : 'block';
+    //         this.textContent = isExpanded ? '展开更多' : '收起';
+    //     });
+    // });
+    // document.querySelectorAll('.fault-item').forEach(item => {
+    //     item.addEventListener('click', function () {
+    //         const more = this.querySelector('.more-users');
+    //         if (more) {
+    //             const isExpanded = more.style.display === 'block';
+    //             const toggleLink = this.querySelector('.toggle-users');
+    //             more.style.display = isExpanded ? 'none' : 'block';
+    //             toggleLink.textContent = isExpanded ? '展开更多' : '收起';
+    //         }
+    //     });
+    // });
+
+    }
+
+    function setDefaultDateRange() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+
+        const start = `${yyyy}-${mm}-${dd}T00:00`;
+        const end = `${yyyy}-${mm}-${dd}T23:59`;
+
+        document.getElementById('startTime').value = start;
+        document.getElementById('endTime').value = end;
+    }
+</script>
+
+</body>
+</html>

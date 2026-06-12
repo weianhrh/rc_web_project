@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音乐播放器</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f0f4ff, #d9e4f5);
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+    }
+    #music-toggle {
+      position: fixed; top: 20px; right: 20px;
+      background: #ffffffcc;
+      backdrop-filter: blur(8px);
+      border: 1px solid #ccc;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 16px;
+      color: #333;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      z-index: 9999;
+    }
+    #music-toggle:hover {
+      transform: scale(1.05);
+      background: #eef2f9cc;
+    }
+    #music-player-wrapper {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      width: 280px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      background: #ffffffcc;
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      z-index: 9998;
+    }
+    #rope {
+      width: 3px;
+      height: 40px;
+      background: #333;
+      margin-bottom: 10px;
+      animation: swing 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes swing {
+      0% { transform: rotate(-5deg); }
+      100% { transform: rotate(5deg); }
+    }
+    #music-card {
+      width: 100%;
+      background: #f5f8ff;
+      border-radius: 16px;
+      overflow: hidden;
+      text-align: center;
+      position: relative;
+    }
+    #music-card::before {
+      content: "";
+      background-size: cover;
+      background-position: center;
+      opacity: 0.2;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 16px;
+      pointer-events: none;
+
+      transition: background-image 0.5s ease;
+    }
+    #music-info {
+      position: relative;
+      z-index: 2;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      margin: 10px 0;
+    }
+    audio {
+      width: 100%;
+      margin-top: 8px;
+      outline: none;
+    }
+    #search-box {
+      margin-top: 12px;
+      display: flex;
+      gap: 6px;
+    }
+    #search-keyword {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    #search-btn {
+      padding: 6px 12px;
+      border: none;
+      background: #5c8df6;
+      color: white;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #search-btn:hover {
+      background: #3e6bd9;
+    }
+    #song-list {
+      margin-top: 10px;
+      width: 100%;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="music-toggle">🎵 音乐</div>
+
+<div id="music-player-wrapper">
+  <div id="rope"></div>
+  <div id="music-card">
+    <div id="music-info">加载中...</div>
+    <audio id="audio" controls></audio>
+
+    <div id="search-box">
+      <input id="search-keyword" type="text" placeholder="搜索歌曲...">
+      <button id="search-btn">搜索</button>
+    </div>
+
+    <select id="song-list">
+      <option value="">选择歌曲</option>
+    </select>
+  </div>
+</div>
+
+<script>
+const toggleBtn = document.getElementById("music-toggle");
+const wrapper = document.getElementById("music-player-wrapper");
+const audio = document.getElementById("audio");
+const musicInfo = document.getElementById("music-info");
+const card = document.getElementById("music-card");
+const searchBtn = document.getElementById("search-btn");
+const keywordInput = document.getElementById("search-keyword");
+const songList = document.getElementById("song-list");
+
+let songs = [];
+
+toggleBtn.onclick = () => {
+  wrapper.style.display = wrapper.style.display === "flex" ? "none" : "flex";
+};
+
+function fetchSongList(keyword) {
+  fetch(`https://open.rcwulian.cn/api/pop/music.php?type=song&msg=${encodeURIComponent(keyword)}`)
+    .then(res => res.json())
+    .then(data => {
+    songs = data.data || [];
+    songList.innerHTML = "<option value=''>选择歌曲</option>";
+    songs.forEach((song, index) => {
+        if (song.name) {  // ✅ 只判断有名字就添加
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = `${song.name || "未知"} - ${song.singername || "未知歌手"}`;
+            option.title = option.textContent;
+            songList.appendChild(option);
+        }
+    });
+})
+
+    .catch(() => {
+      musicInfo.textContent = "加载失败";
+    });
+}
+
+searchBtn.onclick = () => {
+  const keyword = keywordInput.value.trim();
+  if (keyword) fetchSongList(keyword);
+};
+
+songList.onchange = () => {
+  const selectedIndex = songList.value;
+  if (selectedIndex !== "") {
+    const keyword = keywordInput.value.trim();
+    fetch(`https://open.rcwulian.cn/api/pop/music.php?type=song&msg=${encodeURIComponent(keyword)}&n=${selectedIndex}`)
+      .then(res => res.json())
+      .then(data => {
+        const song = data.data;
+        if (song && song.song_url) {
+          audio.src = song.song_url;
+          musicInfo.textContent = `${song.name || "未知"} - ${song.singername || "未知歌手"}`;
+          document.querySelector("#music-card::before").style.backgroundImage = `url(${song.album_img})`;
+          audio.play();
+        } else {
+          musicInfo.textContent = "无音频资源";
+        }
+      })
+      .catch(() => {
+        musicInfo.textContent = "请求失败";
+      });
+  }
+};
+</script>
+
+</body>
+</html>

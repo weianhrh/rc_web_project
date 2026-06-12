@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能工作台</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="/res/fa/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 数据指标区 */
+        .metrics-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .metric-item {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .metric-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+       /* 导航区 */
+        .nav-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr); /* 每行 4 个 */
+          gap: 12px;
+          padding-top: 24px;
+        }
+
+        .nav-card {
+            position: relative; /* ✅ 添加这一句 */
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .nav-text {
+            color: #666;
+            font-size: 10px;
+        }
+
+          #venue-status.green {
+            color: green;
+          }
+        
+          #venue-status.orange {
+            color: orange;
+          }
+        
+          #venue-status.red {
+            color: red;
+          }
+          
+          #venue-status {
+            font-weight: bold !important;
+        }
+         .badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background-color: #ff3b3b;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+.hidden {
+    display: none !important;
+}
+
+/* ✅ 手机端：右侧“场地ID”换到下一行，避免挤在标题行 */
+@media (max-width: 1080px) {
+  .card-title {
+    flex-wrap: wrap;              /* 允许换行 */
+    row-gap: 6px;
+    margin-bottom: 18px;          /* 稍微收一点 */
+  }
+
+  #venue-id {
+    width: 100%;                  /* 独占一行 */
+    text-align: right;            /* 右对齐 */
+    font-size: 12px !important;   /* 更小一点 */
+    color: #9aa3af !important;
+  }
+
+  /* 左侧内容占满一行，避免跟 venue-id 抢位置 */
+  .card-title > div:first-child {
+    width: 100%;
+  }
+
+  /* 邀请码整段别断得太碎 */
+  #invite-wrap {
+    white-space: nowrap;
+  }
+}
+.venue-level-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;        /* 和场地名称一样大 */
+  font-weight: 600;       /* 和 card-title 一致 */
+  color: #333;
+  white-space: nowrap;
+}
+
+.venue-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 16px;        /* A级也和场地名称一样大 */
+  font-weight: 700;
+  background: #eef4ff;
+  color: #3b6eea;
+  border: 1px solid rgba(91,140,255,0.25);
+}
+
+.level-help-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(91,140,255,0.35);
+  background: #fff;
+  color: #5b8cff;
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+  padding: 0;
+}
+.level-rule-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 9998;
+  display: none;
+}
+
+.level-rule-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(88vw, 360px);
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  z-index: 9999;
+  display: none;
+}
+
+.level-rule-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.level-rule-content {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #475467;
+}
+
+.level-rule-close {
+  margin-top: 14px;
+  width: 100%;
+  height: 36px;
+  border: 0;
+  border-radius: 12px;
+  background: #5b8cff;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+/* 主播认证提醒弹窗 */
+.anchor-auth-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.anchor-auth-modal {
+  position: relative;
+  width: min(90vw, 390px);
+  background: #fff;
+  border-radius: 20px;
+  padding: 22px 18px 18px;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.22);
+  text-align: center;
+}
+
+.anchor-auth-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #f2f4f7;
+  color: #667085;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.anchor-auth-icon {
+  width: 54px;
+  height: 54px;
+  margin: 4px auto 12px;
+  border-radius: 50%;
+  background: #eef4ff;
+  color: #5b8cff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.anchor-auth-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.anchor-auth-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #667085;
+  margin-bottom: 18px;
+}
+
+.anchor-auth-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.anchor-auth-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 12px;
+  border: 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.anchor-auth-btn.cancel {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.anchor-auth-btn.confirm {
+  background: #5b8cff;
+  color: #fff;
+}
+
+/* ===== 顶部场地信息：两行紧凑版 ===== */
+.venue-head {
+  display: block;
+  margin-bottom: 20px;
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+.venue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.venue-row-main {
+  margin-bottom: 10px;
+}
+
+.venue-title-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+#venue-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+#venue-id {
+  flex: 0 0 auto;
+  width: auto !important;
+  text-align: left !important;
+  font-size: 12px !important;
+  color: #667085 !important;
+  white-space: nowrap;
+}
+
+#venue-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700 !important;
+  background: #f2f4f7;
+  color: #667085;
+  white-space: nowrap;
+}
+
+#venue-status.green {
+  color: #079455;
+  background: #ecfdf3;
+}
+
+#venue-status.orange {
+  color: #dc6803;
+  background: #fff6ed;
+}
+
+#venue-status.red {
+  color: #d92d20;
+  background: #fef3f2;
+}
+.venue-status-wrap {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-help-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(91, 140, 255, 0.35);
+  background: #fff;
+  color: #5b8cff;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* 场地状态说明弹窗 */
+.status-rule-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: 9998;
+  display: none;
+}
+
+.status-rule-modal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(88vw, 360px);
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+  z-index: 9999;
+  display: none;
+}
+
+.status-rule-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.status-rule-content {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #475467;
+}
+
+.status-rule-content b.normal {
+  color: #079455;
+}
+
+.status-rule-content b.warning {
+  color: #dc6803;
+}
+
+.status-rule-content b.danger {
+  color: #d92d20;
+}
+
+.status-rule-close {
+  margin-top: 14px;
+  width: 100%;
+  height: 36px;
+  border: 0;
+  border-radius: 12px;
+  background: #5b8cff;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.venue-row-sub {
+  justify-content: space-between;
+}
+
+.venue-level-wrap,
+.venue-invite-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #667085 !important;
+  white-space: nowrap;
+}
+
+.venue-level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: auto !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 999px;
+  font-size: 13px !important;
+  font-weight: 700;
+  background: #eef4ff;
+  color: #3b6eea;
+  border: 1px solid rgba(91, 140, 255, 0.25);
+}
+
+.level-help-btn {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50%;
+  border: 1px solid rgba(91, 140, 255, 0.35);
+  background: #fff;
+  color: #5b8cff;
+  font-size: 12px !important;
+  line-height: 16px !important;
+  cursor: pointer;
+  padding: 0;
+}
+
+#venue-invite-code {
+  color: #5b8cff;
+}
+
+.copy-invite-btn {
+  border: 1px solid rgba(91, 140, 255, 0.25);
+  background: #fff;
+  color: #5b8cff;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 手机端 */
+@media (max-width: 1080px) {
+  .venue-head {
+    margin-bottom: 18px;
+  }
+
+  .venue-row-main {
+    margin-bottom: 10px;
+  }
+
+  .venue-row-sub {
+    gap: 8px;
+  }
+
+  .venue-level-wrap,
+  .venue-invite-wrap {
+    font-size: 12px !important;
+  }
+}
+
+/* 极窄手机兜底 */
+@media (max-width: 360px) {
+  #venue-name {
+    font-size: 15px;
+  }
+
+  #venue-id {
+    font-size: 11px !important;
+  }
+
+  .venue-level-wrap,
+  .venue-invite-wrap {
+    font-size: 11px !important;
+  }
+
+  .copy-invite-btn {
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+}
+
+    </style>
+</head>
+<body>
+    <div class="dashboard-card">
+        <!-- 数据区 -->
+        <div class="metrics-container">
+<div class="card-title venue-head">
+  <div class="venue-row venue-row-main">
+    <div class="venue-title-left">
+      <span id="venue-name">场地名称</span>
+      <span id="venue-id">(场地ID: 加载中)</span>
+    </div>
+
+    <span class="venue-status-wrap">
+      <span id="venue-status">加载中</span>
+      <button id="status-help-btn" class="status-help-btn" type="button">?</button>
+    </span>
+  </div>
+
+<div class="venue-row venue-row-sub">
+  <span id="invite-wrap" class="venue-invite-wrap hidden">
+    邀请码:
+    <b id="venue-invite-code">----</b>
+    <button id="copy-invite-btn" class="copy-invite-btn" type="button">复制</button>
+  </span>
+
+  <span id="venue-level-wrap" class="venue-level-wrap">
+    评定级别:
+    <b id="venue-level-badge" class="venue-level-badge">A级</b>
+    <button id="level-help-btn" class="level-help-btn" type="button">?</button>
+  </span>
+</div>
+</div>
+
+
+<div class="metrics-grid">
+    <div class="metric-item">
+        <div class="metric-label">今日收益</div>
+        <div class="metric-value" id="totalPayment">¥0.00</div>
+    </div>
+
+
+    <div class="metric-item">
+        <div class="metric-label">礼物收益</div>
+        <div class="metric-value" id="giftPayment">¥0.00</div>
+    </div>
+
+    <div class="metric-item">
+        <div class="metric-label">国内设备收益</div>
+        <div class="metric-value" id="devicePayment">¥0.00</div>
+    </div>
+    <div class="metric-item">
+        <div class="metric-label">海外设备收益</div>
+        <div class="metric-value" id="queue-length">¥0.00</div>
+    </div>
+
+    <div class="metric-item">
+        <div class="metric-label">投诉待处理</div>
+        <div class="metric-value" id="reservationCount">0</div>
+    </div>
+
+    <div class="metric-item">
+        <div class="metric-label">订单数</div>
+        <div class="metric-value" id="orderCount">0单</div>
+    </div>
+</div>
+        </div>
+
+        <!-- 导航区 -->
+        <div class="nav-grid" id="nav-container"></div>
+
+    </div>   
+    <script>
+    
+       
+
+        // 发起请求获取数据并更新页面
+        fetch('/api/index/DailySummaryStatsv2.php') 
+            .then(response => response.json()) 
+            .then(data => {
+                if (data.code  === 0) {
+                    window.__venueId = data.data.venue_id;   // ✅ 保存场地ID
+                    if (window.__venueStatus !== undefined) {
+                      setInviteUI(window.__venueId, window.__venueStatus === 0); // ✅ status已有就刷新一次
+                    }
+                    // 赋值给页面元素
+                   const venueName = data.data.venue_name || '动物汽车城';
+                        // document.getElementById('venue-name').childNodes[0].textContent = venueName + ' ';
+                        document.getElementById('venue-name').textContent = venueName;
+    
+                        // document.getElementById('venue-id').textContent = `场地ID: ${data.data.venue_id}`;
+                        document.getElementById('venue-id').textContent = `(场地ID: ${data.data.venue_id})`;
+
+
+                        document.getElementById('totalPayment').textContent = `¥${data.data.totalPayment ?? '0.00'}`;
+                        document.getElementById('devicePayment').textContent = `¥${data.data.devicePayment ?? '0.00'}`;
+                        document.getElementById('giftPayment').textContent = `¥${data.data.giftPayment ?? '0.00'}`;
+                        renderVenueLevel(data.data.venue_level, data.data.withdraw_ratio);
+                        if (data.data.queue_length == null) {
+                            data.data.queue_length = 0;
+                        }
+                        document.getElementById('queue-length').textContent = `¥${"0.00"}`;
+                        
+                        const reportCount = data.data.reportCount ?? 0;
+                        document.getElementById('reservationCount').textContent = `${reportCount}`;
+                        if (reportCount >= 1) {
+                            document.getElementById('reservationCount').style.color = 'red';
+                        } else {
+                            document.getElementById('reservationCount').style.color = '';
+                        }
+                        
+                        document.getElementById('orderCount').textContent = `${data.data.orderCount ?? 0} 单`;
+                }
+            })
+            .catch(error => {
+                console.error(' 数据加载失败:', error);
+            });
+            
+            
+              // ✅ 根据场地ID生成4位邀请码：个位->100x；十位->10xx；百位->1xxx；四位及以上直接取后4位
+  function genInviteCode(venueId) {
+    const n = parseInt(venueId, 10);
+    if (!Number.isFinite(n) || n <= 0) return "----";
+
+    if (n < 10)  return "100" + n;   // 5 => 1005
+    if (n < 100) return "10" + n;    // 55 => 1055
+    if (n < 1000) return "1" + n;    // 555 => 1555
+
+    // 1000~9999 => 本身就是4位；更大就取后4位（避免变成5位以上）
+    return String(n).slice(-4);
+  }
+
+  function setInviteUI(venueId, isNormal) {
+    const wrap = document.getElementById("invite-wrap");
+    const codeEl = document.getElementById("venue-invite-code");
+    const btn = document.getElementById("copy-invite-btn");
+    if (!wrap || !codeEl || !btn) return;
+
+    const code = genInviteCode(venueId);
+    codeEl.textContent = code;
+
+    if (isNormal && code !== "----") {
+      wrap.classList.remove("hidden");
+    } else {
+      wrap.classList.add("hidden");
+    }
+
+    btn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(code);
+        btn.textContent = "已复制";
+        setTimeout(() => (btn.textContent = "复制"), 1200);
+      } catch (e) {
+        // 兼容极少数浏览器
+        const ta = document.createElement("textarea");
+        ta.value = code;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        btn.textContent = "已复制";
+        setTimeout(() => (btn.textContent = "复制"), 1200);
+      }
+    };
+  }
+            
+        function getVenueWithdrawRatio(level) {
+              const l = String(level || 'A').toUpperCase();
+            
+              // 当前只启用 A / C
+              if (l === 'C') return 60;
+            
+              // S/B/D 暂时按 A 处理，后续扩展
+              return 80;
+            }
+            
+            function renderVenueLevel(level, ratio) {
+              const badge = document.getElementById('venue-level-badge');
+              if (!badge) return;
+            
+              const l = String(level || 'A').toUpperCase();
+              const finalLevel = ['S', 'A', 'B', 'C', 'D'].includes(l) ? l : 'A';
+              const finalRatio = ratio || getVenueWithdrawRatio(finalLevel);
+            
+              badge.textContent = `${finalLevel}级`;
+              badge.title = `${finalLevel}级，提现比例 ${finalRatio}%`;
+            } 
+        function fetchVenueStatus() {
+            fetch('/api/index/get_venue_status.php') // 🔁 替换成真实接口
+              .then(res => res.json())
+              .then(data => {
+              const status = data.status; // 0=正常, 1=异常, 2=高危
+              const statusEl = document.getElementById("venue-status");
+            window.__venueStatus = status; // ✅ 保存状态
+setInviteUI(window.__venueId, status === 0); // ✅ 用全局venueId（不再从文本正则取）
+              let statusText = "";
+              let colorClass = "";
+            
+              switch (status) {
+                case 0:
+                  statusText = "正常";
+                  colorClass = "green";
+                  break;
+                case 1:
+                  statusText = "异常";
+                  colorClass = "orange";
+                  break;
+                case 2:
+                  statusText = "高危";
+                  colorClass = "red";
+                  break;
+                default:
+                  statusText = "未知";
+                  colorClass = "";
+              }
+            
+            //   statusEl.textContent = `(状态: ${statusText})`;
+            statusEl.textContent = statusText;
+           
+              statusEl.classList.remove("green", "orange", "red");
+              if (colorClass) statusEl.classList.add(colorClass);
+            })
+
+              .catch(error => {
+                console.error("状态加载失败:", error);
+                const statusEl = document.getElementById("venue-status");
+                statusEl.textContent = "(状态: 获取失败)";
+                statusEl.className = "";
+              });
+          }
+        
+          // ✅ 页面加载完成后立即调用一次
+          fetchVenueStatus();
+        
+          // ✅ 每 30 分钟自动刷新一次
+          setInterval(fetchVenueStatus, 30 * 60 * 1000);
+    </script>
+<script>
+/**
+ * 渲染导航项
+ * @param {Array} navItems - 包含 id、icon、label、href、badge_id 的对象数组
+ * @param {String} containerId - 渲染的容器ID
+ */
+function renderNavGrid(navItems, containerId = 'nav-container') {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  navItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'nav-card';
+    card.id = item.id;
+
+    const badgeHTML = item.badge_id
+      ? `<span class="badge hidden" id="${item.badge_id}">0</span>` 
+      : '';
+
+    card.innerHTML = `
+      <i class="fas ${item.icon} nav-icon"></i>
+      <div class="nav-text">${item.label}</div>
+      ${badgeHTML}
+    `;
+
+    // card.addEventListener('click', () => {
+    //   window.location.href = item.href || `${item.id}.html`;
+    // });
+    card.addEventListener('click', () => {
+//           // ✅ 推广奖励：暂时提示开发中
+//   if (item.id === 'item_1769658662283' || item.href === 'Promotion_Reward.html') {
+//     alert('开发中');
+//     return;
+//   }
+      const url = item.href || `${item.id}.html`;
+      window.location.href = url + '?_=' + Date.now(); // ⏰ 加上时间戳防缓存
+    });
+
+    container.appendChild(card);
+  });
+}
+
+/**
+ * 更新 badge 显示
+ * @param {String} badgeId - 徽章元素 ID
+ * @param {Number} count - 数量，小于等于0时隐藏
+ */
+function updateBadge(badgeId, count) {
+  const el = document.getElementById(badgeId);
+  if (!el) return;
+
+  if (count > 0) {
+    el.classList.remove('hidden');
+    el.textContent = count;
+  } else {
+    el.classList.add('hidden');
+    el.textContent = '';
+  }
+}
+
+// 加载导航项并渲染
+// fetch('/res/navItems2.json')
+//   .then(res => res.json())
+//   .then(data => {
+//     renderNavGrid(data);
+
+//     // 渲染完成后更新徽章（可写多个接口）
+//     fetch('/api/devMgr/getFaultDevices.php')
+//       .then(res => res.json())
+//       .then(resp => {
+//         if (resp.code === 0) {
+//           updateBadge('pending-count', resp.count); // 示例：故障审批红点
+//         }
+//       })
+//       .catch(err => console.error('设备故障badge更新失败', err));
+
+//     // 你也可以添加更多接口更新其他 badge
+//     // fetch('/api/xxx').then(...).then(data => updateBadge('other-badge-id', data.count));
+//   })
+//   .catch(err => {
+//     console.error('导航加载失败', err);
+//   });
+
+// 先加载导航 + 当前登录用户，然后根据权限控制“设备历史管理”的显示
+// 先加载导航 + 当前登录用户，然后根据权限控制菜单显示
+Promise.all([
+  fetch('/res/navItems2.json?_=' + Date.now()).then(res => res.json()),
+  fetch('/api/operat/get_current_user.php?_=' + Date.now()).then(res => res.json()).catch(() => null)
+]).then(([navData, userInfo]) => {
+
+  const roleId  = Number(userInfo?.data?.role_id || 0);
+  const venueId = Number(userInfo?.data?.venue_id || 0);
+  const role3HideIds = new Set([
+    'item_1780731430102' // 开播时长
+  ]);
+  // role_id = 4 时要隐藏的 9 个红框功能
+  const role4HideIds = new Set([
+    'moeny-details',          // 财务对账
+    'PaymentDisbursement',    // 提现申请
+    'BindReceiveAccount',     // 绑定卡号
+    'PricingOptions',         // 资费套餐
+    'item_1753949261596',     // 能量分配
+    'item_1753443554822',     // 挂车占有
+    'item_1758087008941',     // 反馈信息
+    'item_1761377446251',     // 设备历史管理
+    'item_1779973067605'      // 礼物提现
+  ]);
+
+  // 默认全部显示
+  let finalNavData = navData;
+
+  // 如果是 role_id = 4，过滤掉这 9 个功能
+  if (roleId === 4) {
+    finalNavData = navData.filter(item => !role4HideIds.has(item.id));
+  }
+// role_id=3
+if (roleId === 3) {
+    finalNavData = finalNavData.filter(
+        item => !role3HideIds.has(item.id)
+    );
+}
+  // 渲染过滤后的菜单
+  renderNavGrid(finalNavData);
+
+
+  // 非 role_id=4 时，继续保留你原来的“设备历史管理”权限逻辑
+  // 只有 role_id=1 或 venue_id=86/94 才能看到设备历史管理
+  const historyItemId = 'item_1761377446251';
+  const historyItemEl = document.getElementById(historyItemId);
+
+  if (historyItemEl) {
+    historyItemEl.style.display = 'none';
+  }
+
+  if ((roleId === 1 || venueId === 86 || venueId === 94) && historyItemEl) {
+    historyItemEl.style.display = '';
+  }
+
+
+  // badge 更新逻辑
+  fetch('/api/devMgr/getFaultDevices.php')
+    .then(res => res.json())
+    .then(resp => {
+      if (resp.code === 0) {
+        updateBadge('pending-count', resp.count);
+      }
+    })
+    .catch(err => console.error('设备故障badge更新失败', err));
+
+}).catch(err => {
+  console.error('导航加载失败', err);
+});
+
+document.addEventListener('DOMContentLoaded', function initLevelRuleModal() {
+  const btn = document.getElementById('level-help-btn');
+  const mask = document.getElementById('level-rule-mask');
+  const modal = document.getElementById('level-rule-modal');
+  const closeBtn = document.getElementById('level-rule-close');
+
+  if (!btn || !mask || !modal || !closeBtn) return;
+
+  function openModal() {
+    mask.style.display = 'block';
+    modal.style.display = 'block';
+  }
+
+  function closeModal() {
+    mask.style.display = 'none';
+    modal.style.display = 'none';
+  }
+
+  btn.addEventListener('click', openModal);
+  mask.addEventListener('click', closeModal);
+  closeBtn.addEventListener('click', closeModal);
+});
+document.addEventListener('DOMContentLoaded', function initStatusRuleModal() {
+  const btn = document.getElementById('status-help-btn');
+  const mask = document.getElementById('status-rule-mask');
+  const modal = document.getElementById('status-rule-modal');
+  const closeBtn = document.getElementById('status-rule-close');
+
+  if (!btn || !mask || !modal || !closeBtn) return;
+
+  function openModal() {
+    mask.style.display = 'block';
+    modal.style.display = 'block';
+  }
+
+  function closeModal() {
+    mask.style.display = 'none';
+    modal.style.display = 'none';
+  }
+
+  btn.addEventListener('click', openModal);
+  mask.addEventListener('click', closeModal);
+  closeBtn.addEventListener('click', closeModal);
+});
+// 主播认证提醒间隔：多少分钟弹一次
+const ANCHOR_AUTH_REMIND_MINUTES = 1440;
+
+// localStorage 记录 key
+const ANCHOR_AUTH_LAST_POP_KEY = 'anchor_auth_last_popup_time';
+
+function canShowAnchorAuthModalNow() {
+  const lastTime = Number(localStorage.getItem(ANCHOR_AUTH_LAST_POP_KEY) || 0);
+  const now = Date.now();
+  const intervalMs = ANCHOR_AUTH_REMIND_MINUTES * 60 * 1000;
+
+  // 从来没弹过，可以弹
+  if (!lastTime) return true;
+
+  // 超过 N 分钟，才允许再次弹
+  return now - lastTime >= intervalMs;
+}
+
+function recordAnchorAuthPopupTime() {
+  localStorage.setItem(ANCHOR_AUTH_LAST_POP_KEY, String(Date.now()));
+}
+
+// 进入首页时检查当前场地是否需要主播认证
+function checkAnchorAuthOnEnter() {
+  // ✅ N分钟内弹过，就不再请求/不再弹
+  if (!canShowAnchorAuthModalNow()) {
+    return;
+  }
+
+  fetch('/api/admin/anchor_auth_check_venue.php?_=' + Date.now(), {
+    credentials: 'same-origin'
+  })
+    .then(res => res.json())
+    .then(resp => {
+      // 只有“当前场地可以发起认证”时才弹窗
+      if (Number(resp.code) === 0 && resp.data && resp.data.can_auth === true) {
+        showAnchorAuthModal();
+
+        // ✅ 只要弹出来，就记录时间，避免刷新页面又弹
+        recordAnchorAuthPopupTime();
+      }
+    })
+    .catch(err => {
+      console.error('主播认证状态检查失败:', err);
+    });
+}
+
+function showAnchorAuthModal() {
+  const mask = document.getElementById('anchor-auth-mask');
+  if (!mask) return;
+
+  mask.style.display = 'flex';
+}
+
+function hideAnchorAuthModal() {
+  const mask = document.getElementById('anchor-auth-mask');
+  if (!mask) return;
+
+  mask.style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function initAnchorAuthModal() {
+  const closeBtn = document.getElementById('anchor-auth-close');
+  const cancelBtn = document.getElementById('anchor-auth-cancel');
+  const goBtn = document.getElementById('anchor-auth-go');
+  const mask = document.getElementById('anchor-auth-mask');
+
+  if (closeBtn) closeBtn.addEventListener('click', hideAnchorAuthModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', hideAnchorAuthModal);
+
+  if (goBtn) {
+    goBtn.addEventListener('click', function () {
+      window.location.href = 'anchor_auth_start.html?_=' + Date.now();
+    });
+  }
+
+  // 点击遮罩关闭
+  if (mask) {
+    mask.addEventListener('click', function (e) {
+      if (e.target === mask) {
+        hideAnchorAuthModal();
+      }
+    });
+  }
+
+  checkAnchorAuthOnEnter();
+});
+</script>
+
+
+
+<script src="canvas-nest-colorful.js"></script>
+<div id="level-rule-mask" class="level-rule-mask"></div>
+<div id="status-rule-mask" class="status-rule-mask"></div>
+
+<div id="status-rule-modal" class="status-rule-modal">
+  <div class="status-rule-title">场地状态说明</div>
+  <div class="status-rule-content">
+    <div><b class="normal">正常：</b>无设备、场地出现违规，可正常营业。</div>
+    <div><b class="warning">异常：</b>有设备存在违规，相关设备已被封禁，请及时处理。</div>
+    <div><b class="danger">高危：</b>场地出现违规，场地已被封禁，请尽快联系平台处理。</div>
+  </div>
+  <button id="status-rule-close" class="status-rule-close" type="button">知道了</button>
+</div>
+<div id="level-rule-modal" class="level-rule-modal">
+  <div class="level-rule-title">场地评级说明</div>
+  <div class="level-rule-content">
+    <div><b>A评级场地：</b>该评级场地运营正常，有效直播引流，收益提成比例为80%，请继续保持运营。</div>
+    <div><b>C评级场地：</b>该评级场地因长时间缺乏运营，无有效直播引流，收益提成比例降低为60%，请及时整改。</div>
+    <!--<div><b>S级：</b>扶持级，后续扩展使用。</div>-->
+    <!--<div><b>B / D级：</b>后续扩展使用。</div>-->
+    <!--<div style="margin-top:8px;">-->
+    <!--  评级参考项预留：活跃度、是否引流、运营综合判定等。-->
+    <!--</div>-->
+    <div style="margin-top:8px;">
+      如对评定级别有异议，请联系运营电话沟通。
+    </div>
+  </div>
+  <button id="level-rule-close" class="level-rule-close" type="button">知道了</button>
+</div>
+<!-- 主播认证提醒弹窗 -->
+<div id="anchor-auth-mask" class="anchor-auth-mask">
+  <div class="anchor-auth-modal">
+    <button id="anchor-auth-close" class="anchor-auth-close" type="button">×</button>
+
+    <div class="anchor-auth-icon">
+      <i class="fas fa-id-card"></i>
+    </div>
+
+    <div class="anchor-auth-title">当前场地暂未完成主播认证</div>
+
+    <div class="anchor-auth-desc">
+      完成主播实名认证后，可正常使用主播相关功能。<br>
+      是否现在前往认证页面？
+    </div>
+
+    <div class="anchor-auth-actions">
+      <button id="anchor-auth-cancel" class="anchor-auth-btn cancel" type="button">暂不认证</button>
+      <button id="anchor-auth-go" class="anchor-auth-btn confirm" type="button">去认证</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

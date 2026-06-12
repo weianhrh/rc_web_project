@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能违规巡查系统</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      background: #0e1d2d;
+      color: white;
+      font-family: sans-serif;
+    }
+    .page-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      margin: 20px 0;
+      color: cyan;
+    }
+    .comparison-section {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px;
+      gap: 20px;
+    }
+    .left-column, .right-column {
+      flex: 1;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .left-column h2, .right-column h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    .left-column iframe, .left-column img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    .violations-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .violation-card {
+      background: #fff;
+      color: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      width: 300px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    .card-remark {
+      font-size: 14px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-title">Rc物联-AI违规巡查系统</div>
+ <div class="comparison-section">
+  <!-- AI 识别 -->
+  <div class="left-column">
+    <h2>左侧渲染 AI 识别的</h2>
+    <button id="toggleSoundBtnAI" onclick="toggleSoundAlert('AI')">声音提醒: 开启</button>
+    <div class="violations-grid" id="violationsContainerAI">
+      <div class="loading">数据加载中...</div>
+    </div>
+  </div>
+  <!-- 自研识别 -->
+  <div class="right-column">
+    <h2>右侧渲染 自研识别的</h2>
+    <button id="toggleSoundBtnSelf" onclick="toggleSoundAlert('Self')">声音提醒: 开启</button>
+    <div class="violations-grid" id="violationsContainerSelf">
+      <div class="loading">数据加载中...</div>
+    </div>
+  </div>
+</div>
+<audio id="alertSoundAI" src="001.mp3"></audio>
+<audio id="alertSoundSelf" src="001.mp3"></audio>
+
+
+  <audio id="alertSound" src="001.mp3"></audio>
+  <div class="modal" id="imageModal" onclick="closeImageModal()">
+    <img id="modalImage" src="" alt="放大图片">
+  </div>
+  <div id="customAlert">
+    <div id="customAlertClose" onclick="closeCustomAlert()">×</div>
+    <div id="customAlertMessage">有举报待处理，是否立即前往？</div>
+    <button onclick="goToReportReview()">立即处理</button>
+  </div>
+<script src="canvas-nest-colorful.js"></script>
+<script>
+let soundEnabledAI = true;
+let soundEnabledSelf = true;
+let lastViolationsAI = null;
+let lastViolationsSelf = null;
+const alertSoundAI = document.getElementById('alertSoundAI');
+const alertSoundSelf = document.getElementById('alertSoundSelf');
+
+async function fetchViolations() {
+    try {
+        const response = await fetch('https://open.rcwulian.cn/api/pop/fetch_vuln.php');
+        const data = await response.json();
+
+        if (data.success) {
+            // AI识别渲染
+            const newAI = JSON.stringify(data.ai_violations || []);
+            if (newAI !== lastViolationsAI) {
+                lastViolationsAI = newAI;
+                renderViolationsAI(data.ai_violations || []);
+                if (soundEnabledAI && data.ai_violations && data.ai_violations.length > 0) alertSoundAI.play();
+            }
+            // 自研识别渲染
+            const newSelf = JSON.stringify(data.self_violations || []);
+            if (newSelf !== lastViolationsSelf) {
+                lastViolationsSelf = newSelf;
+                renderViolationsSelf(data.self_violations || []);
+                if (soundEnabledSelf && data.self_violations && data.self_violations.length > 0) alertSoundSelf.play();
+            }
+        } else {
+            showEmptyState('AI');
+            showEmptyState('Self');
+        }
+    } catch (error) {
+        showErrorState('AI');
+        showErrorState('Self');
+        console.error('数据获取失败:', error);
+    }
+}
+
+function renderViolationsAI(violations) {
+    renderViolationsCommon(violations, 'AI');
+}
+function renderViolationsSelf(violations) {
+    renderViolationsCommon(violations, 'Self');
+}
+
+// type: 'AI' or 'Self'
+function renderViolationsCommon(violations, type) {
+    const container = document.getElementById(type === 'AI' ? 'violationsContainerAI' : 'violationsContainerSelf');
+    container.innerHTML = '';
+    violations.sort((a, b) => {
+        const levelWeight = { high: 3, medium: 2, low: 1 };
+        return (levelWeight[b.risk_level] || 0) - (levelWeight[a.risk_level] || 0);
+    });
+    violations.forEach(violation => {
+        const card = document.createElement('div');
+        card.className = 'violation-card';
+        card.innerHTML = `
+            <div class="image-wrapper">
+                <img src="${violation.image_url}" alt="违规截图" class="card-image" loading="lazy" onclick="showImageModal('${violation.image_url}')">
+                <div class="time-overlay">${violation.time}</div>
+            </div>
+            <div class="card-content">
+                <div class="risk-and-count">
+                    <div class="risk-level ${getRiskClass(violation.risk_level)}">${getRiskText(violation.risk_level)}</div>
+                    <div class="violation-count"><span class="count-num">${violation.hit_count ?? 0}</span> 次违规</div>
+                </div>
+                <div class="card-venue">场地：${violation.venue_name}</div>
+                <div class="card">违规次数：<span class="count-num">${violation.violation_count ?? 0}</span> 次违规</div>
+                <div class="card-reason">描述：${violation.reason}</div>
+                ${violation.remark ? `<div class="card-remark">备注：${violation.remark}</div>` : ''}
+                <button onclick="banDevice('${violation.key}', '${type}')">${violation.is_banned === 1 ? '已封禁' : '封禁'}</button>
+                <button class="button-off" onclick="offbanDevice('${violation.key}', '${type}')">忽略</button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+function showEmptyState(type) {
+    document.getElementById(type === 'AI' ? 'violationsContainerAI' : 'violationsContainerSelf').innerHTML = '<div class="loading">当前没有违规记录</div>';
+}
+function showErrorState(type) {
+    document.getElementById(type === 'AI' ? 'violationsContainerAI' : 'violationsContainerSelf').innerHTML = '<div class="loading">数据加载失败，请稍后重试</div>';
+}
+function toggleSoundAlert(type) {
+    if (type === 'AI') {
+        soundEnabledAI = !soundEnabledAI;
+        document.getElementById('toggleSoundBtnAI').innerText = `声音提醒: ${soundEnabledAI ? "开启" : "关闭"}`;
+    } else if (type === 'Self') {
+        soundEnabledSelf = !soundEnabledSelf;
+        document.getElementById('toggleSoundBtnSelf').innerText = `声音提醒: ${soundEnabledSelf ? "开启" : "关闭"}`;
+    }
+}
+
+
+        function getRiskClass(level) {
+            return {
+                high: 'risk-high',
+                medium: 'risk-medium',
+                low: 'risk-low'
+            }[level] || 'risk-medium';
+        }
+
+        function getRiskText(level) {
+            return {
+                high: '高风险',
+                medium: '中风险',
+                low: '低风险'
+            }[level] || '未知风险';
+        }
+
+        function showEmptyState() {
+            const container = document.getElementById('violationsContainer');
+            container.innerHTML = '<div class="loading">当前没有违规记录</div>';
+        }
+
+        function showErrorState() {
+            const container = document.getElementById('violationsContainer');
+            container.innerHTML = '<div class="loading">数据加载失败，请稍后重试</div>';
+        }
+
+        function toggleSoundAlert() {
+            soundEnabled = !soundEnabled;
+            const buttonText = `声音提醒: ${soundEnabled ? "开启" : "关闭"}`;
+            document.getElementById('toggleSoundBtn').innerText = buttonText;
+        }
+
+
+        function showImageModal(imageUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = imageUrl;
+            modal.classList.add('show');
+        }
+        // function offbanDevice(serialNumber) {
+        //     if (!confirm(`确定要忽略设备 ${serialNumber} 的本次违规记录吗？`)) return;
+        
+        //     const formData = new URLSearchParams();
+        //     formData.append('serial_number', serialNumber);
+        
+        //     fetch('/api/pop/clear_device_violation.php', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/x-www-form-urlencoded'
+        //         },
+        //         body: formData.toString()
+        //     })
+        //     .then(res => res.json())
+        //     .then(data => {
+        //         alert(data.message || (data.success ? '忽略成功' : '忽略失败'));
+        //         if (data.success) {
+        //             fetchViolations(); // 刷新页面
+        //         }
+        //     })
+        //     .catch(err => {
+        //         alert('忽略请求失败：' + err);
+        //         console.error(err);
+        //     });
+        // }
+function offbanDevice(serialNumber) {
+    if (!confirm(`确定要忽略设备 ${serialNumber} 的本次违规记录吗？`)) return;
+
+    // 找到点击按钮所在卡片，检查是否包含 .card-remark
+    const button = document.querySelector(`button[onclick="offbanDevice('${serialNumber}')"]`);
+    const cardContent = button?.closest('.card-content');
+    const hasRemark = cardContent?.querySelector('.card-remark') !== null;
+
+    // 如果存在备注，认为是“自研模型”推理的，自动加 _predicted 后缀
+    const finalSerial = hasRemark ? (serialNumber + '_predicted') : serialNumber;
+
+    const formData = new URLSearchParams();
+    formData.append('serial_number', finalSerial);
+
+    fetch('/api/pop/clear_device_violation.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message || (data.success ? '忽略成功' : '忽略失败'));
+        if (data.success) {
+            fetchViolations(); // 刷新页面
+        }
+    })
+    .catch(err => {
+        alert('忽略请求失败：' + err);
+        console.error(err);
+    });
+}
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('show');
+        }
+
+        // 初始化加载数据并每30秒刷新一次
+        fetchViolations();
+        
+
+        setInterval(fetchViolations, 30000);
+        document.getElementById('toggleSoundBtn').innerText = `声音提醒: ${soundEnabled ? "开启" : "关闭"}`;
+        let selectedKey = '';
+        let defaultReason = '';
+        
+        function banDevice(key) {
+            selectedKey = key;
+            // 从卡片中取出当前默认问题描述
+            const reasonElem = document.querySelector(`button[onclick="banDevice('${key}')"]`).closest('.card-content').querySelector('.card-reason');
+            defaultReason = reasonElem ? reasonElem.textContent.replace('问题描述：', '') : '';
+        
+            document.getElementById('banDeviceKey').textContent = key;
+            document.getElementById('banDuration').value = '5';
+            document.getElementById('banReason').value = defaultReason;
+        
+            document.getElementById('banModal').classList.add('show');
+        }
+        
+        function closeBanModal() {
+            document.getElementById('banModal').classList.remove('show');
+        }
+        
+ 
+        function confirmBan() {
+    const duration = document.getElementById('banDuration').value;
+    const reason = document.getElementById('banReason').value;
+    const imageSerial = selectedKey;
+
+    // 获取按钮和卡片元素
+    const button = document.querySelector(`button[onclick="banDevice('${imageSerial}')"]`);
+    const cardContent = button?.closest('.card-content');
+    const imageUrl = cardContent?.parentElement.querySelector('img')?.src;
+
+    const hasRemark = cardContent?.querySelector('.card-remark') !== null;
+
+    // 如果存在备注，认为是“自研模型”推理的，自动去掉 _predicted 后缀
+    const finalSerial = hasRemark ? imageSerial.replace('_predicted', '') : imageSerial;
+
+    const formData = new URLSearchParams();
+    formData.append('image_device_serial', finalSerial);
+    formData.append('image_url', imageUrl);
+    formData.append('ban_duration', duration);
+    formData.append('ban_reason', reason);
+
+    fetch('/api/pop/handle_device_ban.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData.toString()
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message || (data.success ? '封禁成功' : '封禁失败'));
+        if (data.success) {
+            closeBanModal();
+            fetchViolations(); // 刷新列表
+        }
+    })
+    .catch(err => {
+        alert('请求异常：' + err);
+        console.error(err);
+    });
+}
+
+    function closeCustomAlert() {
+        document.getElementById('customAlert').style.display = 'none';
+        reportAlertShown = false;
+        // 不清空 lastReportCount，确保只有有“新增未处理记录”才再次提醒
+    }
+
+    </script>
+<script>
+let alertShown = false; // 是否已弹出提示，避免重复弹窗
+
+function checkPendingImages() {
+    fetch('https://open.rcwulian.cn/api/venue/getPendingImages.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.code === 0) {
+                if (data.count > 0 && !alertShown) {
+                    const confirmed = confirm("有图片待审核，是否立即前往？");
+                    alertShown = true;
+
+                    if (confirmed) {
+                        window.location.href = "https://open.rcwulian.cn/res/peddingMain.html";
+                    } else {
+                        console.log("用户取消提醒");
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            console.error('获取待审核数量失败', err);
+        });
+}
+
+// 首次加载就执行一次
+checkPendingImages();
+
+// 每隔30秒轮询一次
+setInterval(checkPendingImages, 30000);
+</script>
+<script>
+let reportAlertShown = false;
+let lastReportCount = 0;
+let lastAlertTimestamp = 0;
+const REPORT_POPUP_INTERVAL = 10 * 60 * 1000; // 10分钟
+
+function checkReportCount() {
+    const now = Date.now();
+
+    // 防止过于频繁弹窗（10分钟内只提示一次）
+    if (reportAlertShown && now - lastAlertTimestamp < REPORT_POPUP_INTERVAL) return;
+
+    fetch('https://open.rcwulian.cn/api/index/adminbackstage.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.code === 0) {
+                const reportCount = data.data.reportCount || 0;
+
+                // 只有在数量增加，并且我们还没提示过，才去校验详情
+                if (reportCount > lastReportCount && !reportAlertShown) {
+
+                    // 二次确认，是否还有“未处理或处理中”的投诉
+                    fetch('https://open.rcwulian.cn/api/operat/ReporthandV2.php')
+                        .then(r => r.json())
+                        .then(reportData => {
+                            if (reportData.code === 0 && reportData.data.length > 0) {
+                                document.getElementById('customAlertMessage').textContent =
+                                    `当前有 ${reportCount} 条举报待处理，是否立即前往？`;
+                                document.getElementById('customAlert').style.display = 'block';
+                                reportAlertShown = true;
+                                lastAlertTimestamp = now;
+                            }
+
+                            lastReportCount = reportCount; // 不论结果，更新记录值
+                        });
+                }
+            }
+        })
+        .catch(err => {
+            console.error('举报数量检查失败:', err);
+        });
+}
+
+
+
+function goToReportReview() {
+    window.location.href = "https://open.rcwulian.cn/res/reporthandv2.html";
+}
+
+
+checkReportCount();
+setInterval(checkReportCount, 10000);
+setTimeout(() => {
+    if (document.getElementById('customAlert').style.display === 'block') {
+        closeCustomAlert();
+    }
+}, 30000); // 15秒后自动关闭
+
+</script>
+</body>
+</html>
+
+
+
+
+
+

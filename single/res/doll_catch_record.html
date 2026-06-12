@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>娃娃抓中记录</title>
+<style>
+:root {
+    --primary: #5b8cff;
+    --primary-deep: #4c79ea;
+    --secondary: #8a97ab;
+    --bg-start: #f8f9ff;
+    --bg-end: #eef3ff;
+    --card-bg: rgba(255,255,255,0.96);
+    --text: #24324a;
+    --line: #e9eef7;
+    --shadow: 0 8px 24px rgba(91, 140, 255, 0.08);
+    --shadow-soft: 0 4px 14px rgba(91, 140, 255, 0.06);
+    --radius: 14px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 14px;
+}
+
+.page-shell {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.page-header {
+    margin-bottom: 10px;
+    padding: 2px 2px 6px;
+}
+
+.page-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #223454;
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.page-header p {
+    font-size: 12px;
+    color: var(--secondary);
+    line-height: 1.4;
+}
+
+.toolbar-card {
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.7);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 12px;
+    backdrop-filter: blur(8px);
+    margin-bottom: 10px;
+}
+
+.toolbar-grid {
+    display: grid;
+    grid-template-columns: 2fr repeat(7, 1fr) auto auto;
+    gap: 8px;
+    align-items: end;
+}
+.field label {
+    display: block;
+    font-size: 11px;
+    color: var(--secondary);
+    margin-bottom: 5px;
+    padding-left: 2px;
+    line-height: 1;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.98);
+    padding: 0 10px;
+    font-size: 13px;
+    outline: none;
+    transition: all .2s ease;
+}
+
+.field input:focus,
+.field select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.08);
+}
+
+.btn {
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    padding: 0 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all .2s ease;
+    white-space: nowrap;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+    color: #fff;
+    box-shadow: 0 6px 14px rgba(91, 140, 255, 0.16);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+}
+
+.btn-light {
+    background: #f1f5ff;
+    color: var(--primary);
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.stat-mini {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.72);
+    min-height: 58px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: var(--secondary);
+    margin-bottom: 4px;
+    line-height: 1;
+}
+
+.stat-mini strong {
+    font-size: 18px;
+    line-height: 1.1;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.state-box {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-soft);
+    padding: 14px;
+    text-align: center;
+    color: var(--secondary);
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.mini-card {
+    background: var(--card-bg);
+    border-radius: 14px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(255,255,255,0.75);
+    padding: 10px 12px;
+    transition: all .2s ease;
+}
+
+.mini-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(91, 140, 255, 0.10);
+}
+
+.mini-top {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.item-cover {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #eef3fb;
+}
+
+.empty-cover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa8bf;
+    font-size: 11px;
+}
+
+.mini-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.card-head-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.card-head-right {
+    flex-shrink: 0;
+}
+
+.item-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #24395c;
+    line-height: 1.2;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.badge.purple { background: rgba(139,92,246,.10); color: #7c3aed; }
+.badge.orange { background: rgba(245,158,11,.12); color: #d97706; }
+.badge.cyan   { background: rgba(6,182,212,.12); color: #0891b2; }
+.badge.green  { background: rgba(34,197,94,.12); color: #16a34a; }
+.badge.red    { background: rgba(239,68,68,.10); color: #dc2626; }
+.badge.gray   { background: rgba(148,163,184,.12); color: #64748b; }
+
+.tag-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+    line-height: 1.1;
+}
+
+.tag.yes {
+    background: rgba(34,197,94,.10);
+    color: #16a34a;
+}
+
+.tag.no {
+    background: rgba(148,163,184,.12);
+    color: #64748b;
+}
+
+/* 新布局：顶部五列 */
+.data-grid {
+    display: grid;
+    gap: 6px;
+}
+
+.data-grid-top {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-bottom: 6px;
+}
+
+/* 新布局：底部三列 */
+.data-grid-bottom {
+    grid-template-columns: 1.45fr 1fr 1fr;
+}
+
+.info-cell {
+    background: rgba(248,250,255,.96);
+    border: 1px solid #edf2fb;
+    border-radius: 10px;
+    padding: 7px 9px;
+    min-width: 0;
+}
+
+.info-cell span {
+    display: block;
+    font-size: 10px;
+    color: var(--secondary);
+    margin-bottom: 3px;
+    line-height: 1.1;
+}
+
+.info-cell strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    line-height: 1.3;
+    word-break: break-all;
+}
+
+.pager-wrap {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pager-info {
+    color: var(--secondary);
+    font-size: 12px;
+}
+
+.pager {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.page-btn {
+    min-width: 34px;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #fff;
+    color: #334155;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all .2s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.page-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.page-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 1100px) {
+    .page-shell {
+        max-width: 940px;
+    }
+
+    .toolbar-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .data-grid-top {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .data-grid-bottom {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .page-shell {
+        max-width: 100%;
+    }
+
+    .page-header {
+        margin-bottom: 8px;
+    }
+
+    .page-header h1 {
+        font-size: 18px;
+    }
+
+    .page-header p {
+        font-size: 11px;
+    }
+
+    .toolbar-card {
+        padding: 10px;
+        border-radius: 12px;
+    }
+
+    .toolbar-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 7px;
+    }
+
+    .stat-mini {
+        min-height: 52px;
+        padding: 8px 10px;
+    }
+
+    .stat-mini strong {
+        font-size: 16px;
+    }
+
+    .mini-card {
+        padding: 9px 10px;
+        border-radius: 12px;
+    }
+
+    .mini-top {
+        gap: 9px;
+    }
+
+    .item-cover {
+        width: 54px;
+        height: 54px;
+        border-radius: 10px;
+    }
+
+    .item-title {
+        font-size: 14px;
+    }
+
+    .badge {
+        min-height: 20px;
+        font-size: 10px;
+        padding: 0 7px;
+    }
+
+    .tag {
+        font-size: 10px;
+        padding: 4px 7px;
+    }
+
+    .data-grid-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .data-grid-bottom {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .info-cell {
+        padding: 6px 8px;
+    }
+
+    .info-cell strong {
+        font-size: 11px;
+    }
+
+    .pager-wrap {
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 8px;
+    }
+
+    .toolbar-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .mini-top {
+        gap: 8px;
+    }
+
+    .item-cover {
+        width: 50px;
+        height: 50px;
+        border-radius: 9px;
+    }
+
+    .card-head {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .item-title {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+    }
+
+    .data-grid-top,
+    .data-grid-bottom {
+        grid-template-columns: 1fr;
+    }
+}
+.stat-mini.is-clickable {
+    cursor: pointer;
+    transition: all .2s ease;
+    user-select: none;
+}
+
+.stat-mini.is-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(91, 140, 255, 0.12);
+}
+
+.stat-mini.is-clickable.active {
+    border: 1px solid rgba(91, 140, 255, 0.35);
+    box-shadow: 0 0 0 2px rgba(91, 140, 255, 0.10), 0 10px 22px rgba(91, 140, 255, 0.12);
+    background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(240,246,255,0.98) 100%);
+}
+</style>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="page-header">
+            <div>
+                <h1>娃娃抓中记录</h1>
+                <p>展示用户抓中娃娃的记录信息</p>
+            </div>
+        </div>
+
+        <section class="toolbar-card">
+            <div class="toolbar-grid">
+                <div class="field">
+                    <label>关键词</label>
+                    <input id="keyword" type="text" placeholder="用户ID / 机台ID / 娃娃名称 / 订单ID" />
+                </div>
+
+                <div class="field">
+                    <label>状态</label>
+                    <select id="status">
+                        <option value="">全部状态</option>
+                        <option value="0">寄存中</option>
+                        <option value="1">待发货</option>
+                        <option value="2">已发货</option>
+                        <option value="3">已完成</option>
+                        <option value="4">已兑换</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>兑换</label>
+                    <select id="is_exchange">
+                        <option value="">全部</option>
+                        <option value="0">未兑换</option>
+                        <option value="1">已兑换</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>领取</label>
+                    <select id="is_receive">
+                        <option value="">全部</option>
+                        <option value="0">未领取</option>
+                        <option value="1">已领取</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>赠送</label>
+                    <select id="is_gift">
+                        <option value="">全部</option>
+                        <option value="0">未赠送</option>
+                        <option value="1">已赠送</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>开始日期</label>
+                    <input id="start_date" type="date" />
+                </div>
+                
+                <div class="field">
+                    <label>结束日期</label>
+                    <input id="end_date" type="date" />
+                </div>
+                <div class="field">
+                    <label>每页</label>
+                    <select id="page_size">
+                        <option value="12">12</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" id="searchBtn">搜索</button>
+                <button class="btn btn-light" id="resetBtn">重置</button>
+            </div>
+        </section>
+
+<section class="stats-row" id="statsRow">
+    <div class="stat-mini is-clickable active" data-status="">
+        <span class="stat-label">总记录</span>
+        <strong id="stat_total">0</strong>
+    </div>
+    <div class="stat-mini is-clickable" data-status="0">
+        <span class="stat-label">寄存中</span>
+        <strong id="stat_0">0</strong>
+    </div>
+    <div class="stat-mini is-clickable" data-status="1">
+        <span class="stat-label">待发货</span>
+        <strong id="stat_1">0</strong>
+    </div>
+    <div class="stat-mini is-clickable" data-status="2">
+        <span class="stat-label">已发货</span>
+        <strong id="stat_2">0</strong>
+    </div>
+    <div class="stat-mini is-clickable" data-status="3">
+        <span class="stat-label">已完成</span>
+        <strong id="stat_3">0</strong>
+    </div>
+    <div class="stat-mini is-clickable" data-status="4">
+        <span class="stat-label">已兑换</span>
+        <strong id="stat_4">0</strong>
+    </div>
+</section>
+
+        <section id="loadingBox" class="state-box">加载中...</section>
+        <section id="emptyBox" class="state-box" style="display:none;">暂无记录</section>
+
+        <section class="card-grid" id="cardGrid"></section>
+
+        <section class="pager-wrap">
+            <div class="pager-info" id="pagerInfo">第 1 / 1 页</div>
+            <div class="pager" id="pager"></div>
+        </section>
+    </div>
+
+    <script>
+        let currentPage = 1;
+
+    function syncStatActive() {
+    const currentStatus = document.getElementById('status').value;
+
+    document.querySelectorAll('#statsRow .stat-mini[data-status]').forEach(card => {
+        const cardStatus = card.getAttribute('data-status') ?? '';
+        card.classList.toggle('active', cardStatus === currentStatus);
+    });
+
+    // status 为空时，默认高亮“总记录”
+    if (currentStatus === '') {
+        const totalCard = document.querySelector('#statsRow .stat-mini[data-status=""]');
+        if (totalCard) totalCard.classList.add('active');
+    }
+}
+
+async function handleStatClick(rawStatus) {
+    const statusEl = document.getElementById('status');
+    const currentStatus = statusEl.value;
+    let nextStatus = rawStatus;
+
+    // 点击当前已选中的状态 => 取消筛选
+    if (rawStatus !== '' && currentStatus === rawStatus) {
+        nextStatus = '';
+    }
+
+    // 总记录始终代表清空状态
+    if (rawStatus === '') {
+        nextStatus = '';
+    }
+
+    statusEl.value = nextStatus;
+    currentPage = 1;
+
+    await loadData();
+
+    // 切到待发货后弹窗询问是否跳转
+    if (nextStatus === '1') {
+        const go = window.confirm('已切换到【待发货】记录，是否跳转到娃娃待发货处理页面？');
+        if (go) {
+            window.location.href = 'pending-shipping.html';
+        }
+    }
+}
+
+function bindStatClicks() {
+    document.querySelectorAll('#statsRow .stat-mini[data-status]').forEach(card => {
+        card.addEventListener('click', () => {
+            const status = card.getAttribute('data-status') ?? '';
+            handleStatClick(status);
+        });
+    });
+}
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function badgeClass(status) {
+            switch (String(status)) {
+                case '0': return 'badge purple';
+                case '1': return 'badge orange';
+                case '2': return 'badge cyan';
+                case '3': return 'badge green';
+                case '4': return 'badge red';
+                default: return 'badge gray';
+            }
+        }
+
+        function ynClass(val) {
+            return String(val) === '1' ? 'tag yes' : 'tag no';
+        }
+
+function buildCard(item) {
+    const imageHtml = item.doll_image
+        ? `<img class="item-cover" src="${escapeHtml(item.doll_image)}" alt="${escapeHtml(item.doll_name || '娃娃图片')}">`
+        : `<div class="item-cover empty-cover">暂无图片</div>`;
+
+    return `
+        <article class="mini-card">
+            <div class="mini-top">
+                ${imageHtml}
+
+                <div class="mini-main">
+                    <div class="card-head">
+                        <div class="card-head-left">
+                            <h3 class="item-title">${escapeHtml(item.doll_name || '未命名娃娃')}</h3>
+                            <div class="tag-line">
+                                <span class="${ynClass(item.is_exchange)}">${escapeHtml(item.is_exchange_text)}</span>
+                                <span class="${ynClass(item.is_receive)}">${escapeHtml(item.is_receive_text)}</span>
+                                <span class="${ynClass(item.is_gift)}">${escapeHtml(item.is_gift_text)}</span>
+                            </div>
+                        </div>
+
+                        <div class="card-head-right">
+                            <span class="${badgeClass(item.doll_status)}">${escapeHtml(item.doll_status_text || '未知')}</span>
+                        </div>
+                    </div>
+
+                    <div class="data-grid data-grid-top">
+                        <div class="info-cell">
+                            <span>记录ID</span>
+                            <strong>${escapeHtml(item.id)}</strong>
+                        </div>
+                        <div class="info-cell">
+                            <span>用户ID</span>
+                            <strong>${escapeHtml(item.user_id)}</strong>
+                        </div>
+                        <div class="info-cell">
+                            <span>机台ID</span>
+                            <strong>${escapeHtml(item.doll_machine_id)}</strong>
+                        </div>
+                        <div class="info-cell">
+                            <span>娃娃ID</span>
+                            <strong>${escapeHtml(item.doll_id)}</strong>
+                        </div>
+                        <div class="info-cell">
+                            <span>积分</span>
+                            <strong>${escapeHtml(item.doll_machine_integral)}</strong>
+                        </div>
+                    </div>
+
+                    <div class="data-grid data-grid-bottom">
+                        <div class="info-cell">
+                            <span>订单ID</span>
+                            <strong>${escapeHtml(item.order_id || '-')}</strong>
+                        </div>
+                        <div class="info-cell">
+                            <span>抓中时间</span>
+                            <strong>${escapeHtml(item.created_at || '-')}</strong>
+                        </div>
+                        <div class="info-cell">
+                            <span>兑换时间</span>
+                            <strong>${escapeHtml(item.er_time || '-')}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+        function renderStats(stats) {
+            document.getElementById('stat_total').textContent = stats.total_count || 0;
+            document.getElementById('stat_0').textContent = stats.status_0 || 0;
+            document.getElementById('stat_1').textContent = stats.status_1 || 0;
+            document.getElementById('stat_2').textContent = stats.status_2 || 0;
+            document.getElementById('stat_3').textContent = stats.status_3 || 0;
+            document.getElementById('stat_4').textContent = stats.status_4 || 0;
+        }
+
+        function renderPager(pagination) {
+            const pager = document.getElementById('pager');
+            const pagerInfo = document.getElementById('pagerInfo');
+            pager.innerHTML = '';
+
+            const page = Number(pagination.page || 1);
+            const totalPages = Number(pagination.total_pages || 1);
+            pagerInfo.textContent = `第 ${page} / ${totalPages} 页，共 ${pagination.total || 0} 条`;
+
+            function createBtn(text, targetPage, active = false, disabled = false) {
+                const btn = document.createElement('button');
+                btn.className = 'page-btn' + (active ? ' active' : '');
+                btn.textContent = text;
+                btn.disabled = disabled;
+                btn.onclick = () => {
+                    if (!disabled) {
+                        currentPage = targetPage;
+                        loadData();
+                    }
+                };
+                pager.appendChild(btn);
+            }
+
+            createBtn('上一页', page - 1, false, page <= 1);
+
+            let start = Math.max(1, page - 2);
+            let end = Math.min(totalPages, page + 2);
+
+            for (let i = start; i <= end; i++) {
+                createBtn(String(i), i, i === page, false);
+            }
+
+            createBtn('下一页', page + 1, false, page >= totalPages);
+        }
+
+async function loadData() {
+    const loadingBox = document.getElementById('loadingBox');
+    const emptyBox = document.getElementById('emptyBox');
+    const cardGrid = document.getElementById('cardGrid');
+
+    syncStatActive();
+    loadingBox.style.display = 'block';
+    emptyBox.style.display = 'none';
+    cardGrid.innerHTML = '';
+
+    const statusValue = document.getElementById('status').value;
+
+    // 列表请求：保留当前状态筛选
+    const listParams = new URLSearchParams({
+        page: currentPage,
+        page_size: document.getElementById('page_size').value,
+        keyword: document.getElementById('keyword').value.trim(),
+        status: statusValue,
+        is_exchange: document.getElementById('is_exchange').value,
+        is_receive: document.getElementById('is_receive').value,
+        is_gift: document.getElementById('is_gift').value,
+        start_date: document.getElementById('start_date').value,
+        end_date: document.getElementById('end_date').value
+    });
+
+    // 统计请求：不带 status，保证顶部永远显示全量统计
+    const statsParams = new URLSearchParams({
+        page: 1,
+        page_size: 1,
+        keyword: document.getElementById('keyword').value.trim(),
+        status: '',
+        is_exchange: document.getElementById('is_exchange').value,
+        is_receive: document.getElementById('is_receive').value,
+        is_gift: document.getElementById('is_gift').value,
+        start_date: document.getElementById('start_date').value,
+        end_date: document.getElementById('end_date').value
+    });
+
+    try {
+        const [listRes, statsRes] = await Promise.all([
+            fetch(`/api/dolls/doll_catch_record.php?${listParams.toString()}`, {
+                credentials: 'include'
+            }),
+            fetch(`/api/dolls/doll_catch_record.php?${statsParams.toString()}`, {
+                credentials: 'include'
+            })
+        ]);
+
+        const listJson = await listRes.json();
+        const statsJson = await statsRes.json();
+
+        loadingBox.style.display = 'none';
+
+        if (listJson.code !== 200) {
+            emptyBox.style.display = 'block';
+            emptyBox.textContent = listJson.msg || '获取失败';
+            return;
+        }
+
+        if (statsJson.code === 200) {
+            const globalStats = statsJson.data?.stats || {};
+            renderStats(globalStats);
+        }
+
+        const { list = [], pagination = {} } = listJson.data || {};
+        renderPager(pagination);
+
+        if (!list.length) {
+            emptyBox.style.display = 'block';
+            emptyBox.textContent = '暂无记录';
+            return;
+        }
+
+        cardGrid.innerHTML = list.map(buildCard).join('');
+    } catch (e) {
+        loadingBox.style.display = 'none';
+        emptyBox.style.display = 'block';
+        emptyBox.textContent = '接口请求失败，请检查路径或登录状态';
+        console.error(e);
+    }
+}
+
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            currentPage = 1;
+            loadData();
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.getElementById('keyword').value = '';
+            document.getElementById('status').value = '';
+            document.getElementById('is_exchange').value = '';
+            document.getElementById('is_receive').value = '';
+            document.getElementById('is_gift').value = '';
+            document.getElementById('start_date').value = '';
+            document.getElementById('end_date').value = '';
+            document.getElementById('page_size').value = '12';
+            currentPage = 1;
+            loadData();
+        });
+        bindStatClicks();
+        loadData();
+    </script>
+</body>
+</html>

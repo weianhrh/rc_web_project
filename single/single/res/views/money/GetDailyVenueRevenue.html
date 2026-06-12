@@ -1,0 +1,89 @@
+<title>场地每日交易额</title>
+
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>财务</cite></a>
+    <a><cite>场地交易额</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-card-header">场地交易额</div>
+    <div class="layui-card-body">
+      <table id="LAY-daily-revenue-manage" lay-filter="LAY-daily-revenue-manage"></table>
+      <!-- 表格操作的模板 -->
+      <script type="text/html" id="toolbarTpl">
+        {{# if(d.is_checked == 0) { }}
+          <button class="layui-btn layui-btn-sm" lay-event="check">核对</button>
+        {{# } }}
+      </script>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+layui.use(['table', 'form', 'layer'], function(){
+  var table = layui.table,
+      form = layui.form,
+      layer = layui.layer;
+
+  // 渲染表格
+  table.render({
+    elem: '#LAY-daily-revenue-manage',
+    url: '/api/pay/GetDailyVenueRevenue.php', // 数据接口
+    cols: [[
+     {title: '序号', type: 'numbers', width: 80, fixed: 'left'}, // 自动生成序号
+      {field: 'venue_id', title: '场地ID', width: 120},
+      {field: 'date', title: '日期', width: 150},
+      {field: 'total_revenue', title: '总收入', width: 150, templet: function(d) {
+        return '¥ ' + (d.total_revenue ? parseFloat(d.total_revenue).toFixed(2) : '0.00');
+      }},
+      {field: 'is_settled', title: '是否结算', width: 120, templet: function(d) {
+        return d.is_settled == 1 ? '已结算' : '未结算';
+      }},
+      {field: 'is_checked', title: '是否核对', width: 120, templet: function(d) {
+        return d.is_checked == 1 ? '已核对' : '未核对';
+      }},
+      {field: 'created_at', title: '创建时间', width: 160},
+      {field: 'updated_at', title: '更新时间', width: 160},
+      {title: '操作', toolbar: '#toolbarTpl', width: 120} // 操作列
+    ]],
+    page: true,
+    limit: 20,
+    height: 'full-220',
+    text: '对不起，加载出现异常！'
+  });
+
+  // 监听工具条操作
+  table.on('tool(LAY-daily-revenue-manage)', function(obj){
+    var data = obj.data; // 获取当前行数据
+    var layEvent = obj.event; // 获取 lay-event 的值
+
+    if (layEvent === 'check') {
+      // 核对操作
+      layer.confirm('确认要核对该记录吗？', function(index){
+        $.ajax({
+          url: '/api/pay/CheckDailyVenueRevenue.php', // 核对的后端接口
+          type: 'POST',
+          data: { id: data.id }, // 发送记录的ID
+          success: function(res) {
+            if (res.code === 0) {
+              layer.msg('核对成功');
+              table.reload('LAY-daily-revenue-manage'); // 重新加载表格数据
+            } else {
+              layer.msg('核对失败：' + res);
+            }
+          },
+          error: function() {
+            layer.msg('网络错误，请稍后重试');
+          }
+        });
+        layer.close(index); // 关闭弹窗
+      });
+    }
+  });
+});
+</script>

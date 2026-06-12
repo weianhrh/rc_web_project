@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>消息管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --hover-bg: #f9f9f9;
+            --highlight-bg: #eff4ff;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .form-control {
+            background-color: #f8f9ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            width: 100%;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(91, 140, 255, 0.2);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .color-picker {
+            width: 100px;
+            height: 40px;
+            padding: 0;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .submit-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+
+        .submit-button:hover {
+            background-color: #4c6ef5;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 16px;
+            }
+
+            .form-group {
+                font-size: 12px;
+            }
+
+            .submit-button {
+                font-size: 12px;
+            }
+        }
+
+        .message-list {
+            margin-top: 20px;
+        }
+
+        .message-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .delete-btn {
+            background-color: #ff4d4f;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background-color: #ff7875;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 官方通知表单 -->
+        <div class="card">
+            <h2 class="card-title">添加官方通知</h2>
+            <form id="noticeForm" onsubmit="submitNotice(event)">
+                <div class="form-group">
+                    <label for="noticeTitle">通知标题</label>
+                    <input type="text" id="noticeTitle" name="title" class="form-control" value="官方通知" required>
+                </div>
+                <div class="form-group">
+                    <label for="noticeContent">通知内容</label>
+                    <textarea id="noticeContent" name="content" class="form-control" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="color">标题颜色</label>
+                    <input type="color" id="color" name="color" class="color-picker">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isPopup" name="isPopup" onchange="updateNoticeTitle(this)"> 设为弹窗通知
+                    </label>
+                </div>
+                <button type="submit" class="submit-button">发布通知</button>
+            </form>
+        </div>
+
+        <!-- 更新日志表单 -->
+        <div class="card">
+            <h2 class="card-title">添加更新日志</h2>
+            <form id="logForm" onsubmit="submitLog(event)">
+                <div class="form-group">
+                    <label for="version">版本号</label>
+                    <input type="text" id="version" name="version" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="platform">平台</label>
+                    <select id="platform" name="platform" class="form-control" required>
+                        <option value="安卓">安卓</option>
+                        <option value="苹果">苹果</option>
+                      
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="logContent">更新内容</label>
+                    <textarea id="logContent" name="content" class="form-control" required></textarea>
+                </div>
+                <button type="submit" class="submit-button">发布更新日志</button>
+            </form>
+        </div>
+
+        <!-- 在 container div 中添加新的卡片 -->
+        <div class="card">
+            <h2 class="card-title">删除消息</h2>
+            <div class="form-group">
+                <label for="messageType">消息类型</label>
+                <select id="messageType" class="form-control">
+                    <option value="notice">官方通知</option>
+                    <option value="log">更新日志</option>
+                </select>
+            </div>
+            <div id="messageList" class="message-list">
+                <!-- 消息列表将通过 JavaScript 动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function submitNotice(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            formData.append('action', 'addNotice');
+            
+            // 添加弹窗状态
+            formData.append('read_status', document.getElementById('isPopup').checked ? '0' : '1');
+            
+            try {
+                const response = await fetch('https://open.rcwulian.cn/api/index/Msg.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    alert('通知发布成功！');
+                    event.target.reset();
+                } else {
+                    alert('发布失败：' + result.msg);
+                }
+            } catch (error) {
+                alert('发布失败：' + error.message);
+            }
+        }
+
+        async function submitLog(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            formData.append('action', 'addLog');
+            
+            try {
+                const response = await fetch('https://open.rcwulian.cn/api/index/Msg.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    alert('更新日志发布成功！');
+                    event.target.reset();
+                } else {
+                    alert('发布失败：' + result.msg);
+                }
+            } catch (error) {
+                alert('发布失败：' + error.message);
+            }
+        }
+
+        // 加载消息列表
+        async function loadMessages() {
+            const type = document.getElementById('messageType').value;
+            const formData = new FormData();
+            formData.append('action', 'getMessages');
+            formData.append('type', type);
+            
+            try {
+                const response = await fetch('https://open.rcwulian.cn/api/index/Msg.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    displayMessages(result.data, type);
+                } else {
+                    alert('获取消息失败：' + result.msg);
+                }
+            } catch (error) {
+                alert('获取消息失败：' + error.message);
+            }
+        }
+
+        // 显示消息列表
+        function displayMessages(messages, type) {
+            const messageList = document.getElementById('messageList');
+            messageList.innerHTML = '';
+            
+            messages.forEach(message => {
+                const div = document.createElement('div');
+                div.className = 'message-item';
+                div.innerHTML = `
+                    <div>${message.title || message.version}</div>
+                    <button class="delete-btn" onclick="deleteMessage('${type}', ${message.id})">删除</button>
+                `;
+                messageList.appendChild(div);
+            });
+        }
+
+        // 删除消息
+        async function deleteMessage(type, id) {
+            if (!confirm('确定要删除这条消息吗？')) return;
+            
+            const formData = new FormData();
+            formData.append('action', 'deleteMessage');
+            formData.append('type', type);
+            formData.append('id', id);
+            
+            try {
+                const response = await fetch('https://open.rcwulian.cn/api/index/Msg.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.code === 0) {
+                    alert('删除成功！');
+                    loadMessages();
+                } else {
+                    alert('删除失败：' + result.msg);
+                }
+            } catch (error) {
+                alert('删除失败：' + error.message);
+            }
+        }
+
+        // 监听消息类型变化
+        document.getElementById('messageType').addEventListener('change', loadMessages);
+
+        // 页面加载完成后加载消息列表
+        document.addEventListener('DOMContentLoaded', loadMessages);
+
+        function updateNoticeTitle(checkbox) {
+            const titleInput = document.getElementById('noticeTitle');
+            if (checkbox.checked) {
+                titleInput.value = '官方公告';
+            } else {
+                titleInput.value = '官方通知';
+            }
+        }
+    </script>
+</body>
+</html>

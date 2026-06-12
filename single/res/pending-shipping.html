@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>待发货处理</title>
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+            --success: #22c55e;
+            --border: #e8ecf5;
+            --muted: #666;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 16px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .summary {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 16px;
+            color: var(--text-color);
+        }
+
+        .summary b {
+            color: var(--primary);
+            font-size: 22px;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .btn:hover {
+            opacity: 0.92;
+        }
+
+        .btn.secondary {
+            background-color: var(--secondary);
+        }
+
+        .btn.success {
+            background-color: var(--success);
+        }
+
+        .list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .item {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: 120px 1fr auto;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .thumb {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #f3f4f6;
+            border: 1px solid #eee;
+        }
+
+        .info {
+            display: grid;
+            gap: 8px;
+        }
+
+        .name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .row {
+            color: var(--text-color);
+            line-height: 1.7;
+            word-break: break-all;
+        }
+
+        .label {
+            color: var(--muted);
+            margin-right: 6px;
+        }
+
+        .sub-box {
+            background: #f7f9ff;
+            border: 1px solid #edf1fb;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .sub-title {
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .sub-line {
+            line-height: 1.7;
+            color: var(--text-color);
+            word-break: break-all;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 140px;
+        }
+
+        .empty {
+            text-align: center;
+            color: #666;
+            padding: 50px 20px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--primary);
+            padding: 40px 20px;
+        }
+        .btn.danger {
+            background-color: #ef4444;
+        }
+        @media (max-width: 768px) {
+            .item {
+                grid-template-columns: 1fr;
+            }
+
+            .thumb {
+                width: 100%;
+                height: 220px;
+            }
+
+            .actions {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <div class="card-title">待发货处理</div>
+
+        <div class="topbar">
+            <div class="summary">
+                <div>当前待发货用户：<b id="totalUserCount">0</b> 位</div>
+                <div>当前待发货订单：<b id="totalOrderCount">0</b> 条</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn secondary" onclick="location.reload()">刷新</button>
+            </div>
+        </div>
+
+        <div id="listBox" class="list">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function renderRecordList(records) {
+        if (!Array.isArray(records) || records.length === 0) {
+            return '<div class="sub-line">暂无</div>';
+        }
+
+        return records.map((record, index) => {
+            return `
+                <div class="sub-line">
+                    ${index + 1}. 
+                    <span class="label">订单号：</span>${escapeHtml(record.order_id || '-')}
+                    &nbsp;&nbsp;
+                    <span class="label">娃娃名称：</span>${escapeHtml(record.doll_name || '-')}
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function loadList() {
+        const listBox = document.getElementById('listBox');
+        const totalUserCount = document.getElementById('totalUserCount');
+        const totalOrderCount = document.getElementById('totalOrderCount');
+
+        listBox.innerHTML = '<div class="loading">加载中...</div>';
+
+        try {
+            const res = await fetch('/api/dolls/getPendingShipmentList.php', {
+                credentials: 'include'
+            });
+            const data = await res.json();
+
+            if (data.code !== 0) {
+                listBox.innerHTML = `<div class="empty">${escapeHtml(data.msg || '加载失败')}</div>`;
+                return;
+            }
+
+            const list = Array.isArray(data.data) ? data.data : [];
+            totalUserCount.textContent = Number(data.total_users || list.length);
+            totalOrderCount.textContent = Number(data.total_orders || 0);
+
+            if (list.length === 0) {
+                listBox.innerHTML = '<div class="empty">当前没有待发货记录</div>';
+                return;
+            }
+
+            listBox.innerHTML = list.map(item => {
+                const img = item.cover_image ? escapeHtml(item.cover_image) : '';
+                const recordIds = Array.isArray(item.record_ids)
+                    ? item.record_ids.map(v => Number(v)).filter(v => v > 0)
+                    : [];
+
+                return `
+                    <div class="item">
+                        ${
+                            img
+                            ? `<img class="thumb" src="${img}" alt="娃娃图" onerror="this.style.display='none'">`
+                            : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#999;">暂无图片</div>`
+                        }
+
+                        <div class="info">
+                            <div class="name">用户ID：${escapeHtml(item.user_id || '-')}</div>
+
+                            <div class="row"><span class="label">待发货记录数：</span>${escapeHtml(item.record_count || 0)} 条</div>
+                            <div class="row"><span class="label">订单数：</span>${escapeHtml(item.order_count || 0)} 个</div>
+                            <div class="row"><span class="label">最初抓中时间：</span>${escapeHtml(item.first_created_at || '-')}</div>
+                            <div class="row"><span class="label">最末抓中时间：</span>${escapeHtml(item.last_created_at || '-')}</div>
+                            <div class="row"><span class="label">收件人：</span>${escapeHtml(item.addressee || '未填写')}</div>
+                            <div class="row"><span class="label">手机号：</span>${escapeHtml(item.phone || '未填写')}</div>
+                            <div class="row"><span class="label">联系地址：</span>${escapeHtml(item.address || '未填写')}</div>
+
+                            <div class="sub-box">
+                                <div class="sub-title">该用户待发货订单 / 娃娃列表</div>
+                                ${renderRecordList(item.records)}
+                            </div>
+                        </div>
+
+<div class="actions">
+    <button class="btn success" onclick='markSent(${JSON.stringify(recordIds)})'>
+        标记已发货
+    </button>
+
+    <button class="btn danger" onclick='rejectShipment(${JSON.stringify(recordIds)})'>
+        驳回
+    </button>
+
+    <button class="btn secondary" onclick="copyAddress(
+        '${escapeHtml(item.addressee || '')}',
+        '${escapeHtml(item.phone || '')}',
+        '${escapeHtml(item.address || '')}'
+    )">
+        复制地址
+    </button>
+</div>
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            console.error(err);
+            listBox.innerHTML = '<div class="empty">请求失败，请检查接口路径</div>';
+        }
+    }
+
+    async function markSent(ids) {
+        if (!Array.isArray(ids) || ids.length === 0) {
+            alert('没有可处理的记录');
+            return;
+        }
+
+        if (!confirm(`确认将该用户这 ${ids.length} 条记录标记为已发货吗？`)) {
+            return;
+        }
+
+        const form = new FormData();
+        form.append('ids', JSON.stringify(ids));
+
+        try {
+            const res = await fetch('/api/dolls/markPendingShipmentSent.php', {
+                method: 'POST',
+                body: form,
+                credentials: 'include'
+            });
+            const data = await res.json();
+
+            alert(data.msg || '处理完成');
+
+            if (data.code === 0) {
+                loadList();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('请求失败');
+        }
+    }
+
+    async function copyAddress(addressee, phone, address) {
+        const text = `收件人：${addressee}\n手机号：${phone}\n地址：${address}`;
+        try {
+            await navigator.clipboard.writeText(text);
+            alert('已复制到剪贴板');
+        } catch (e) {
+            alert(text);
+        }
+    }
+
+    async function rejectShipment(ids) {
+        if (!Array.isArray(ids) || ids.length === 0) {
+            alert('没有可处理的记录');
+            return;
+        }
+
+        if (!confirm(`确认驳回该用户这 ${ids.length} 条记录吗？`)) {
+            return;
+        }
+
+        const form = new FormData();
+        form.append('ids', JSON.stringify(ids));
+
+        try {
+            const res = await fetch('/api/dolls/rejectPendingShipment.php', {
+                method: 'POST',
+                body: form,
+                credentials: 'include'
+            });
+            const data = await res.json();
+
+            alert(data.msg || '处理完成');
+
+            if (data.code === 0) {
+                loadList();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('请求失败');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadList);
+</script>
+</body>
+</html>

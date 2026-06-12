@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>用户变动记录（金额 / 能量 / 金币 / 礼物背包）</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
+
+  <style>
+    :root{
+      --bg1:#f6f8ff;
+      --bg2:#eef3ff;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --primary:#5b8cff;
+      --primary2:#3f6edc;
+      --shadow:0 10px 30px rgba(17,24,39,.08);
+      --radius:18px;
+
+      --green:#22c55e;
+      --red:#ef4444;
+      --amber:#f59e0b;
+      --cyan:#06b6d4;
+      --gold:#d97706;
+      --gold2:#fbbf24;
+      --purple:#8b5cf6;
+      --purple2:#a78bfa;
+    }
+
+    *{
+      box-sizing:border-box;
+      margin:0;
+      padding:0;
+      font-family:"PingFang SC",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    }
+
+    body{
+      min-height:100vh;
+      padding:22px;
+      background:
+        radial-gradient(1200px 400px at 20% 0%, rgba(91,140,255,.18), transparent 55%),
+        radial-gradient(900px 300px at 80% 10%, rgba(34,197,94,.12), transparent 55%),
+        linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:var(--text);
+    }
+
+    .wrap{max-width:1120px;margin:0 auto;}
+
+    .card{
+      background:var(--card);
+      border:1px solid rgba(229,231,235,.7);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .header{
+      padding:18px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.75));
+      backdrop-filter: blur(10px);
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .title h1{
+      font-size:18px;
+      font-weight:750;
+      letter-spacing:.2px;
+    }
+
+    .title p{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .tabs{
+      display:flex;
+      gap:8px;
+      background:#f4f6ff;
+      border:1px solid rgba(91,140,255,.20);
+      padding:6px;
+      border-radius:999px;
+      flex:0 0 auto;
+      flex-wrap:wrap;
+    }
+
+    .tab{
+      border:none;
+      background:transparent;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:13px;
+      color:#334155;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    .tab.active{
+      background:var(--primary);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(91,140,255,.25);
+    }
+
+    .filters{
+      padding:16px 20px;
+      display:grid;
+      gap:12px;
+      align-items:end;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      border-bottom:1px solid var(--border);
+      background: rgba(255,255,255,.7);
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .label{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    input, select{
+      height:40px;
+      padding:0 12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      font-size:14px;
+      outline:none;
+      background:#fff;
+    }
+
+    input:focus, select:focus{
+      border-color:rgba(91,140,255,.55);
+      box-shadow:0 0 0 4px rgba(91,140,255,.12);
+    }
+
+    .col-3{grid-column: span 3;}
+    .col-2{grid-column: span 2;}
+    .col-btn{grid-column: span 2;}
+
+    .btn{
+      height:40px;
+      width:100%;
+      min-width:140px;
+      padding:0 16px;
+      border:none;
+      border-radius:12px;
+      background:var(--primary);
+      color:#fff;
+      font-weight:650;
+      cursor:pointer;
+      transition:.18s;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      box-shadow:0 10px 20px rgba(91,140,255,.22);
+      white-space:nowrap;
+    }
+
+    .btn:hover{
+      background:var(--primary2);
+      transform: translateY(-1px);
+    }
+
+    .btn:active{
+      transform: translateY(0);
+    }
+
+    .summary{
+      padding:14px 20px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      border-bottom:1px solid var(--border);
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(229,231,235,.9);
+      background:#fff;
+      font-size:13px;
+      color:#374151;
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:8px;
+      height:8px;
+      border-radius:99px;
+      background:#9ca3af;
+    }
+
+    .dot.green{background:var(--green);}
+    .dot.red{background:var(--red);}
+    .dot.amber{background:var(--amber);}
+    .dot.cyan{background:var(--cyan);}
+    .dot.gold{background:var(--gold);}
+    .dot.purple{background:var(--purple);}
+
+    .list{
+      padding:18px 20px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .item{
+      border:1px solid rgba(229,231,235,.85);
+      border-radius:16px;
+      padding:14px 14px;
+      background:linear-gradient(180deg,#fff,rgba(255,255,255,.88));
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+    }
+
+    .badge{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+      font-size:16px;
+      flex:0 0 auto;
+      box-shadow:0 10px 20px rgba(17,24,39,.12);
+    }
+
+    .badge.money{background:linear-gradient(135deg,var(--primary),#7aa6ff);}
+    .badge.energy{background:linear-gradient(135deg,#16a34a,#86efac);}
+    .badge.gold{background:linear-gradient(135deg,var(--gold),var(--gold2));}
+    .badge.backpack{background:linear-gradient(135deg,var(--purple),var(--purple2));}
+
+    .content{
+      flex:1;
+      min-width:0;
+    }
+
+    .top{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:baseline;
+      justify-content:space-between;
+    }
+
+    .name{font-weight:750;}
+    .meta{font-size:12px;color:var(--muted);}
+    .amount{font-weight:800;font-size:16px;letter-spacing:.2px;}
+    .amount.green{color:var(--green);}
+    .amount.red{color:var(--red);}
+    .amount.cyan{color:var(--cyan);}
+    .amount.amber{color:var(--amber);}
+    .amount.gold{color:var(--gold);}
+    .amount.purple{color:var(--purple);}
+
+    .kv{
+      margin-top:8px;
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap:8px;
+      font-size:12px;
+      color:#374151;
+    }
+
+    .kv div{
+      padding:8px 10px;
+      border:1px dashed rgba(229,231,235,.95);
+      border-radius:12px;
+      background:rgba(249,250,251,.75);
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .kv .kv-long{
+      overflow-x:auto;
+      overflow-y:hidden;
+      text-overflow:clip;
+      white-space:nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .kv .kv-long::-webkit-scrollbar{ height: 6px; }
+    .kv .kv-long::-webkit-scrollbar-thumb{
+      background: rgba(17,24,39,.18);
+      border-radius: 999px;
+    }
+    .kv .kv-long::-webkit-scrollbar-track{
+      background: rgba(17,24,39,.06);
+      border-radius: 999px;
+    }
+
+    .empty{
+      padding:36px 20px;
+      text-align:center;
+      color:var(--muted);
+      display:none;
+    }
+
+    @media (max-width: 860px){
+      body{padding:14px;}
+      .header{align-items:flex-start; gap:10px; flex-direction:column;}
+      .tabs{width:100%;}
+      .filters{grid-template-columns: 1fr;}
+      .col-3,.col-2,.col-btn{grid-column: 1 / -1;}
+      .btn{width:100%;}
+      .kv{grid-template-columns: repeat(2, minmax(0, 1fr));}
+      .pill{white-space:normal;}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <div class="title">
+          <h1>用户变动记录</h1>
+          <p>支持：金额（balance_changes） / 能量（energy_changes） / 金币（gold_balance_changes） / 礼物背包（user_gift_backpack_changes）</p>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" data-mode="all">全部</button>
+          <button class="tab" data-mode="money">金额</button>
+          <button class="tab" data-mode="energy">能量</button>
+          <button class="tab" data-mode="gold">金币</button>
+          <button class="tab" data-mode="backpack">礼物背包</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="field col-3">
+          <div class="label">用户 ID（user_id / user_uid / uid）</div>
+          <input id="user_id" placeholder="请输入用户ID" />
+        </div>
+
+        <div class="field col-3" id="moneyTypeWrap" style="display:none;">
+          <div class="label">金额变动类型</div>
+          <select id="change_type">
+            <option value="">全部类型</option>
+            <option value="充值">充值</option>
+            <option value="消费">消费</option>
+            <option value="提现">提现</option>
+            <option value="金额返还">金额返还</option>
+          </select>
+        </div>
+
+        <div class="field col-3" id="goldTypeWrap" style="display:none;">
+          <div class="label">金币变动类型</div>
+          <select id="gold_change_type">
+            <option value="">全部类型</option>
+            <option value="recharge">充值</option>
+            <option value="admin_add">后台加币</option>
+            <option value="vip_exchange">VIP兑换</option>
+            <option value="refund">退款返还</option>
+            <option value="activity_gift">活动赠送</option>
+            <option value="admin_deduct">后台扣减</option>
+          </select>
+        </div>
+
+        <div class="field col-3" id="backpackTypeWrap" style="display:none;">
+          <div class="label">礼物背包变动类型</div>
+          <select id="backpack_change_type">
+            <option value="">全部类型</option>
+            <option value="obtain">获取</option>
+            <option value="use">使用</option>
+            <option value="expire">过期</option>
+            <option value="delete">删除</option>
+            <option value="admin_add">后台增加</option>
+            <option value="admin_deduct">后台扣减</option>
+          </select>
+        </div>
+
+        <div class="field col-2">
+          <div class="label">每次最多返回</div>
+          <select id="limit">
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
+            <option value="1000">1000</option>
+            <option value="5000">5000</option>
+            <option value="10000">10000</option>
+            <option value="50000" selected>50000</option>
+          </select>
+        </div>
+
+        <div class="field col-2">
+          <div class="label">开始时间</div>
+          <input id="start_date" type="text" placeholder="yyyy/mm/dd"
+                 onfocus="this.type='date'" onblur="if(!this.value)this.type='text'"/>
+        </div>
+
+        <div class="field col-2">
+          <div class="label">结束时间</div>
+          <input id="end_date" type="text" placeholder="yyyy/mm/dd"
+                 onfocus="this.type='date'" onblur="if(!this.value)this.type='text'"/>
+        </div>
+
+        <div class="field col-btn">
+          <button class="btn" id="search_btn">
+            <i class="fas fa-search"></i> 查询
+          </button>
+        </div>
+      </div>
+
+      <div class="summary" id="summary"></div>
+      <div class="list" id="list"></div>
+      <div class="empty" id="empty">暂无数据</div>
+    </div>
+  </div>
+
+<script>
+  const API = 'https://open.rcwulian.cn/api/finance/Comsumquery_v2.php';
+
+  let currentMode = 'all';
+
+  const tabs = document.querySelectorAll('.tab');
+  const moneyTypeWrap = document.getElementById('moneyTypeWrap');
+  const goldTypeWrap = document.getElementById('goldTypeWrap');
+  const backpackTypeWrap = document.getElementById('backpackTypeWrap');
+
+  const changeTypeEl = document.getElementById('change_type');
+  const goldChangeTypeEl = document.getElementById('gold_change_type');
+  const backpackChangeTypeEl = document.getElementById('backpack_change_type');
+
+  const goldTypeMap = {
+    recharge: '充值',
+    admin_add: '后台加币',
+    vip_exchange: 'VIP兑换',
+    refund: '退款返还',
+    activity_gift: '活动赠送',
+    admin_deduct: '后台扣减'
+  };
+
+  const bizTypeMap = {
+    iap_order: 'IAP订单',
+    vip_exchange: 'VIP兑换',
+    manual: '手动操作'
+  };
+
+  const backpackTypeMap = {
+    obtain: '获取',
+    use: '使用',
+    expire: '过期',
+    delete: '删除',
+    admin_add: '后台增加',
+    admin_deduct: '后台扣减',
+    '获取': '获取',
+    '使用': '使用',
+    '过期': '过期',
+    '删除': '删除',
+    '后台增加': '后台增加',
+    '后台扣减': '后台扣减'
+  };
+
+  function getGoldTypeName(type){
+    return goldTypeMap[type] || type || '未知类型';
+  }
+
+  function getBizTypeName(type){
+    return bizTypeMap[type] || type || '-';
+  }
+
+  function getBackpackTypeName(type){
+    return backpackTypeMap[type] || type || '未知类型';
+  }
+
+  function fmt(n){
+    const x = Number(n || 0);
+    return x.toFixed(2);
+  }
+
+  function fmtInt(n){
+    return String(parseInt(Number(n || 0), 10));
+  }
+
+  function absNum(n){
+    return Math.abs(Number(n || 0));
+  }
+
+  function sumBy(list, fn){
+    return list.reduce((a, b) => a + (fn(b) || 0), 0);
+  }
+
+  function pill(color, text){
+    const el = document.createElement('div');
+    el.className = 'pill';
+    el.innerHTML = `<span class="dot ${color}"></span><span>${text}</span>`;
+    return el;
+  }
+
+  function syncModeUI(){
+    moneyTypeWrap.style.display = 'none';
+    goldTypeWrap.style.display = 'none';
+    backpackTypeWrap.style.display = 'none';
+
+    if (currentMode === 'money') {
+      moneyTypeWrap.style.display = 'flex';
+    } else if (currentMode === 'gold') {
+      goldTypeWrap.style.display = 'flex';
+    } else if (currentMode === 'backpack') {
+      backpackTypeWrap.style.display = 'flex';
+    }
+  }
+
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = btn.dataset.mode;
+      syncModeUI();
+    });
+  });
+
+  document.getElementById('search_btn').addEventListener('click', load);
+
+  function renderSummary(data){
+    const summary = document.getElementById('summary');
+    summary.innerHTML = '';
+
+    const money = data.money || [];
+    const energy = data.energy || [];
+    const gold = data.gold || [];
+    const backpack = data.backpack || [];
+
+    const recharge = sumBy(money.filter(x => x.type === '充值'), x => absNum(x.amount));
+    const consume  = sumBy(money.filter(x => x.type === '消费'), x => absNum(x.amount));
+    const withdraw = sumBy(money.filter(x => x.type === '提现'), x => absNum(x.amount));
+    const refund   = sumBy(money.filter(x => x.type === '金额返还'), x => absNum(x.amount));
+
+    const ePlus  = sumBy(energy.filter(x => Number(x.amount) > 0), x => Number(x.amount));
+    const eMinus = sumBy(energy.filter(x => Number(x.amount) < 0), x => absNum(x.amount));
+
+    const gPlus  = sumBy(gold.filter(x => Number(x.amount) > 0), x => Number(x.amount));
+    const gMinus = sumBy(gold.filter(x => Number(x.amount) < 0), x => absNum(x.amount));
+
+    const bPlus  = sumBy(backpack.filter(x => Number(x.change_quantity) > 0), x => Number(x.change_quantity));
+    const bMinus = sumBy(backpack.filter(x => Number(x.change_quantity) < 0), x => absNum(x.change_quantity));
+
+    const pills = [];
+
+    if (currentMode === 'all' || currentMode === 'money'){
+      if (!changeTypeEl.value){
+        pills.push(pill('green', `总充值 +${fmt(recharge)}`));
+        pills.push(pill('red', `总消费 -${fmt(consume)}`));
+        pills.push(pill('amber', `总提现 -${fmt(withdraw)}`));
+        pills.push(pill('cyan', `总返还 +${fmt(refund)}`));
+      } else if (changeTypeEl.value === '充值'){
+        pills.push(pill('green', `总充值 +${fmt(recharge)}`));
+      } else if (changeTypeEl.value === '消费'){
+        pills.push(pill('red', `总消费 -${fmt(consume)}`));
+      } else if (changeTypeEl.value === '提现'){
+        pills.push(pill('amber', `总提现 -${fmt(withdraw)}`));
+      } else if (changeTypeEl.value === '金额返还'){
+        pills.push(pill('cyan', `总返还 +${fmt(refund)}`));
+      }
+    }
+
+    if (currentMode === 'all' || currentMode === 'energy'){
+      pills.push(pill('green', `能量增加 +${fmt(ePlus)}`));
+      pills.push(pill('red', `能量减少 -${fmt(eMinus)}`));
+    }
+
+    if (currentMode === 'all' || currentMode === 'gold'){
+      pills.push(pill('gold', `金币增加 +${fmtInt(gPlus)}`));
+      pills.push(pill('red', `金币减少 -${fmtInt(gMinus)}`));
+    }
+
+    if (currentMode === 'all' || currentMode === 'backpack'){
+      pills.push(pill('purple', `背包增加 +${fmtInt(bPlus)}`));
+      pills.push(pill('red', `背包减少 -${fmtInt(bMinus)}`));
+    }
+
+    pills.forEach(p => summary.appendChild(p));
+  }
+
+  function renderList(list){
+    const wrap = document.getElementById('list');
+    const empty = document.getElementById('empty');
+
+    wrap.innerHTML = '';
+
+    if (!list || list.length === 0){
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+
+    list.forEach(item => {
+      const isMoney = item.kind === 'money';
+      const isEnergy = item.kind === 'energy';
+      const isGold = item.kind === 'gold';
+      const isBackpack = item.kind === 'backpack';
+
+      let badgeCls = 'money';
+      let icon = 'fa-yen-sign';
+      let title = '';
+      let sub = '';
+      let amountText = '';
+      let amountCls = '';
+      let kv = '';
+
+      if (isMoney) {
+        const raw = Number(item.amount || 0);
+
+        badgeCls = 'money';
+        icon = 'fa-yen-sign';
+        title = `金额｜${item.type || '未知类型'}`;
+        sub = `user_id: ${item.user_id || ''} · ${item.created_at || ''}`;
+
+        if (item.type === '充值') {
+          amountText = `+${fmt(absNum(raw))}`;
+          amountCls = 'green';
+        } else if (item.type === '金额返还') {
+          amountText = `+${fmt(absNum(raw))}`;
+          amountCls = 'cyan';
+        } else if (item.type === '消费') {
+          amountText = `-${fmt(absNum(raw))}`;
+          amountCls = 'red';
+        } else if (item.type === '提现') {
+          amountText = `-${fmt(absNum(raw))}`;
+          amountCls = 'amber';
+        } else {
+          amountText = raw >= 0 ? `+${fmt(raw)}` : `-${fmt(absNum(raw))}`;
+          amountCls = raw >= 0 ? 'green' : 'red';
+        }
+
+        kv = `
+          <div>变动前：${fmt(item.before)}</div>
+          <div>变动后：${fmt(item.after)}</div>
+          <div>渠道：${item.channel || '-'}</div>
+          <div class="kv-long">描述：${item.desc || '-'}</div>
+        `;
+      }
+
+      if (isEnergy) {
+        const raw = Number(item.amount || 0);
+
+        badgeCls = 'energy';
+        icon = 'fa-bolt';
+        title = `能量｜${item.reason || 'unknown'}`;
+        sub = `user_uid: ${item.user_uid || ''} · venue_id: ${item.venue_id ?? ''} · ${item.created_at || ''}`;
+
+        if (raw >= 0) {
+          amountText = `+${fmt(raw)}`;
+          amountCls = 'green';
+        } else {
+          amountText = `-${fmt(absNum(raw))}`;
+          amountCls = 'red';
+        }
+
+        kv = `
+          <div>变动前：${fmt(item.before)}</div>
+          <div>变动后：${fmt(item.after)}</div>
+          <div class="kv-long">原因：${item.reason || '-'}</div>
+          <div>ID：${item.id}</div>
+        `;
+      }
+
+      if (isGold) {
+        const raw = Number(item.amount || 0);
+
+        badgeCls = 'gold';
+        icon = 'fa-coins';
+        title = `金币｜${getGoldTypeName(item.type)}`;
+        sub = `uid: ${item.uid || ''} · 业务类型: ${getBizTypeName(item.biz_type)} · ${item.created_at || ''}`;
+
+        if (raw >= 0) {
+          amountText = `+${fmtInt(raw)}`;
+          amountCls = 'gold';
+        } else {
+          amountText = `-${fmtInt(absNum(raw))}`;
+          amountCls = 'red';
+        }
+
+        kv = `
+          <div>变动前：${fmtInt(item.before)}</div>
+          <div>变动后：${fmtInt(item.after)}</div>
+          <div>业务ID：${item.biz_id ?? '-'}</div>
+          <div class="kv-long">业务编号：${item.biz_no || '-'}</div>
+          <div>操作人：${item.operator_id ?? '-'}</div>
+          <div class="kv-long">备注：${item.remark || '-'}</div>
+        `;
+      }
+
+      if (isBackpack) {
+        const raw = Number(item.change_quantity || 0);
+
+        badgeCls = 'backpack';
+        icon = 'fa-gift';
+        title = `礼物背包｜${getBackpackTypeName(item.type)}`;
+        sub = `uid: ${item.uid || ''} · 礼物: ${item.gift_name || '-'}（ID:${item.gift_id ?? '-'}） · ${item.created_at || ''}`;
+
+        if (raw >= 0) {
+          amountText = `+${fmtInt(raw)}`;
+          amountCls = 'purple';
+        } else {
+          amountText = `-${fmtInt(absNum(raw))}`;
+          amountCls = 'red';
+        }
+
+        kv = `
+          <div>变动前：${fmtInt(item.before)}</div>
+          <div>变动后：${fmtInt(item.after)}</div>
+          <div>背包ID：${item.backpack_id ?? '-'}</div>
+          <div class="kv-long">关联订单：${item.related_order_id || '-'}</div>
+          <div>操作人：${item.operator_id ?? '-'}</div>
+          <div class="kv-long">原因：${item.reason || '-'}</div>
+        `;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'item';
+      card.innerHTML = `
+        <div class="badge ${badgeCls}"><i class="fas ${icon}"></i></div>
+        <div class="content">
+          <div class="top">
+            <div>
+              <div class="name">${title}</div>
+              <div class="meta">${sub}</div>
+            </div>
+            <div class="amount ${amountCls}">${amountText}</div>
+          </div>
+          <div class="kv">${kv}</div>
+        </div>
+      `;
+
+      wrap.appendChild(card);
+    });
+  }
+
+  async function load(){
+    const userId = document.getElementById('user_id').value.trim();
+    const limit = document.getElementById('limit').value;
+
+    if (!userId){
+      alert('请先输入用户ID');
+      return;
+    }
+
+    let url = `${API}?user_id=${encodeURIComponent(userId)}&mode=${encodeURIComponent(currentMode)}&limit=${encodeURIComponent(limit)}`;
+
+    if (currentMode === 'money' && changeTypeEl.value){
+      url += `&change_type=${encodeURIComponent(changeTypeEl.value)}`;
+    }
+
+    if (currentMode === 'gold' && goldChangeTypeEl.value){
+      url += `&gold_change_type=${encodeURIComponent(goldChangeTypeEl.value)}`;
+    }
+
+    if (currentMode === 'backpack' && backpackChangeTypeEl.value){
+      url += `&backpack_change_type=${encodeURIComponent(backpackChangeTypeEl.value)}`;
+    }
+
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+
+    if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+    if (endDate)   url += `&end_date=${encodeURIComponent(endDate)}`;
+
+    try{
+      const res = await fetch(url, { credentials: 'include' });
+      const json = await res.json();
+
+      if (json.code !== 200){
+        alert(json.msg || '查询失败');
+        return;
+      }
+
+      const data = json.data || {};
+      renderSummary(data);
+
+      let list = [];
+      if (currentMode === 'all') list = data.merged || [];
+      if (currentMode === 'money') list = data.money || [];
+      if (currentMode === 'energy') list = data.energy || [];
+      if (currentMode === 'gold') list = data.gold || [];
+      if (currentMode === 'backpack') list = data.backpack || [];
+
+      list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      renderList(list);
+
+    }catch(e){
+      console.error(e);
+      alert('网络或接口异常');
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    syncModeUI();
+  });
+</script>
+</body>
+</html>

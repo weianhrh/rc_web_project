@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>绑定收款账号</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+        --primary: #5b8cff;
+        --secondary: #7f8fa4;
+        --background-gradient-start: #f8f9ff;
+        --background-gradient-end: #f0f3ff;
+        --card-bg: #ffffff;
+        --border-color: #ddd;
+        --text-color: #333;
+        --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        --transition: all 0.3s ease;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 800px;
+        width: 100%;
+    }
+
+    .card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        margin-bottom: 20px;
+    }
+
+    .card-title {
+        font-size: 24px;
+        color: var(--text-color);
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--primary);
+        padding-bottom: 10px;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 16px;
+        font-size: 14px;
+    }
+
+    .field label {
+        margin-bottom: 6px;
+        color: var(--secondary);
+    }
+
+    .field input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+    .field button {
+        background-color: var(--primary);
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .field button:hover {
+        background-color: #4a7bff;
+    }
+
+    .field button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">绑定收款账号</div>
+      <form id="bindForm">
+        <div class="field">
+          <label>账号类型</label>
+          <input type="text" id="account_type" name="account_type" value="银行卡" readonly>
+        </div>
+        <div class="field">
+          <label>账户姓名</label>
+          <input type="text" id="account_name" name="account_name" required>
+        </div>
+        <div class="field">
+          <label>提现卡号</label>
+          <input type="text" id="withdrawal_account" name="withdrawal_account" required>
+        </div>
+        <div class="field">
+          <label>银行名称</label>
+          <input type="text" id="bank_name" name="bank_name" required>
+        </div>
+        <div class="field">
+          <label>银行行号（可选）</label>
+          <input type="text" id="bank_number" name="bank_number">
+        </div>
+        <div class="field">
+          <label>备注</label>
+          <input type="text" id="remarks" name="remarks">
+        </div>
+        <div class="field">
+          <button type="submit" id="submitBtn">提交绑定</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('bindForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // 页面加载时检查是否已绑定
+    fetch('https://open.rcwulian.cn/api/pay/BindPaymentAccount.php')
+      .then(res => res.json())
+      .then(data => {
+        if (data.code === 0 && data.data) {
+          // 自动填充字段
+          document.getElementById('account_type').value = data.data.account_type || '银行卡';
+          document.getElementById('account_name').value = data.data.account_name || '';
+          document.getElementById('withdrawal_account').value = data.data.withdrawal_account || '';
+          document.getElementById('bank_name').value = data.data.bank_name || '';
+          document.getElementById('bank_number').value = data.data.bank_number || '';
+          document.getElementById('remarks').value = data.data.remarks || '';
+
+          // 禁用表单
+          document.querySelectorAll('#bindForm input').forEach(el => el.disabled = true);
+          submitBtn.disabled = true;
+
+          alert('已绑定账号，不能再次绑定');
+        }
+      });
+
+    // 首次提交绑定
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      fetch('https://open.rcwulian.cn/api/pay/BindPaymentAccount.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.code === 0) {
+          alert('绑定成功');
+          location.reload();
+        } else {
+          alert('绑定失败：' + data.msg);
+        }
+      })
+      .catch(err => {
+        alert('提交失败，请稍后再试');
+        console.error(err);
+      });
+    });
+  </script>
+</body>
+</html>

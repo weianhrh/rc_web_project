@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>每日时间段收入详情</title>
+    <style>
+        /* 引入上方提供的CSS样式 */
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+            --highlight-bg: #eff4ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", system-ui; }
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start), var(--background-gradient-end));
+            padding: 20px; min-height: 100vh; display: flex; justify-content: center;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg); border-radius: 12px; padding: 20px;
+            box-shadow: var(--shadow); margin-bottom: 20px; transition: var(--transition);
+        }
+
+        .card:hover { box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16); }
+        .card-title {
+            font-size: 24px; color: var(--text-color); font-weight: 600;
+            border-bottom: 2px solid var(--primary); padding-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .summary-total {
+            font-size: 18px; font-weight: bold; color: var(--primary);
+        }
+
+        .filter-bar {
+            display: flex; gap: 10px; margin: 20px 0; align-items: center;
+        }
+
+        .revenue-item {
+            background: #fff; padding: 15px; border-radius: 10px;
+            box-shadow: var(--shadow); margin-bottom: 15px; transition: var(--transition);
+        }
+
+        .revenue-item:hover { background-color: var(--highlight-bg); }
+
+        .field {
+            display: flex; justify-content: space-between; font-size: 14px;
+            margin: 4px 0;
+        }
+
+        .pagination {
+            display: flex; justify-content: center; gap: 10px; margin-top: 20px;
+        }
+
+        button {
+            padding: 6px 14px; background: var(--primary); color: white;
+            border: none; border-radius: 4px; cursor: pointer;
+        }
+
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        @media (max-width: 768px) {
+            .card-title { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .filter-bar { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <div class="card-title">
+            每日分时收入详情
+            <div class="summary-total" id="totalRevenue">当页收入：0.00 元</div>
+        </div>
+
+        <div class="filter-bar">
+            <label>选择日期：</label>
+            <input type="date" id="queryDate">
+            <button onclick="loadDetails()">查询</button>
+        </div>
+
+        <div id="detailList"></div>
+
+        <div class="pagination">
+            <button onclick="prevPage()" id="prevBtn">上一页</button>
+            <span id="pageInfo"></span>
+            <button onclick="nextPage()" id="nextBtn">下一页</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    const limit = 10;
+    let totalPages = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('queryDate').value = today;
+        loadDetails();
+    });
+
+    function loadDetails(page = 1, fallbackTried = false) {
+    const dateInput = document.getElementById('queryDate');
+    const date = dateInput.value;
+
+    if (!date) return alert("请选择日期");
+
+    const url = `https://open.rcwulian.cn/api/pay/get_revenue_details.php?start=${date}&end=${date}&page=${page}&limit=${limit}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById('detailList');
+            const totalDom = document.getElementById('totalRevenue');
+            list.innerHTML = '';
+
+            if (data.records && data.records.length > 0) {
+                let total = 0;
+                data.records.forEach(item => {
+                    total += parseFloat(item.revenue || 0);
+                    const div = document.createElement('div');
+                    div.className = 'revenue-item';
+                    div.innerHTML = `
+                        <div class="field"><strong>场地ID：</strong><span>${item.venue_id}</span></div>
+                        <div class="field"><strong>日期：</strong><span>${item.date}</span></div>
+                        <div class="field"><strong>时间段：</strong><span>${item.time_start} - ${item.time_end}</span></div>
+                        <div class="field"><strong>收入：</strong><span style="color: var(--primary); font-weight: bold;">${item.revenue} 元</span></div>
+                    `;
+                    list.appendChild(div);
+                });
+                totalDom.textContent = `当页收入：${total.toFixed(2)} 元`;
+                totalPages = data.totalPages;
+                updatePagination();
+            } else {
+                // 如果没数据且还没尝试过 fallback，则自动查询昨日数据
+                if (!fallbackTried) {
+                    const yesterday = new Date(new Date(date).getTime() - 86400000)
+                        .toISOString().split('T')[0];
+                    dateInput.value = yesterday;
+                    loadDetails(1, true);
+                } else {
+                    list.innerHTML = '<div class="revenue-item">暂无数据</div>';
+                    totalDom.textContent = `当页收入：0.00 元`;
+                    totalPages = 0;
+                    updatePagination();
+                }
+            }
+        });
+}
+
+
+    function updatePagination() {
+        document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+    }
+
+    function prevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            loadDetails(currentPage);
+        }
+    }
+
+    function nextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            loadDetails(currentPage);
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,165 @@
+[
+    {
+        "id": "reservation-management",
+        "label": "驾驶管理",
+        "title": "驾驶管理",
+        "href": "h.html",
+        "page": "h.html",
+        "icon": "fas fa-calendar-check"
+    },
+    {
+        "id": "order-management",
+        "icon": "fa-shopping-cart",
+        "label": "订单管理",
+        "href": "order.html"
+    },
+    {
+        "id": "user-management",
+        "icon": "fa-bolt",
+        "label": "能量赠送",
+        "href": "user.html"
+    },
+    {
+        "id": "vehicleslite",
+        "icon": "fa-cogs",
+        "label": "设备管理",
+        "href": "vehicleslite.html"
+    },
+    {
+        "id": "venue-management1",
+        "icon": "fa-map-marker-alt",
+        "label": "场地管理",
+        "href": "venue.html"
+    },
+    {
+        "id": "income-details",
+        "label": "收入明细",
+        "title": "收入明细",
+        "href": "incomedetailsv2.html",
+        "page": "incomedetailsv2.html",
+        "icon": "fas fa-receipt"
+    },
+    {
+        "id": "moeny-details",
+        "icon": "fa-poll-h",
+        "label": "财务对账",
+        "href": "moeny.html"
+    },
+    {
+        "id": "PaymentDisbursement",
+        "icon": "fa-wallet",
+        "label": "提现申请",
+        "href": "PaymentDisbursement.html"
+    },
+    {
+        "id": "FaultDevicesApproval",
+        "icon": "fa-exclamation-triangle",
+        "label": "故障审批",
+        "href": "getFaultDevices.html",
+        "badge_id": "pending-count"
+    },
+    {
+        "id": "BindReceiveAccount",
+        "icon": "fa-credit-card",
+        "label": "绑定卡号",
+        "href": "paybind.html"
+    },
+    {
+        "id": "PricingOptions",
+        "icon": "fa-file-invoice-dollar",
+        "label": "资费套餐",
+        "href": "pricing_options.html"
+    },
+    {
+        "id": "Reporthand",
+        "icon": "fa-headset",
+        "label": "投诉处理",
+        "href": "reporthand.html"
+    },
+    {
+        "id": "ban_Record",
+        "icon": "fa-clipboard-list",
+        "label": "违规记录",
+        "href": "ban_Record.html"
+    },
+    {
+        "id": "item_1753949261596",
+        "label": "能量分配",
+        "title": "能量分配",
+        "href": "energy_log_view.html",
+        "page": "energy_log_view.html",
+        "icon": "fas fa-envelope"
+    },
+    {
+        "id": "item_1753443554822",
+        "label": "挂车占有",
+        "title": "挂车占有",
+        "href": "fill_energy.html",
+        "page": "fill_energy.html",
+        "icon": "fas fa-car"
+    },
+    {
+        "id": "item_1757385929175",
+        "label": "拉黑用户",
+        "title": "拉黑用户",
+        "href": "black_user_gmt.html",
+        "page": "black_user_gmt.html",
+        "icon": "fas fa-ban"
+    },
+    {
+        "id": "item_1758087008941",
+        "label": "反馈信息",
+        "title": "反馈信息",
+        "href": "feedback_mgt.html",
+        "page": "feedback_mgt.html",
+        "icon": "fas fa-marker"
+    },
+    {
+        "id": "item_1759560084210",
+        "label": "金额退款",
+        "title": "金额退款",
+        "href": "refund_records.html",
+        "page": "refund_records.html",
+        "icon": "fas fa-memory"
+    },
+    {
+        "id": "item_1761377446251",
+        "label": "设备历史管理",
+        "title": "设备历史管理",
+        "href": "latest_device_run.html",
+        "page": "latest_device_run.html",
+        "icon": "fas fa-bacon"
+    },
+    {
+        "id": "item_1769658662283",
+        "label": "推广奖励",
+        "title": "推广奖励",
+        "href": "Promotion_Reward.html",
+        "page": "Promotion_Reward.html",
+        "icon": "fas fa-award"
+    },
+    {
+        "id": "item_1779265692617",
+        "label": "直播认证",
+        "title": "直播认证",
+        "href": "anchor_auth_start.html",
+        "page": "anchor_auth_start.html",
+        "icon": "fas  fa-id-card"
+    },
+    {
+        "id": "item_1779973067605",
+        "label": "礼物提现",
+        "title": "礼物提现",
+        "href": "GiftPaymentDisbursement.html",
+        "page": "GiftPaymentDisbursement.html",
+        "icon": "fas fa-gifts"
+    },
+    {
+        "id": "item_1780731430102",
+        "label": "开播时长",
+        "title": "开播时长",
+        "href": "venueLiveDuration.html",
+        "page": "venueLiveDuration.html",
+        "icon": "fas fa-video"
+    }
+]

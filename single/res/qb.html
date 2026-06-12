@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>每日签到</title>
+  <style>
+    :root{
+      --bg1:#070A12;
+      --bg2:#130B2A;
+      --card:#0f1220cc;
+      --card2:#0b0e18cc;
+      --stroke:rgba(255,255,255,.10);
+      --text:#e9ecff;
+      --muted:rgba(233,236,255,.65);
+      --gold1:#f7d37a;
+      --gold2:#b98b2e;
+      --blue:#5b8cff;
+      --shadow:0 18px 50px rgba(0,0,0,.45);
+      --glow:0 0 40px rgba(91,140,255,.25);
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; font-family: "PingFang SC", system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(1200px 500px at 80% 10%, rgba(142, 74, 255, .22), transparent 55%),
+        radial-gradient(900px 600px at 25% 25%, rgba(91, 140, 255, .22), transparent 58%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      color:var(--text);
+      display:flex;
+      justify-content:center;
+      padding:18px 14px 40px;
+    }
+
+    .wrap{
+      width:min(420px, 100%);
+    }
+
+    .banner{
+      position:relative;
+      border-radius:18px;
+      padding:16px 16px 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .banner:before{
+      content:"";
+      position:absolute; inset:-80px -80px auto auto;
+      width:240px; height:240px;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 210, 108, .25), transparent 60%);
+      filter: blur(0px);
+      transform: rotate(18deg);
+      pointer-events:none;
+    }
+    .title{
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:.5px;
+      text-shadow: 0 8px 22px rgba(0,0,0,.35);
+    }
+    .sub{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+    }
+
+    .progress{
+      margin-top:12px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: #2cff88;
+      box-shadow: 0 0 14px rgba(44,255,136,.35);
+    }
+    .progress span{
+      font-size:13px;
+      color: rgba(233,236,255,.9);
+    }
+    .progress b{
+      color:#2cff88;
+      font-size:18px;
+      margin:0 4px;
+    }
+
+    .panel{
+      margin-top:12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--stroke);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      padding:14px 12px 14px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+    }
+
+    .day-card{
+      position:relative;
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.10);
+      padding:10px 10px 12px;
+      min-height:118px;
+      overflow:hidden;
+    }
+
+    .day-card .top{
+      display:flex;
+      align-items:baseline;
+      gap:6px;
+      margin-bottom:8px;
+    }
+    .day-card .d{
+      font-size:22px;
+      font-weight:900;
+    }
+    .day-card .unit{
+      font-size:12px;
+      color:rgba(233,236,255,.7);
+      letter-spacing:.8px;
+    }
+
+    .orb{
+      width:38px; height:38px;
+      margin:6px auto 10px;
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.75), rgba(255,255,255,.15) 35%, rgba(91,140,255,.25) 58%, rgba(0,0,0,.2) 75%),
+        radial-gradient(circle at 65% 65%, rgba(255, 213, 116, .35), transparent 55%);
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 0 25px rgba(91,140,255,.20);
+      position:relative;
+    }
+    .orb:after{
+      content:"⚡";
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      color: rgba(255,255,255,.95);
+      text-shadow: 0 8px 18px rgba(0,0,0,.35);
+      transform: translateY(-1px);
+    }
+
+    .amt{
+      text-align:center;
+      font-size:18px;
+      font-weight:900;
+      letter-spacing:.4px;
+    }
+    .amt small{
+      font-size:12px;
+      font-weight:700;
+      color:rgba(233,236,255,.7);
+      margin-right:4px;
+    }
+
+    /* 已领取 */
+    .claimed{
+      opacity:.55;
+      filter:saturate(.85);
+    }
+    .claimed .badge{
+      position:absolute;
+      right:8px; top:8px;
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      background: rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(233,236,255,.78);
+    }
+
+    /* 今日可领 */
+    .today{
+      border-color: rgba(247,211,122,.55);
+      box-shadow: 0 0 0 1px rgba(247,211,122,.18), var(--glow);
+      background: linear-gradient(180deg, rgba(247,211,122,.10), rgba(255,255,255,.02));
+    }
+    .today:before{
+      content:"";
+      position:absolute; left:-40px; top:-40px;
+      width:120px; height:120px;
+      background: radial-gradient(circle at 50% 50%, rgba(247,211,122,.22), transparent 60%);
+      transform: rotate(25deg);
+    }
+    .today .mark{
+      position:absolute;
+      left:10px; bottom:10px;
+      width:32px; height:4px;
+      border-radius:999px;
+      background: linear-gradient(90deg, var(--gold1), var(--gold2));
+      opacity:.85;
+    }
+
+    /* 第 7 天占两列更大一点（像你图里） */
+    .day7{
+      grid-column: span 2;
+      min-height:118px;
+    }
+    .day7 .orb{
+      width:46px; height:46px;
+    }
+
+    .btn{
+      margin-top:14px;
+      width:100%;
+      padding:14px 14px;
+      border-radius:14px;
+      border:1px solid rgba(247,211,122,.45);
+      background: linear-gradient(90deg, rgba(247,211,122,.18), rgba(185,139,46,.10));
+      color: rgba(255, 239, 200, .98);
+      font-weight:900;
+      font-size:16px;
+      letter-spacing:1px;
+      cursor:pointer;
+      box-shadow: 0 10px 26px rgba(0,0,0,.35);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn[disabled]{
+      opacity:.55;
+      cursor:not-allowed;
+      filter:saturate(.6);
+    }
+
+    /* 成功弹窗 */
+    .mask{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:999;
+      padding:18px;
+    }
+    .modal{
+      width:min(420px, 100%);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(20,16,40,.98), rgba(10,10,20,.98));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .modal .head{
+      padding:18px 16px 6px;
+      text-align:center;
+      font-size:22px;
+      font-weight:900;
+      color: rgba(255, 214, 130, .98);
+      text-shadow: 0 12px 26px rgba(0,0,0,.45);
+    }
+    .modal .body{
+      padding:12px 16px 16px;
+      text-align:center;
+    }
+    .modal .big-orb{
+      width:86px; height:86px;
+      margin:10px auto 10px;
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(255,255,255,.8), rgba(255,255,255,.12) 38%, rgba(91,140,255,.28) 62%, rgba(0,0,0,.25) 78%),
+        radial-gradient(circle at 70% 70%, rgba(255, 213, 116, .38), transparent 55%);
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow: 0 0 42px rgba(255, 213, 116, .18), 0 0 38px rgba(91,140,255,.20);
+      position:relative;
+    }
+    .modal .big-orb:after{
+      content:"⚡";
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:34px; color:#fff;
+      text-shadow: 0 12px 22px rgba(0,0,0,.35);
+    }
+    .modal .reward{
+      font-size:28px;
+      font-weight:1000;
+      margin-top:2px;
+    }
+    .modal .reward small{
+      font-size:14px;
+      color: rgba(233,236,255,.70);
+      margin-right:6px;
+      font-weight:800;
+    }
+    .modal .tip{
+      margin-top:8px;
+      font-size:12px;
+      color: rgba(233,236,255,.60);
+    }
+    .modal .foot{
+      padding:0 16px 16px;
+    }
+    .modal .ok{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(247,211,122,.45);
+      background: linear-gradient(90deg, rgba(247,211,122,.18), rgba(185,139,46,.10));
+      color: rgba(255, 239, 200, .98);
+      font-weight:900;
+      font-size:16px;
+      cursor:pointer;
+    }
+    /* ====== 领奖特效：弹窗入场 + 光晕 + 彩带 ====== */
+@keyframes popIn {
+  0%   { transform: translateY(14px) scale(.92); opacity: 0; }
+  60%  { transform: translateY(0) scale(1.02);  opacity: 1; }
+  100% { transform: translateY(0) scale(1);     opacity: 1; }
+}
+@keyframes glowPulse {
+  0%,100% { box-shadow: 0 0 42px rgba(255,213,116,.18), 0 0 38px rgba(91,140,255,.20); }
+  50%     { box-shadow: 0 0 70px rgba(255,213,116,.30), 0 0 70px rgba(91,140,255,.28); }
+}
+@keyframes orbBeat {
+  0%   { transform: scale(.92); filter: brightness(1); }
+  45%  { transform: scale(1.08); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes shineSweep {
+  0% { transform: translateX(-120%) skewX(-18deg); opacity: .0; }
+  15%{ opacity: .85; }
+  55%{ opacity: .85; }
+  100%{ transform: translateX(140%) skewX(-18deg); opacity: 0; }
+}
+
+.mask.show { display:flex; }
+.mask.show .modal { animation: popIn .42s cubic-bezier(.2,.9,.2,1) both; }
+
+.modal::before{
+  content:"";
+  position:absolute; inset:-2px;
+  background: radial-gradient(600px 240px at 50% 0%, rgba(255,213,116,.14), transparent 60%),
+              radial-gradient(500px 260px at 20% 30%, rgba(91,140,255,.12), transparent 60%);
+  pointer-events:none;
+}
+
+.modal .big-orb{
+  animation: orbBeat .55s ease-out both, glowPulse 1.2s ease-in-out infinite;
+}
+
+.modal .reward{
+  animation: popIn .42s .10s cubic-bezier(.2,.9,.2,1) both;
+}
+
+.modal .ok{
+  position:relative;
+  overflow:hidden;
+}
+.modal .ok::after{
+  content:"";
+  position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  opacity:0;
+}
+.mask.show .ok::after{
+  animation: shineSweep 1.4s .15s ease-in-out;
+}
+
+/* ====== 彩带层 ====== */
+.fx{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+}
+.fx i{
+  position:absolute;
+  top:-14vh;
+  width:10px;
+  height:18px;
+  border-radius:3px;
+  opacity:.9;
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,.35));
+  animation: confettiFall var(--dur) linear forwards, confettiSpin var(--spin) linear infinite;
+  left: calc(var(--x) * 1%);
+  transform: translateY(-10vh) rotate(0deg);
+}
+@keyframes confettiFall{
+  to{ transform: translateY(120vh) rotate(0deg); opacity: 1; }
+}
+@keyframes confettiSpin{
+  to{ rotate: 360deg; }
+}
+
+/* 弹窗背景轻微模糊感（可选） */
+body.modal-open .wrap{
+  filter: blur(2px);
+  opacity:.85;
+}
+
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="banner">
+      <div class="title">累计签到 7 天，领取能量奖励</div>
+      <div class="sub">每日签到可领取能量（仅用于游戏/活动）。连续签到会拿到更高奖励。</div>
+
+      <div class="progress">
+        <div class="dot"></div>
+        <span>您已累计签到 <b id="signedDays">0</b> 天</span>
+        <span style="color:var(--muted)">｜</span>
+        <span id="todayState" style="color:rgba(233,236,255,.85)">今日未签到</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="grid" id="grid"></div>
+      <button class="btn" id="btnSign" onclick="doSign()">立即签到</button>
+    </div>
+  </div>
+
+  <!-- 成功弹窗 -->
+<div class="mask" id="mask">
+  <div class="modal">
+    <div class="fx" id="fx"></div> <!-- ✅新增：彩带特效层 -->
+
+    <div class="head">恭喜您获得</div>
+    <div class="body">
+      <div class="big-orb"></div>
+      <div class="reward"><small>⚡</small><span id="rewardText">x100</span></div>
+      <div class="tip">可在个人信息的能量余额中确认</div>
+    </div>
+    <div class="foot">
+      <button class="ok" onclick="closeModal()">开心收下</button>
+    </div>
+  </div>
+</div>
+
+  <script>
+    // ======= 1) 从 URL 读取 uid =======
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid') || '0';
+
+    // ======= 2) 7 天奖励配置（你可改数值） =======
+    const REWARDS = [100, 100, 150, 150, 200, 200, 300];
+
+    // ======= 3) 你的接口地址：改成你自己的 PHP =======
+    // 约定返回格式建议：
+    // STATUS: { code:0, msg:"ok", data:{ signed_days:0~7, today_signed:0/1 } }
+    // CHECKIN: { code:0, msg:"ok", data:{ reward:100, signed_days:1, today_signed:1 } }
+    const API = {
+      STATUS: 'https://open.rcxxzk.cn/api/user/checkin_status.php', // ✅改这里
+      CHECKIN: 'https://open.rcxxzk.cn/api/user/checkin.php'        // ✅改这里
+    };
+
+    // ======= 页面状态 =======
+    let signedDays = 0;        // 已累计签到天数
+    let todaySigned = false;   // 今日是否已签到
+
+    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+    function renderGrid(){
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      // nextDayIndex：今天要领第几天（1~7）
+      const nextDayIndex = clamp(signedDays + 1, 1, 7);
+
+      REWARDS.forEach((amt, i) => {
+        const day = i + 1;
+        const div = document.createElement('div');
+        div.className = 'day-card' + (day === 7 ? ' day7' : '');
+
+        const claimed = day <= signedDays;
+        const isTodayTarget = (!todaySigned && day === nextDayIndex);
+
+        if (claimed) div.classList.add('claimed');
+        if (isTodayTarget) div.classList.add('today');
+
+        div.innerHTML = `
+          ${claimed ? `<div class="badge">已领取</div>` : ``}
+          <div class="top">
+            <div class="d">${String(day).padStart(2,'0')}</div>
+            <div class="unit">DAY</div>
+          </div>
+          <div class="orb"></div>
+          <div class="amt"><small>x</small>${amt}</div>
+          ${isTodayTarget ? `<div class="mark"></div>` : ``}
+        `;
+        grid.appendChild(div);
+      });
+
+      document.getElementById('signedDays').textContent = String(signedDays);
+      document.getElementById('todayState').textContent = todaySigned ? '今日已签到' : '今日未签到';
+
+      const btn = document.getElementById('btnSign');
+      if (uid === '0') {
+        btn.disabled = true;
+        btn.textContent = '缺少 uid（请用 ?uid=xxx 打开）';
+        return;
+      }
+      if (todaySigned) {
+        btn.disabled = true;
+        btn.textContent = '今日已签到';
+      } else if (signedDays >= 7) {
+        btn.disabled = true;
+        btn.textContent = '已完成 7 天签到';
+      } else {
+        btn.disabled = false;
+        btn.textContent = '立即签到';
+      }
+    }
+
+    // ======= 拉取签到状态 =======
+    async function loadStatus(){
+      try{
+        const qs = new URLSearchParams({ uid: String(uid) });
+        const r = await fetch(`${API.STATUS}?${qs.toString()}`, { method:'GET' });
+        const j = await r.json();
+
+        if (j.code !== 0) throw new Error(j.msg || 'status error');
+
+        const data = j.data || {};
+        signedDays = clamp(Number(data.signed_days ?? 0), 0, 7);
+        todaySigned = String(data.today_signed ?? 0) === '1';
+
+        renderGrid();
+      }catch(e){
+        console.error('loadStatus error:', e);
+        // 接口挂了也先渲染默认 UI
+        signedDays = 0;
+        todaySigned = false;
+        renderGrid();
+        alert('获取签到状态失败，请检查接口或网络');
+      }
+    }
+
+    // ======= 点击签到 =======
+    async function doSign(){
+      if (uid === '0') return;
+
+      const btn = document.getElementById('btnSign');
+      btn.disabled = true;
+      btn.textContent = '签到中…';
+
+      try{
+        const body = new URLSearchParams({ uid: String(uid) });
+
+        const r = await fetch(API.CHECKIN, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+        const j = await r.json();
+        if (j.code !== 0) throw new Error(j.msg || 'checkin error');
+
+        const data = j.data || {};
+        const reward = Number(data.reward ?? 0);
+
+        // 更新页面状态（以服务端为准）
+        signedDays = clamp(Number(data.signed_days ?? (signedDays+1)), 0, 7);
+        todaySigned = String(data.today_signed ?? 1) === '1';
+
+        // 弹窗展示奖励
+        document.getElementById('rewardText').textContent = `x${reward || REWARDS[Math.max(0, signedDays-1)]}`;
+        openModal();
+
+        renderGrid();
+      }catch(e){
+        console.error('doSign error:', e);
+        alert(e.message || '签到失败，请稍后重试');
+        btn.disabled = false;
+        btn.textContent = '立即签到';
+      }
+    }
+
+function spawnConfetti(count = 26){
+  const fx = document.getElementById('fx');
+  if (!fx) return;
+  fx.innerHTML = '';
+
+  const colors = [
+    'rgba(255,213,116,.95)',
+    'rgba(91,140,255,.95)',
+    'rgba(255,90,140,.90)',
+    'rgba(44,255,136,.85)',
+    'rgba(200,160,255,.85)',
+    'rgba(255,255,255,.70)',
+  ];
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('i');
+    const x = Math.random() * 100;
+    const dur = 1.2 + Math.random() * 0.9;     // 1.2~2.1s
+    const spin = 0.7 + Math.random() * 1.2;    // 0.7~1.9s
+    const w = 6 + Math.random() * 8;          // 6~14px
+    const h = 10 + Math.random() * 16;        // 10~26px
+    const c = colors[(Math.random() * colors.length) | 0];
+
+    el.style.setProperty('--x', x.toFixed(2));
+    el.style.setProperty('--dur', dur.toFixed(2) + 's');
+    el.style.setProperty('--spin', spin.toFixed(2) + 's');
+    el.style.width = w.toFixed(0) + 'px';
+    el.style.height = h.toFixed(0) + 'px';
+    el.style.background = c;
+
+    fx.appendChild(el);
+  }
+}
+
+function openModal(){
+  const mask = document.getElementById('mask');
+  mask.classList.add('show');
+  document.body.classList.add('modal-open');
+  spawnConfetti(30);
+
+  // 2.3s 后自动停掉彩带（避免一直占资源）
+  setTimeout(() => {
+    const fx = document.getElementById('fx');
+    if (fx) fx.innerHTML = '';
+  }, 2300);
+}
+
+function closeModal(){
+  const mask = document.getElementById('mask');
+  mask.classList.remove('show');
+  document.body.classList.remove('modal-open');
+
+  const fx = document.getElementById('fx');
+  if (fx) fx.innerHTML = '';
+
+  // 关掉弹窗后再拉一次状态，保证同步
+  loadStatus();
+}
+
+
+    // 点击遮罩关闭
+    document.getElementById('mask').addEventListener('click', (e)=>{
+      if (e.target.id === 'mask') closeModal();
+    });
+
+    // ======= 初次加载 =======
+    renderGrid();
+    loadStatus();
+  </script>
+</body>
+</html>

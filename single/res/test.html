@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>福袋雨活动页面</title>
+
+  <!-- 引入 Vue3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <style>
+    /** { margin: 0; padding: 0; box-sizing: border-box; }*/
+    /*body { font-family: "PingFang SC", system-ui, sans-serif; background: #f5f7fa; min-height: 100vh; }*/
+    /*header, footer { background: #5b8cff; color: white; text-align: center; padding: 15px 0; }*/
+    /*main { padding: 20px; max-width: 1200px; margin: auto; }*/
+    /*.section { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }*/
+    /*h1 { font-size: 24px; margin-bottom: 10px; }*/
+    /*p { font-size: 16px; color: #555; }*/
+
+    /* 福袋雨用到的动画样式 */
+    .luckBag {
+      width: 60px;
+      height: 60px;
+      background: url('https://open.rcwulian.cn/res/img/red-gift-emoji.png') no-repeat center/contain;
+      position: absolute;
+      top: -60px;
+      cursor: pointer;
+      animation: fall linear forwards;
+    }
+    @keyframes fall {
+      to { top: 100%; }
+    }
+    .animate-click {
+      animation: clickScale 0.3s ease;
+    }
+    @keyframes clickScale {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    .html, .body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+  </style>
+</head>
+
+<body>
+
+<!-- ====== 页面正常内容 ====== -->
+<header>
+  欢迎来到福袋雨活动页面
+</header>
+
+<main>
+  <div class="section">
+    <h1>活动介绍</h1>
+    <p>在活动期间，点击福袋有机会获得能量奖励或余额券。快来挑战吧！</p>
+  </div>
+
+  <div class="section">
+    <h1>参与规则</h1>
+    <p>每次进入页面自动开始福袋雨，活动时间1分钟，奖励将自动发放。</p>
+  </div>
+</main>
+
+<footer>
+  © 2025 福袋雨活动页面
+</footer>
+
+<!-- ====== 福袋雨 模态弹窗部分 ====== -->
+<button id="test" onclick="hideMe()">点我隐藏</button>
+
+<!-- 灰色半透明遮罩 -->
+
+
+
+   
+<div id="app" style="width:100%; height:100%;"></div>
+<!-- ====== 脚本部分 ====== -->
+<script>
+// 🌟 页面一加载就弹出游戏
+window.onload = function() {
+  initGameApp();
+};
+
+
+
+  if (!window.gameApp) {
+    initGameApp();
+  }
+
+
+// 🌟 初始化福袋雨 Vue 应用
+function initGameApp() {
+  window.gameApp = Vue.createApp({
+    setup() {
+      const timer = Vue.ref(60);
+      const isGameOver = Vue.ref(false);
+      const rewards = Vue.ref([]);
+      const currentBagCount = Vue.ref(0);
+      const maxBagCount = Vue.ref(8);
+      const dropInterval = Vue.ref(3000);
+
+      let countdownTimer = null;
+
+      function createBag() {
+        if (isGameOver.value) return;
+        if (currentBagCount.value >= maxBagCount.value) return;
+
+        const bag = document.createElement('div');
+        bag.className = 'luckBag';
+        bag.style.left = Math.random() * (window.innerWidth - 60) + 'px';
+        bag.style.animationDuration = (2 + Math.random() * 2) + 's';
+
+        bag.addEventListener('click', () => {
+          if (isGameOver.value) return;
+          bag.classList.add('animate-click');
+          setTimeout(() => {
+            bag.remove();
+            currentBagCount.value--;
+          }, 300);
+
+          const rand = Math.random();
+          const clickTime = timer.value;
+          let winRate = 0.03;
+          let bigWinRate = 0.005;
+
+          if (clickTime <= 45 && clickTime >= 20) {
+            winRate = 0.08;
+            bigWinRate = 0.02;
+          }
+
+          if (rand <= winRate) {
+            let prize = '';
+            if (Math.random() <= bigWinRate) {
+              prize = '🎉 1元余额券';
+            } else {
+              const energy = Math.floor(Math.random() * 10);
+              const field = Math.floor(Math.random() * 50) + 1;
+              prize = `⚡ ${energy}能量（${field}号场地）`;
+            }
+            rewards.value.push(prize);
+          }
+        });
+
+        bag.addEventListener('animationend', () => {
+          bag.remove();
+          currentBagCount.value--;
+        });
+
+        document.body.appendChild(bag);
+        currentBagCount.value++;
+      }
+
+      function startDrop() {
+        if (isGameOver.value) return;
+        createBag();
+
+        if (timer.value > 45) {
+          maxBagCount.value = 5;
+        } else if (timer.value > 30) {
+          maxBagCount.value = 15;
+        } else if (timer.value > 15) {
+          maxBagCount.value = 12;
+        } else {
+          maxBagCount.value = 5;
+        }
+
+        if (timer.value > 55) {
+          dropInterval.value = 3000;
+        } else if (timer.value > 35) {
+          dropInterval.value = 1500 - (55 - timer.value) * 30;
+        } else if (timer.value > 20) {
+          dropInterval.value = 600;
+        } else if (timer.value > 15) {
+          dropInterval.value = 800;
+        } else {
+          dropInterval.value = 1200;
+        }
+
+        setTimeout(startDrop, dropInterval.value);
+      }
+
+      function startCountdown() {
+        countdownTimer = setInterval(() => {
+          timer.value--;
+          if (timer.value <= 0) {
+            clearInterval(countdownTimer);
+            isGameOver.value = true;
+            // 结束后可以调用奖励保存逻辑
+          }
+        }, 1000);
+      }
+
+      Vue.onMounted(() => {
+        startDrop();
+        startCountdown();
+      });
+
+      return { timer, isGameOver, rewards };
+    }
+  }).mount('#app');
+}
+</script>
+
+</body>
+</html>

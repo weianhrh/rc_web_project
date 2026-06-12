@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>能量赠送</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        /* 搜索框 */
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .search-input {
+            width: 80%;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+            font-size: 12px;
+        }
+
+        .search-button {
+            width: 15%;
+            background-color: var(--primary);
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-button:hover {
+            background-color: #4c6ef5;
+        }
+
+        /* 用户列表 */
+        .user-list {
+            margin-top: 24px;
+        }
+
+        .user-item {
+    background: #f8f9ff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: row; /* 默认PC端横向排列 */
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap; /* 允许溢出后换行 */
+}
+
+
+        .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-info img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 16px;
+        }
+
+        .user-info .user-details {
+            color: #333;
+        }
+
+        .user-info .user-id {
+            font-weight: 700;
+        }
+         /* 新增的跨场地能量赠送按钮样式 */
+        .cross-site-gift-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+        .user-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .user-button.danger {
+            background-color: #ff4d4f;
+        }
+        
+        .user-button.danger:hover {
+            background-color: #d9363e;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .user-button:hover {
+            background-color: #4c6ef5;
+        }
+        .user-details {
+            word-break: break-all;
+            white-space: normal;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .search-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input {
+                width: 100%;
+                margin-bottom: 12px;
+            }
+
+            .search-button {
+                width: 100%;
+            }
+        }
+        @media (max-width: 768px) {
+    .user-item {
+        flex-direction: column; /* 垂直排列 */
+        align-items: flex-start;
+    }
+
+    .user-info {
+        flex-direction: row;
+        width: 100%;
+    }
+
+    .user-actions {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 12px;
+    }
+
+    .user-button {
+        flex: 1;
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .user-info img {
+        width: 40px;
+        height: 40px;
+        margin-right: 12px;
+    }
+
+    .user-details {
+        font-size: 14px;
+    }
+}
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-card">
+        <div class="card-title">能量赠送</div>
+        <!-- 新增的跨场地能量赠送按钮 -->
+            
+        <!-- 搜索框 -->
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="搜索用户ID...">
+            <button class="search-button" onclick="searchUser()">搜索</button>
+        </div>
+
+        <!-- 用户列表 -->
+        <div class="user-list" id="user-list">
+            <!-- 用户信息项将动态加载 -->
+        </div>
+    </div>
+
+    <script>
+        // 用于存储当前页面
+        let currentPage = 1;
+        const pageSize = 20;
+
+        // 请求并加载用户数据
+        function loadUserData(searchQuery = '') {
+            const url = `https://open.rcwulian.cn/api/user/getUserList.php?page=${currentPage}&limit=${pageSize}&id=${searchQuery.id || ''}&username=${searchQuery.username || ''}&phone=${searchQuery.phone || ''}&access_token=df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        const userListContainer = document.getElementById('user-list');
+                        userListContainer.innerHTML = ''; // 清空当前用户列表
+
+                        data.data.forEach(user => {
+                            const userItem = document.createElement('div');
+                            userItem.classList.add('user-item');
+
+                            userItem.innerHTML = `
+                                <div class="user-info">
+                                    <img src="${user.avatar}" alt="User Image">
+                                    <div class="user-details">
+                                        <div class="user-id">用户ID: ${user.id}</div>
+                                        <div class="user-nickname">昵称: ${user.username}</div>
+                                        <div class="user-nickname">能量: ${user.energy ?? '0.00'}</div>
+                                        <div class="user-registered">登录时间: ${user.jointime ?? '-'}</div>
+
+                                    </div>
+                                </div>
+                                     <div class="user-actions">
+                                      <button class="user-button" onclick="giftEnergy('${user.id}')">赠送能量</button>
+                                      <button class="user-button danger" onclick="clearEnergy('${user.id}')">清除能量</button>
+                                    </div>
+
+                                
+                            `;
+                            userListContainer.appendChild(userItem);
+                        });
+                    } else {
+                        alert('没有更多用户数据');
+                    }
+                })
+                .catch(error => {
+                    console.error('数据加载失败:', error);
+                });
+        }
+
+        // 搜索功能，根据输入动态请求数据
+        function searchUser() {
+            const searchInput = document.getElementById('search-input').value.trim().toLowerCase();
+            const searchQuery = {
+                id: searchInput, // 假设用户可以按ID搜索
+            };
+            // 清空列表，加载新的搜索结果
+            currentPage = 1;  // 重置为第一页
+            loadUserData(searchQuery);
+        }
+
+        // 赠送能量的功能
+        function giftEnergy(userId) {
+            const amount = 5; // 假设赠送5单位能量
+        
+            // 构造请求体
+            const params = new URLSearchParams();
+            params.append('uid', userId);
+            params.append('amount', amount);
+        
+            // 请求赠送能量
+            fetch('https://open.rcwulian.cn/api/user/recharges.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded', // 使用 URL 编码格式
+                },
+                body: params.toString()  // 将数据转为 URLSearchParams 格式的字符串
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0 && data.success) {
+                    alert(`赠送能量成功，总能量余额：${data.message}`);
+                    loadUserData(); // 赠送成功后刷新数据
+                } else {
+                    alert('能量赠送失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('能量赠送失败:', error);
+                alert('能量赠送失败，请检查网络');
+            });
+        }
+
+        // 监听滚动事件，实现下拉加载更多
+        window.addEventListener('scroll', () => {
+            const scrollPosition = window.scrollY + window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+
+            if (scrollPosition >= documentHeight) {
+                // 到达底部，加载下一页
+                currentPage++;
+                loadUserData();
+            }
+        });
+function clearEnergy(userId) {
+    const amount = prompt("请输入要清除的能量数量（留空则全部清除）");
+
+    if (amount === null) return; // 用户取消
+
+    const params = new URLSearchParams();
+    params.append('uid', userId);
+    if (amount !== '') params.append('amount', amount); // 指定数量才添加
+
+    fetch('https://open.rcwulian.cn/api/user/getUserList.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.code === 0) {
+            alert(data.detail || '清除成功');
+            loadUserData(); // 刷新列表
+        } else {
+            alert('清除失败：' + data.msg);
+        }
+    });
+}
+
+        // 页面加载时初始加载第一页数据
+        loadUserData();
+    </script>
+
+</body>
+</html>

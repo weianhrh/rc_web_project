@@ -1,0 +1,243 @@
+<title>主页二</title>
+
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>场地名称：</cite></a>
+      <a><cite id="daily-order-venue_name" >场地名称</cite></a>
+    
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-row layui-col-space15">   
+ 
+      
+
+    <div class="layui-col-sm12">
+      <div class="layui-card">
+        <div class="layui-card-header">官方通知</div>
+        <div class="layui-card-body" id="notices-container">
+          <!-- 官方通知将通过JavaScript动态插入 -->
+        </div>
+      </div>
+    </div>
+   <div class="layui-col-sm12">
+      <div class="layui-card">
+        <div class="layui-card-header">更新日志</div>
+        <div class="layui-card-body" id="logs-container">
+          <!-- 更新日志将通过JavaScript动态插入 -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.notice-popup {
+    padding: 20px;
+    max-width: 100%;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+.notice-popup h3 {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.notice-popup .content {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 20px;
+    white-space: pre-wrap; /* 保留换行并自动换行 */
+}
+
+.notice-popup .btn-group {
+    text-align: right;
+}
+
+.notice-popup .btn-group {
+    text-align: right;
+    margin-top: 20px;   /* 增加按钮上方间距 */
+}
+.notice-popup .btn-group button {
+    padding: 8px 20px;  /* 增加按钮内边距 */
+    font-size: 16px;    /* 增加按钮字体大小 */
+}
+
+/* 自定义滚动条样式 */
+.notice-popup .content::-webkit-scrollbar {
+    width: 6px;
+}
+.notice-popup .content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+.notice-popup .content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+.notice-popup .content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+</style>
+
+<script>
+layui.use('sample', layui.factory('sample'));
+</script>
+<script>
+layui.use(['jquery', 'layer'], function(){
+  var $ = layui.jquery;
+  var layer = layui.layer;
+
+  // 加载官方通知和更新日志
+  $.ajax({
+    url: './api/index/Msg.php',
+    type: 'GET',
+    dataType: 'json',
+    success: function(res) {
+      if(res.code === 0) {
+        // 渲染官方通知
+        var noticesHtml = '';
+        res.data.notices.forEach(function(notice) {
+          noticesHtml += `
+            <ul class="layuiadmin-card-status layuiadmin-home2-usernote">
+              <li>
+                <p${notice.color ? ` style="color:${notice.color}"` : ''}>${notice.content}</p>
+                <span>${formatDate(notice.publish_time)}</span>
+                <a href="javascript:;" layadmin-event="replyNote" data-id="7" class="layui-btn layui-btn-xs layuiadmin-reply">反馈</a>
+              </li>
+            </ul>
+          `;
+        });
+        $('#notices-container').html(noticesHtml);
+
+        // 渲染更新日志
+        var logsHtml = '';
+        res.data.logs.forEach(function(log) {
+          logsHtml += `
+            <ul class="layuiadmin-card-status layuiadmin-home2-usernote">
+              <li>
+                <h3>${log.version}-${log.platform}</h3>
+                <p>${log.content}</p>
+                <span>${formatDate(log.publish_time)}</span>
+                <a href="javascript:;" layadmin-event="replyNote" data-id="7" class="layui-btn layui-btn-xs layuiadmin-reply">反馈</a>
+              </li>
+            </ul>
+          `;
+        });
+        $('#logs-container').html(logsHtml);
+
+        // 如果有违规设备ID，可以在适当位置显示
+        if(res.data.violations && res.data.violations.length > 0) {
+          // 这里可以添加违规设备ID的显示逻辑
+        }
+      } else {
+        layer.msg('获取数据失败: ' + res.msg);
+      }
+    },
+    error: function(xhr, type, errorThrown) {
+      layer.msg('请求失败，请检查网络连接');
+    }
+  });
+
+  // 日期格式化函数
+  function formatDate(dateStr) {
+    var date = new Date(dateStr);
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    return month + '月' + day + '日 ' + 
+           String(date.getHours()).padStart(2, '0') + ':' + 
+           String(date.getMinutes()).padStart(2, '0');
+  }
+
+  // 保留原有的DailySummaryStats请求
+  $.ajax({
+    url: './api/index/DailySummaryStats.php',
+    type: 'GET',
+    dataType: 'json',
+    success: function(res) {
+      if(res.code === 0) {
+        $('#daily-total-payment').text(res.data.totalPayment || '0.00');
+        $('#daily-order-count').text(res.data.orderCount || '0');
+        $('#daily-order-reservationCount').text(res.data.reservationCount || '0');
+        $('#daily-order-venue_name').text(res.data.venue_name || '非法数据');
+      } else {
+        layer.msg('获取数据失败: ' + res.msg);
+      }
+    },
+    error: function(xhr, type, errorThrown) {
+      layer.msg('数据请求失败，请检查API和网络状态');
+    }
+  });
+
+  // 检查未读通知
+  function checkUnreadNotices() {
+    $.ajax({
+      url: './api/index/Msg.php',
+      type: 'POST',
+      data: {
+        action: 'getUnreadNotices'
+      },
+      dataType: 'json',
+      success: function(res) {
+        if(res.code === 0 && res.data.length > 0) {
+          showNoticePopup(res.data[0]); // 显示第一条未读通知
+        }
+      }
+    });
+  }
+
+  // 显示通知弹窗
+  function showNoticePopup(notice) {
+    layer.open({
+        type: 1,
+        title: false,
+        closeBtn: 0,
+        shadeClose: false,
+        area: [window.innerWidth < 500 ? '90%' : '800px', 'auto'],
+
+        maxHeight: '80vh',       // 设置最大高度
+        content: `
+            <div class="notice-popup">
+                <h3>${notice.title}</h3>
+                <div class="content">${notice.content}</div>
+                <div class="btn-group">
+                    <button class="layui-btn layui-btn-primary" onclick="markAsRead(${notice.id})">标记已读</button>
+                </div>
+            </div>
+        `
+    });
+  }
+
+  // 标记通知为已读
+  window.markAsRead = function(noticeId) {
+    $.ajax({
+      url: './api/index/Msg.php',
+      type: 'POST',
+      data: {
+        action: 'markNoticeAsRead',
+        notice_id: noticeId
+      },
+      dataType: 'json',
+      success: function(res) {
+        if(res.code === 0) {
+          layer.closeAll();
+          checkUnreadNotices(); // 检查是否还有其他未读通知
+        } else {
+          layer.msg('标记已读失败：' + res.msg);
+        }
+      }
+    });
+  };
+
+  // 页面加载完成后检查未读通知
+  $(document).ready(function() {
+    checkUnreadNotices();
+  });
+});
+</script>

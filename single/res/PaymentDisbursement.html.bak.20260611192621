@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<!--PaymentDisbursement.html-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提现申请</title>
+  <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">-->
+     <link rel="stylesheet" href="/res/fa/css/all.min.css"> 
+  <style>
+    /* 定义 CSS 变量 */
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+      --highlight-bg: #eff4ff;
+    }
+
+    /* 全局样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    /* 卡片样式 */
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 20px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+
+    /* 账户信息样式 */
+    .account-info {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .account-info .field {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .account-info .label {
+      color: var(--secondary);
+      font-weight: 500;
+    }
+
+    .account-info .value {
+      color: var(--text-color);
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    /* 金额卡片样式 */
+    .amount-card {
+      background-color: #f5faff;
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(0, 123, 255, 0.15);
+    }
+
+    .amount-card .field {
+      font-size: 16px;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 500;
+    }
+
+    .amount-card .value {
+      font-weight: 600;
+      color: #007bff;
+    }
+.check-money-btn {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 999px;
+  background: #5b8cff;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.check-money-btn:active {
+  opacity: 0.85;
+}
+
+.amount-card .value {
+  white-space: nowrap;
+  text-align: right;
+}
+    /* 提现金额输入框前的标签 */
+    .input-label {
+      font-size: 16px;
+      color: var(--text-color);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    /* 本次提现金额输入框 */
+    .withdraw-input {
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      width: 100%;
+      margin-top: 8px;
+      box-sizing: border-box;
+    }
+
+    .withdraw-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* 提现按钮 */
+    .withdraw-button {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      transition: 0.3s;
+      margin-top: 20px;
+    }
+
+    .withdraw-button:hover {
+      background-color: #4a77e4;
+    }
+
+    .withdraw-button:disabled {
+      background-color: #d0d0d0;
+      cursor: not-allowed;
+    }
+
+    /* 提示信息样式 */
+    .loading,
+    .success,
+    .error {
+      text-align: center;
+      font-size: 16px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .loading {
+      color: var(--primary);
+    }
+
+    .success {
+      color: #4caf50;
+    }
+
+    .error {
+      color: #ff6b6b;
+    }
+
+    /* 提现记录列表 */
+    .record-list {
+      margin-top: 30px;
+    }
+
+    .record-item {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .record-item span {
+      display: block;
+    }
+
+    .record-item .record-title {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .card {
+        padding: 16px;
+      }
+      .field {
+        font-size: 12px;
+      }
+      .withdraw-button {
+        font-size: 14px;
+      }
+      .withdraw-input {
+        font-size: 14px;
+      }
+      .record-item {
+        font-size: 12px;
+      }
+    }
+    /* 通用模态提示框 */
+.custom-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.custom-modal {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 22px 16px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  animation: modalFadeIn 0.18s ease-out;
+}
+
+.custom-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 12px;
+}
+
+.custom-modal-content {
+  font-size: 13px;
+  line-height: 1.8;
+  color: #444;
+  white-space: pre-line;
+}
+
+.custom-modal-btn {
+  margin-top: 16px;
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.custom-modal-btn:active {
+  opacity: 0.85;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-title">提现申请</div>
+
+      <!-- 账户信息 -->
+      <div class="account-info" id="account-info"></div>
+
+      <!-- 金额信息卡片 -->
+      <div class="amount-card" id="amount-info"></div>
+
+      <!-- 本次提现金额输入框 -->
+      <div>
+        <div class="input-label">本次提现金额</div>
+        <input type="number" id="withdraw-amount" class="withdraw-input" placeholder="请输入提现金额" />
+      </div>
+
+      <!-- 提现按钮 -->
+      <button class="withdraw-button" id="withdraw-button" onclick="applyWithdrawal()">立即提现</button>
+
+      <div id="status-message" class="loading" style="display: none;">正在申请提现...</div>
+
+      <!-- 提现记录列表 -->
+      <div id="withdrawal-records" class="record-list"></div>
+    </div>
+  </div>
+<div class="custom-modal-mask" id="custom-modal-mask" onclick="closeCustomModal()">
+  <div class="custom-modal" onclick="event.stopPropagation()">
+    <div class="custom-modal-title" id="custom-modal-title">提示</div>
+    <div class="custom-modal-content" id="custom-modal-content"></div>
+    <button class="custom-modal-btn" onclick="closeCustomModal()">知道了</button>
+  </div>
+</div>
+  <script>
+  function money(value) {
+  const num = parseFloat(value);
+  if (isNaN(num)) return '0.00';
+  return num.toFixed(2);
+}
+  function showCustomModal(title, content) {
+  document.getElementById('custom-modal-title').textContent = title || '提示';
+  document.getElementById('custom-modal-content').textContent = content || '';
+  document.getElementById('custom-modal-mask').style.display = 'flex';
+}
+
+function closeCustomModal() {
+  document.getElementById('custom-modal-mask').style.display = 'none';
+}
+    // 获取提现账户和金额信息
+    function loadAccountInfo() {
+      const url = 'https://open.rcwulian.cn/api/pay/CalculateSettlements.php?access_token=df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4';
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 0) {
+            // 显示账户信息
+            const accountInfo = document.getElementById('account-info');
+            accountInfo.innerHTML = `
+              <div class="field">
+                <div class="label">账户号:</div>
+                <div class="value">${data.account_number}</div>
+              </div>
+              <div class="field">
+                <div class="label">账户姓名:</div>
+                <div class="value">${data.account_name}</div>
+              </div>
+              <div class="field">
+                <div class="label">账户类型:</div>
+                <div class="value">${data.account_pay}</div>
+              </div>
+            `;
+
+            // 显示金额信息
+           // 显示金额信息
+// 显示金额信息
+const amountInfo = document.getElementById('amount-info');
+let amountHtml = `
+  <div class="field">
+    <div class="label">账户余额:</div>
+    <div class="value">${data.account_balance} 元</div>
+  </div>
+  <div class="field">
+    <div class="label">冻结金额(违规关联):</div>
+    <div class="value">${data.frozen_amount} 元</div>
+  </div>
+  <div class="field">
+    <div class="label">退款金额:</div>
+    <div class="value">${data.total_refund} 元</div>
+  </div>
+  <div class="field">
+    <div class="label">锁定订单:</div>
+    <div class="value">${data.lock_order_count || 0} 笔</div>
+  </div>
+  <div class="field">
+    <div class="label">待复核订单:</div>
+    <div class="value">${data.lock_amount || 0} 电池</div>
+  </div>
+  <div class="field">
+    <div class="label">当前可提现:</div>
+<div class="value" id="available-balance">${money(data.available_balance)} 元</div>
+  </div>
+<div class="field">
+  <div class="label">
+    未核对金额:
+    ${
+      Math.abs(parseFloat(data.notSettledAmount || 0)) > 0
+        ? `<button type="button" class="check-money-btn" onclick="location.href='moeny.html'">去核对</button>`
+        : ''
+    }
+  </div>
+  <div class="value">${money(data.notSettledAmount)} 元</div>
+</div>
+</div>
+`;
+
+// ★ 仅当有未结算图传费用时才显示
+if (data.unsettled_image_transmission_fee && data.unsettled_image_transmission_fee > 0) {
+    amountHtml += `
+        <div class="field" id="unsettled-image-fee">
+          <div class="label">未结算图传费用(扣减项)
+            <span
+              onclick="showCustomModal('图传费用说明', '图传费用 = 驾驶分钟数 × 0.03元\\n\\n该费用会在提现时作为扣减项参与结算。')"
+              style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid #007bff;color:#007bff;font-size:12px;cursor:pointer;margin-left:4px;"
+            >?</span>
+          </div>
+          <div class="value">${money(data.unsettled_image_transmission_fee)} 元</div>
+        </div>
+        <input type="hidden" id="unsettled-image-fee-total" value="${money(data.unsettled_image_transmission_fee)}" />
+        <input type="hidden" id="unsettled-image-ids" value='${JSON.stringify(data.unsettled_image_ids || [])}' />
+    `;
+}
+amountInfo.innerHTML = amountHtml;
+            
+            // 默认填入“可提现金额”
+            const withdrawAmountInput = document.getElementById('withdraw-amount');
+            // withdrawAmountInput.value = data.available_balance;
+            withdrawAmountInput.value = money(data.available_balance);
+            updateWithdrawButtonState();
+
+          } else if (data.code === 1002) {
+            if (confirm('需要先绑定收款账号才可以提现，是否立即绑定？')) {
+              window.location.href = 'https://open.rcwulian.cn/res/paybind.html';
+            } else {
+              window.history.back();
+            }
+          } else {
+            // alert('加载账户信息失败，请稍后再试');
+            showCustomModal('加载失败', '加载账户信息失败，请稍后再试。');
+          }
+        })
+        .catch(error => {
+          console.error('请求失败:', error);
+        //   alert('加载账户信息失败，请重试');
+        showCustomModal('加载失败', '加载账户信息失败，请重试。');
+        });
+    }
+
+    // 更新提现按钮的状态
+function updateWithdrawButtonState() {
+  const withdrawAmount = parseFloat(document.getElementById('withdraw-amount').value);
+  const maxText = document.getElementById('available-balance').textContent;
+  const maxWithdrawAmount = parseFloat(maxText.replace(' 元','')) || 0;
+
+  const btn = document.getElementById('withdraw-button');
+  btn.disabled = !(withdrawAmount > 0 && withdrawAmount <= maxWithdrawAmount);
+}
+
+
+
+    // 提交提现申请
+    function applyWithdrawal() {
+      const withdrawButton = document.getElementById('withdraw-button');
+      const statusMessage = document.getElementById('status-message');
+      statusMessage.style.display = 'block';
+      withdrawButton.disabled = true;
+      const withdrawAmount = parseFloat(document.getElementById('withdraw-amount').value);
+      if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+        // alert('请输入有效的提现金额');
+        showCustomModal('提现提示', '请输入有效的提现金额');
+        withdrawButton.disabled = false;
+        statusMessage.style.display = 'none';
+        return;
+      }
+      const url = 'https://open.rcwulian.cn/api/pay/ApplyWithdrawal.php';
+    //   const data = { amount: withdrawAmount };
+      const unsettledImageFeeEl = document.getElementById('unsettled-image-fee-total');
+      const unsettledImageIdsEl = document.getElementById('unsettled-image-ids');
+    
+      const data = {
+        amount: withdrawAmount,
+        unsettled_image_transmission_fee: unsettledImageFeeEl ? unsettledImageFeeEl.value : 0,
+        unsettled_image_ids: unsettledImageIdsEl ? unsettledImageIdsEl.value : '[]'
+      };
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        },
+        body: new URLSearchParams(data).toString()
+      })
+        .then(response => response.json())
+          .then(data => {
+          statusMessage.style.display = 'none';
+          if (data.code === 0) {
+            // alert('提现申请成功');
+            showCustomModal('提现申请成功', '提现申请已提交，请等待平台处理。');
+            loadAccountInfo();
+            loadWithdrawalRecords();
+          } else if (data.code === 1005) {
+            // alert('场地已被封禁，无法提现，请联系运营处理');
+            showCustomModal('无法提现', '场地已被封禁，无法提现，请联系运营处理。');
+          } else if (data.code === 1008) { // ★ 新增
+        //   alert(`超过可提现额度：
+        //     账户余额：${data.data.account_balance} 元
+        //     冻结金额：${data.data.frozen_amount} 元
+        //     退款金额：${data.data.total_refund || 0} 元
+        //     待复核订单：${data.data.lock_amount || 0} 电池
+        //     可提现：${data.data.available_balance} 元`);
+            showCustomModal(
+              '超过可提现额度',
+              `账户余额：${data.data.account_balance} 元
+            冻结金额：${data.data.frozen_amount} 元
+            退款金额：${data.data.total_refund || 0} 元
+            待复核订单：${data.data.lock_amount || 0} 电池
+            可提现：${data.data.available_balance} 元`
+            );
+          } else {
+            // alert('提现申请失败，请稍后重试');
+            showCustomModal('提现失败', '提现申请失败，请稍后重试。');
+          }
+        })
+        .catch(error => {
+          console.error('提现申请失败:', error);
+          statusMessage.style.display = 'none';
+        //   alert('提现申请失败，请重试');
+        showCustomModal('提现失败', '提现申请失败，请重试。');
+        });
+    }
+
+    // 获取提现记录
+    function loadWithdrawalRecords() {
+      const url = 'https://open.rcwulian.cn/api/pay/getWithdrawalRecords.php';
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.code === 0 && data.data && data.data.length > 0) {
+            displayWithdrawalRecords(data.data);
+          } else {
+            document.getElementById('withdrawal-records').innerHTML = '<p style="text-align:center;">暂无提现记录</p>';
+          }
+        })
+        .catch(error => {
+          console.error('提现记录加载失败:', error);
+        });
+    }
+
+    // 显示提现记录列表
+    function displayWithdrawalRecords(records) {
+      const container = document.getElementById('withdrawal-records');
+      container.innerHTML = '';
+      records.forEach(record => {
+        const item = document.createElement('div');
+        item.classList.add('record-item');
+        item.innerHTML = `
+          <span class="record-title">提现编号：${record.id}</span>
+          <span>账户姓名：${record.account_name}</span>
+          <span>提现金额：${record.withdrawal_amount} 元</span>
+          <span>技术服务费：${record.technical_service_fee} 元</span>
+          <span>提现手续费：${record.withdrawal_fee} 元</span>
+          <span>实际打款：${record.actual_amount} 元</span>
+          <span>申请时间：${record.application_time}</span>
+         <span>打款状态：${record.payout_status  == 1 ? '已打款' : '未打款'}</span>
+          <span>申请状态：${record.application_status == 0 ? '待处理' : (record.application_status == 1 ? '已处理' : (record.application_status == 2 ? '已打款' : '拒绝'))}</span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // 监听提现金额输入框
+    document.getElementById('withdraw-amount').addEventListener('input', updateWithdrawButtonState);
+
+
+    // 页面加载时获取账户信息和提现记录
+    loadAccountInfo();
+    loadWithdrawalRecords();
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,160 @@
+<title>设置我的资料</title> 
+ 
+<div class="layui-card layadmin-header"> 
+    <div class="layui-breadcrumb" lay-filter="breadcrumb"> 
+        <a lay-href="">主页</a> 
+        <a><cite>设置</cite></a> 
+        <a><cite>我的资料</cite></a> 
+    </div> 
+</div> 
+ 
+<div class="layui-fluid"> 
+    <div class="layui-row layui-col-space15"> 
+        <div class="layui-col-md12"> 
+            <div class="layui-card"> 
+                <div class="layui-card-header">设置我的资料</div> 
+                <div class="layui-card-body" pad15> 
+ 
+                    <div class="layui-form" lay-filter=""> 
+                        <div class="layui-form-item"> 
+                            <label class="layui-form-label">我的角色</label> 
+                            <!-- 将 select 替换为不可编辑的 input --> 
+                            <div class="layui-input-inline"> 
+                                <input type="text" name="role" readonly class="layui-input"> 
+                            </div> 
+                            <div class="layui-form-mid layui-word-aux">当前角色不可更改为其它角色</div> 
+                        </div> 
+                        <div class="layui-form-item"> 
+                            <label class="layui-form-label">用户名</label> 
+                            <div class="layui-input-inline"> 
+                                <input type="text" name="username" value="张三" readonly class="layui-input"> 
+                            </div> 
+                            <div class="layui-form-mid layui-word-aux">不可修改。一般用于后台登入名</div> 
+                        </div> 
+                        <div class="layui-form-item"> 
+                            <label class="layui-form-label">昵称</label> 
+                            <div class="layui-input-inline"> 
+                                <input type="text" name="nickname" value="tester" lay-verify="nickname" 
+                                       autocomplete="off" placeholder="请输入昵称" class="layui-input"> 
+                            </div> 
+                        </div> 
+                        <div class="layui-form-item"> 
+                            <label class="layui-form-label">性别</label> 
+                            <div class="layui-input-block"> 
+                                <input type="radio" name="sex" value="男" title="男" checked> 
+                                <input type="radio" name="sex" value="女" title="女"> 
+                            </div> 
+                        </div> 
+                        <!--<div class="layui-form-item"> -->
+                        <!--    <label class="layui-form-label">头像</label> -->
+                        <!--    <div class="layui-input-inline"> -->
+                        <!--        <input name="avatar" lay-verify="required" id="LAY_avatarSrc" -->
+                        <!--               placeholder="图片地址" value="https://unpkg.com/outeres@0.0.5/demo/000.jpg"  -->
+                        <!--               class="layui-input"> -->
+                        <!--    </div> -->
+                        <!--    <div class="layui-input-inline layui-btn-container" style="width: auto;"> -->
+                        <!--        <button type="button" class="layui-btn layui-btn-primary" id="LAY_avatarUpload"> -->
+                        <!--            <i class="layui-icon">&#xe67c;</i>上传图片 -->
+                        <!--        </button> -->
+                        <!--        <button class="layui-btn layui-btn-primary" -->
+                        <!--                layadmin-event="avartatPreview">查看图片</button> -->
+                        <!--    </div> -->
+                        <!--</div> -->
+                        <div class="layui-form-item"> 
+                            <label class="layui-form-label">手机</label> 
+                            <div class="layui-input-inline"> 
+                                <input type="text" name="cellphone" value="" lay-verify="phone" 
+                                       autocomplete="off" class="layui-input"> 
+                            </div> 
+                        </div> 
+ 
+                        <div class="layui-form-item"> 
+                            <div class="layui-input-block"> 
+                                <button class="layui-btn" lay-submit lay-filter="setmyinfo">确认修改</button> 
+                        
+                            </div> 
+                        </div> 
+                    </div> 
+ 
+                </div> 
+            </div> 
+        </div> 
+    </div> 
+</div> 
+ 
+<!--<script src="https://cdn.staticfile.org/layui/2.6.8/layui.min.js"></script>  --> 
+<script> 
+    // 发送请求获取数据 
+    fetch('https://open.rcwulian.cn/api/user/info.php')  
+      .then(response => response.json())  
+      .then(data => { 
+            if (data.code  === 0) { 
+                const formData = data.data;  
+ 
+                // 替换角色 
+                document.querySelector('input[name="role"]').value  = formData.role_name;  
+                // 替换用户名 
+                document.querySelector('input[name="username"]').value  = formData.username;  
+                // 替换昵称 
+                document.querySelector('input[name="nickname"]').value  = formData.nickname;  
+                // 替换性别 
+                const sex = formData.sex  === '男' ? '男' : '女'; 
+                // document.querySelector(`input[name="sex"][value="${sex}"]`).checked  = true; 
+                document.querySelector(`input[name="sex"][value="${sex}"]`).checked = true;
+
+                // 替换头像 
+                // document.querySelector('input[name="avatar"]').value  = formData.headimgurl;  
+                // 替换手机 
+                document.querySelector('input[name="cellphone"]').value  = formData.phone_number;  
+                  layui.form.render('radio');
+
+            } 
+        }) 
+      .catch(error => { 
+            console.error('  请求出错:', error); 
+        }); 
+ 
+    
+    
+    layui.use(['form'], function() {
+    const form = layui.form;
+
+    // 监听表单提交
+    form.on('submit(setmyinfo)', function(obj) {
+        // 提取表单字段
+        const fields = obj.field;
+
+        // 映射字段
+        const postData = {
+            nickname: fields.nickname,
+            sex: fields.sex === '男' ? 0 : 1,
+            phone_number: fields.cellphone,
+            headimgurl: fields.avatar
+        };
+
+        fetch('https://open.rcwulian.cn/api/user/info.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include', // 保证携带 cookie（session_token）
+            body: JSON.stringify(postData)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.code === 0) {
+                layer.msg('资料更新成功', {icon: 1});
+            } else {
+                layer.msg(data.msg || '更新失败', {icon: 2});
+            }
+        })
+        .catch(err => {
+            console.error('更新失败:', err);
+            layer.msg('请求出错', {icon: 2});
+        });
+
+        return false; // 阻止默认提交行为
+    });
+});
+// layui.use('set',  layui.factory('set'));  
+</script> 

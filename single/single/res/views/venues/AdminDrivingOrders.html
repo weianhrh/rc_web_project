@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>驾驶订单查询</title>
+  <!-- 引入Font Awesome图标库 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .dashboard-card { background: #ffffff; border-radius: 24px; padding: 24px; box-shadow: var(--shadow); }
+    .card-title { font-size: 20px; color: #333; margin-bottom: 24px; font-weight: 600; }
+
+    .form-container { padding-bottom: 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .form-item { display: inline-block; margin-right: 16px; margin-bottom: 16px; }
+    .form-label { color: var(--secondary); font-size: 14px; margin-bottom: 8px; display: block; }
+    .form-input { width: 150px; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 6px; }
+    .form-button { background-color: var(--primary); color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; transition: opacity .2s; }
+    .form-button:hover { opacity:.9; }
+
+    .cards-container { padding-top: 24px; display: flex; flex-direction: column; gap: 16px; max-width: 800px; margin: 0 auto; }
+    .order-card { background:#fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform .2s; }
+    .order-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(91,140,255,0.12); }
+
+    .order-item { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+    .order-item:last-child { border-bottom:none; }
+    .item-label { color: var(--secondary); font-size: 14px; }
+    .item-value { color:#333; font-weight:500; }
+
+    .status-badge { padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; }
+    .status-completed { background-color:#e6f7e6; color:#52c41a; }
+    .status-pending { background-color:#fff7e6; color:#fa8c16; }
+
+    .pagination { display:flex; justify-content:center; align-items:center; margin-top:20px; padding:20px 0; }
+    .form-button:disabled { opacity:.5; cursor:not-allowed; }
+
+    .suggestions-container { position:absolute; background:#fff; border:1px solid rgba(0,0,0,0.1); border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1); z-index:1000; max-height:200px; overflow-y:auto; display:none; }
+    .suggestion-item { padding:8px; cursor:pointer; }
+    .suggestion-item:hover { background:#f0f3ff; }
+
+    /* 自定义退款原因弹窗（iOS Safari 兼容） */
+    .modal { display:none; position:fixed; z-index:9999; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; }
+    .modal-content { width:90%; max-width:420px; background:#fff; border-radius:12px; padding:16px; }
+  </style>
+</head>
+
+<body>
+
+  <div class="dashboard-card">
+    <h1 class="card-title">驾驶订单查询</h1>
+
+    <div class="form-container">
+      <div class="form-item">
+        <label class="form-label">用户ID</label>
+        <input type="text" id="uid" class="form-input" placeholder="请输入用户ID">
+      </div>
+      <div class="form-item">
+        <label class="form-label">订单编号</label>
+        <input type="text" id="orderNumber" class="form-input" placeholder="请输入订单编号">
+        <div id="suggestions" class="suggestions-container"></div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">&nbsp;</label>
+        <button onclick="searchOrders()" class="form-button">查询</button>
+      </div>
+    </div>
+
+    <div class="cards-container" id="orderCardsContainer"></div>
+
+    <div class="pagination">
+      <button id="prevPage" class="form-button" style="margin-right:10px;">上一页</button>
+      <span id="pageInfo" style="margin:0 10px;"></span>
+      <button id="nextPage" class="form-button" style="margin-left:10px;">下一页</button>
+    </div>
+  </div>
+
+  <script>
+    let currentPage = 1;
+    let pageSize = 10;
+    let totalOrders = [];
+    let orderCache = []; // 用于缓存所有订单数据
+
+    function searchOrders() {
+      const uid = document.getElementById('uid').value;
+      const orderNumber = document.getElementById('orderNumber').value;
+
+      let url = 'https://open.rcwulian.cn/api/finance/getDrivOrder.php?';
+      if (uid) url += `uid=${encodeURIComponent(uid)}&`;
+      if (orderNumber) url += `order_number=${encodeURIComponent(orderNumber)}`;
+
+      fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          if (data.code === 0) {
+            totalOrders = data.data.sort((a,b)=> new Date(b.start_time)-new Date(a.start_time));
+            orderCache = data.data;
+            displayOrders();
+          } else {
+            alert(data.msg || '查询失败');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('查询失败，请稍后重试');
+        });
+    }
+
+    function displayOrders() {
+      const container = document.getElementById('orderCardsContainer');
+      container.innerHTML = '';
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const currentPageOrders = totalOrders.slice(startIndex, endIndex);
+
+      const totalPages = Math.ceil(totalOrders.length / pageSize);
+      document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+      document.getElementById('prevPage').disabled = currentPage === 1;
+      document.getElementById('nextPage').disabled = currentPage === totalPages;
+
+      currentPageOrders.forEach(order => {
+        const card = document.createElement('div');
+        card.className = 'order-card';
+
+        const statusClass = order.status === '已完成' ? 'status-completed' : 'status-pending';
+
+        // 退款按钮（默认可点；如果后端返回已有退款状态，你也可以在这里按需禁用）
+        const refundBtnHtml = `
+          <div class="order-item" style="justify-content:flex-end; border-bottom:none; padding-top:8px;">
+            <button class="form-button refund-btn"
+                    data-order-id="${order.order_id}"
+                    data-uid="${order.uid}"
+                    data-amount="${order.payment_amount ?? ''}">
+              退款
+            </button>
+          </div>`;
+
+        card.innerHTML = `
+          <div class="order-item">
+            <span class="item-label">订单编号</span>
+            <span class="item-value">${order.order_id}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">用户ID</span>
+            <span class="item-value">${order.uid}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">用户昵称</span>
+            <span class="item-value">${order.nickname}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">设备ID</span>
+            <span class="item-value">${order.serial_number}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">订单状态</span>
+            <span class="item-value status-badge ${statusClass}">${order.status}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">驾驶场地</span>
+            <span class="item-value">${order.venue_name}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">可驾驶时长</span>
+            <span class="item-value">${order.billing_rules}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">支付类型</span>
+            <span class="item-value">${order.pays_type}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">支付金额</span>
+            <span class="item-value">¥ ${parseFloat(order.payment_amount || 0).toFixed(2)}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">驾驶开始时间</span>
+            <span class="item-value">${order.start_time}</span>
+          </div>
+          <div class="order-item">
+            <span class="item-label">驾驶结束时间</span>
+            <span class="item-value">${order.end_time}</span>
+          </div>
+          ${refundBtnHtml}
+        `;
+        container.appendChild(card);
+      });
+
+      // 绑定退款按钮事件
+      document.querySelectorAll('.refund-btn').forEach(btn => {
+        btn.addEventListener('click', onRefundClick);
+      });
+    }
+
+    // 在加载页面时获取所有订单数据,用于联想查询
+    fetch('https://open.rcwulian.cn/api/finance/getDrivOrder.php')
+      .then(r => r.json())
+      .then(data => { if (data.code === 0) orderCache = data.data; });
+
+    function updateSuggestions(searchText) {
+      const suggestionsDiv = document.getElementById('suggestions');
+      suggestionsDiv.innerHTML = '';
+      if (searchText.length < 3) { suggestionsDiv.style.display = 'none'; return; }
+
+      const matched = orderCache
+        .filter(o => String(o.order_id).includes(searchText))
+        .slice(0, 10);
+
+      if (!matched.length) { suggestionsDiv.style.display='none'; return; }
+
+      matched.forEach(order => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        const orderNumber = order.order_id;
+        const highlighted = orderNumber.replace(
+          new RegExp(searchText, 'g'),
+          `<span style="color: var(--primary); font-weight: bold;">${searchText}</span>`
+        );
+        div.innerHTML = highlighted;
+        div.addEventListener('click', () => {
+          document.getElementById('orderNumber').value = order.order_id;
+          suggestionsDiv.style.display = 'none';
+          searchOrders();
+        });
+        suggestionsDiv.appendChild(div);
+      });
+      suggestionsDiv.style.display = 'block';
+    }
+
+    const orderInput = document.getElementById('orderNumber');
+    const suggestionsDiv = document.getElementById('suggestions');
+    let debounceTimer;
+    orderInput.addEventListener('input', (e) => {
+      const value = e.target.value.trim();
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(()=> updateSuggestions(value), 300);
+    });
+    document.addEventListener('click', (e) => {
+      if (!orderInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+        suggestionsDiv.style.display = 'none';
+      }
+    });
+
+    function highlightItem(items, index) {
+      Array.from(items).forEach((item, idx) => {
+        item.style.backgroundColor = (idx === index) ? '#f0f3ff' : '';
+      });
+    }
+
+    document.getElementById('prevPage').addEventListener('click', () => {
+      if (currentPage > 1) { currentPage--; displayOrders(); }
+    });
+    document.getElementById('nextPage').addEventListener('click', () => {
+      const totalPages = Math.ceil(totalOrders.length / pageSize);
+      if (currentPage < totalPages) { currentPage++; displayOrders(); }
+    });
+
+    /** ====== 自定义弹窗收集退款原因（必填，iOS Safari 兼容） ====== */
+    function askReason(orderId) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('reasonModal');
+        const orderText = document.getElementById('reasonOrderText');
+        const input = document.getElementById('reasonInput');
+        const err = document.getElementById('reasonError');
+        const okBtn = document.getElementById('reasonOkBtn');
+        const cancelBtn = document.getElementById('reasonCancelBtn');
+
+        orderText.textContent = `订单：${orderId}`;
+        input.value = '';
+        err.style.display = 'none';
+        modal.style.display = 'flex';
+        setTimeout(()=> input.focus(), 50); // iOS Safari
+
+        function cleanup() {
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          modal.removeEventListener('click', onBackdrop);
+        }
+        function onOk() {
+          const val = (input.value || '').trim();
+          if (!val) { err.style.display='block'; return; }
+          modal.style.display = 'none'; cleanup(); resolve(val);
+        }
+        function onCancel() { modal.style.display='none'; cleanup(); resolve(null); }
+        function onBackdrop(e){ if (e.target === modal) onCancel(); }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onBackdrop);
+      });
+    }
+
+    async function onRefundClick(e) {
+      const btn = e.currentTarget;
+      const orderId = btn.getAttribute('data-order-id');
+      const uid = parseInt(btn.getAttribute('data-uid'), 10);
+      const rawAmt = (btn.getAttribute('data-amount') || '').trim();
+      const refundAmount = rawAmt === '' ? null : Number(parseFloat(rawAmt).toFixed(2));
+
+      // 1) 弹窗必填原因
+      const reason = await askReason(orderId);
+      if (reason === null) return;
+
+      // 2) 二次确认
+      if (!confirm(`确认提交退款记录？\n订单：${orderId}\n金额：${refundAmount ?? '（未填写）'}\n原因：${reason}`)) return;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        const resp = await fetch('/api/finance/addRefundRecord.php', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          credentials: 'include',
+          body: JSON.stringify({
+            order_id: orderId,
+            uid: uid,
+            refund_amount: refundAmount,
+            reason: reason
+          })
+        });
+        const data = await resp.json();
+
+        if (data.code === 0) {
+          alert('已记录退款');
+          btn.textContent = '已退款';
+          btn.disabled = true;
+        } else if (data.code === 3001) {
+          alert('该订单已推送过退款或写入失败');
+          btn.textContent = '已退款';
+          btn.disabled = true;
+        } else if (data.code === 2004) {
+          alert('原因不能为空');
+          btn.textContent = '退款';
+          btn.disabled = false;
+        } else if (data.code === 1001) {
+          alert('请先登录后再操作');
+          btn.textContent = '退款';
+          btn.disabled = false;
+        } else if (data.code === 1002) {
+          alert('权限不足，无法退款');
+          btn.textContent = '退款';
+          btn.disabled = false;
+        } else {
+          alert(data.msg || '提交失败');
+          btn.textContent = '退款';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        console.error(err);
+        alert('网络异常，稍后再试');
+        btn.textContent = '退款';
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+  <!-- 退款原因弹窗（放在 body 末尾，保证覆盖所有内容） -->
+  <div class="modal" id="reasonModal">
+    <div class="modal-content">
+      <div style="font-size:16px; font-weight:600; margin-bottom:8px;">填写退款原因</div>
+      <div style="font-size:13px; color:#666; margin-bottom:8px;" id="reasonOrderText"></div>
+      <textarea id="reasonInput" rows="4" placeholder="请输入退款原因（必填）"
+                style="width:100%; box-sizing:border-box; padding:8px; border:1px solid #ddd; border-radius:6px; resize:vertical;"></textarea>
+      <div id="reasonError" style="color:#e5484d; font-size:12px; margin-top:6px; display:none;">原因不能为空</div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+        <button id="reasonCancelBtn" class="form-button" style="background:#eee; color:#333;">取消</button>
+        <button id="reasonOkBtn" class="form-button">确定</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

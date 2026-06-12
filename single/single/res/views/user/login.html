@@ -1,0 +1,85 @@
+<script type="text/html" template>
+  <link rel="stylesheet" href="{{ layui.setter.paths.core }}css/login.css?v={{ layui.admin.v }}" media="all">
+</script>
+
+
+<div class="layadmin-user-login layadmin-user-display-show" id="LAY-user-login" style="display: none;">
+
+  <div class="layadmin-user-login-main">
+    <div class="layadmin-user-login-box layadmin-user-login-header">
+      <h2>rc物联管理后台</h2>
+      <p> </p>
+    </div>
+    <div class="layadmin-user-login-box layadmin-user-login-body layui-form">
+      <div class="layui-form-item">
+        <label class="layadmin-user-login-icon layui-icon layui-icon-username" for="LAY-user-login-username"></label>
+        <input type="text" name="username" id="LAY-user-login-username" lay-verify="required" placeholder="手机号" class="layui-input">
+      </div>
+      <div class="layui-form-item">
+        <label class="layadmin-user-login-icon layui-icon layui-icon-password" for="LAY-user-login-password"></label>
+        <input type="password" name="password" id="LAY-user-login-password" lay-verify="required" placeholder="密码" class="layui-input">
+      </div>
+      
+      <div class="layui-form-item">
+        <button class="layui-btn layui-btn-fluid" lay-submit lay-filter="LAY-user-login-submit">登 入</button>
+      </div>
+      
+    </div>
+  </div>
+  
+  <div class="layui-trans layadmin-user-login-footer">
+    
+    <p>© All Rights Reserved</p>
+  </div>
+  
+
+  
+</div>
+
+<script>
+layui.use(['admin', 'form'], function(){
+  var $ = layui.$
+  ,admin = layui.admin
+  ,form = layui.form;
+
+  // 初始化表单
+  form.render();
+
+  // 提交登录表单的逻辑
+  form.on('submit(LAY-user-login-submit)', function(obj){
+    // 发起请求到后端登录接口
+    admin.req({
+      url: '/api/login/login.php', // 更改为后端真实的登录处理接口
+      method: 'post',
+      data: obj.field,
+      done: function(res){
+        // 根据后端返回结果处理
+        if (res.code === 0) { // 成功的状态码
+          // 登录成功，写入 access_token 到 layui localStorage
+          layui.data('layuiAdmin', {
+            key: 'access_token',
+            value: res.data.access_token,
+            expire: Date.now() + 60 * 12 * 60 * 1000 // 设置过期时间为当前时间+1小时（单位为毫秒）
+          });
+
+          // 登入成功的提示与跳转
+          layer.msg('登录成功，即将跳转...', {
+            offset: '15px',
+            icon: 1,
+            time: 1000
+          }, function(){
+            location.hash = '/'; // 根据需要修改跳转的首页地址
+          });
+        } else {
+          // 登录失败，显示错误信息
+          layer.msg(res.msg, {icon: 2}); // 使用返回的错误消息
+        }
+      }
+    });
+
+    // 阻止表单提交事件
+    return false;
+  });
+
+});
+</script>

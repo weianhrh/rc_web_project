@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>能量赠送记录</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    /* 引用你提供的完整样式 */
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 20px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      text-align: left;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .filter-row label {
+      font-size: 14px;
+      color: var(--secondary);
+    }
+
+    .filter-row select,
+    .filter-row input {
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      min-width: 160px;
+      font-size: 14px;
+    }
+
+    .filter-row input:focus,
+    .filter-row select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    .btn:hover {
+      background-color: #4a77e4;
+    }
+
+    .btn.secondary {
+      background-color: #eee;
+      color: var(--text-color);
+    }
+
+    .btn.secondary:hover {
+      background-color: #ddd;
+    }
+
+    .venue-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      display: flex;
+      gap: 15px;
+      transition: var(--transition);
+    }
+
+    .venue-card:hover {
+      background-color: var(--hover-bg);
+    }
+
+    .venue-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    .venue-info .venue-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .venue-info span {
+      display: block;
+    }
+
+    .venue-actions {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding-left: 15px;
+      gap: 8px;
+      min-width: 120px;
+      text-align: right;
+      font-size: 13px;
+      color: var(--secondary);
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      color: var(--primary);
+      padding: 20px;
+    }
+
+    .empty {
+      text-align: center;
+      font-size: 14px;
+      color: var(--secondary);
+      padding: 20px 0;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--secondary);
+    }
+
+    .pagination .left,
+    .pagination .right {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* modal 样式（留着以后用详情弹窗） */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 30px 20px;
+      border-radius: 12px;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      transition: border-color 0.3s;
+    }
+
+    .modal-content input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+      .filter-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .venue-card {
+        flex-direction: column;
+      }
+      .venue-actions {
+        align-items: flex-start;
+        text-align: left;
+        padding-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- 筛选卡片 -->
+  <div class="card">
+    <div class="card-title">能量赠送记录</div>
+    <div class="filter-row">
+      <label for="venue_id">场地：</label>
+      <select id="venue_id">
+        <option value="">全部场地</option>
+      </select>
+
+      <label for="user_id">用户 UID：</label>
+      <input type="number" id="user_id" placeholder="可选，输入用户 uid">
+
+      <button class="btn" id="searchBtn">查询</button>
+      <button class="btn secondary" id="resetBtn">重置</button>
+    </div>
+  </div>
+
+  <!-- 列表卡片 -->
+  <div class="card">
+    <div id="recordsContainer">
+      <div class="loading">正在加载记录…</div>
+    </div>
+    <div class="pagination" id="pagination" style="display:none;">
+      <div class="left">
+        <button class="btn secondary" id="prevPage">上一页</button>
+        <button class="btn secondary" id="nextPage">下一页</button>
+      </div>
+      <div class="right">
+        <span id="pageInfo"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const API_URL = 'https://open.rcwulian.cn/api/operat/EnergyGift.php'; // 如放同域可改为 '/api/operat/EnergyGift.php'
+
+    const venueSelect     = document.getElementById('venue_id');
+    const userIdInput     = document.getElementById('user_id');
+    const searchBtn       = document.getElementById('searchBtn');
+    const resetBtn        = document.getElementById('resetBtn');
+    const recordsContainer= document.getElementById('recordsContainer');
+    const pagination      = document.getElementById('pagination');
+    const prevPageBtn     = document.getElementById('prevPage');
+    const nextPageBtn     = document.getElementById('nextPage');
+    const pageInfo        = document.getElementById('pageInfo');
+    const venueMap = {};  // id -> venue_name
+    let currentPage = 1;
+    const pageSize  = 20;
+    let total       = 0;
+
+    // 加载场地列表（用你原来的 get_venues 思路）
+function loadVenues() {
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', API_URL, true);
+  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  xhr.withCredentials = true;
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response.code === 0 && Array.isArray(response.data)) {
+            const data = response.data;
+            data.forEach(venue => {
+              const option = document.createElement('option');
+              option.value = venue.id;
+              option.textContent = `${venue.id} - ${venue.venue_name}`;
+              venueSelect.appendChild(option);
+
+              // ⭐ 这里把 id -> name 存起来
+              venueMap[venue.id] = venue.venue_name;
+            });
+          }
+        } catch (e) {
+          console.error('解析场地列表失败', e);
+        }
+      } else {
+        console.error('获取场地失败', xhr.status, xhr.responseText);
+      }
+    }
+  };
+  const data = 'action=get_venues';
+  xhr.send(data);
+}
+
+
+    // 渲染记录列表
+    function renderRecords(list) {
+      if (!list || list.length === 0) {
+        recordsContainer.innerHTML = '<div class="empty">暂无记录</div>';
+        pagination.style.display = 'none';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'venue-card';
+
+        const info = document.createElement('div');
+        info.className = 'venue-info';
+
+  const venueName = document.createElement('div');
+venueName.className = 'venue-name';
+
+let vn = item.venue_name;
+
+// 如果后端没给名字 / 给的是“未知场地”，就用前面下拉里的场地名
+if (!vn || vn === '未知场地') {
+  const vid = item.venue_id;
+  if (vid && venueMap[vid]) {
+    vn = venueMap[vid];
+  } else {
+    vn = '未知场地';
+  }
+}
+
+venueName.textContent = `${vn}（ID: ${item.venue_id}）`;
+
+
+        const userSpan    = document.createElement('span');
+        userSpan.textContent = `用户 UID：${item.user_uid}`;
+
+        const changeSpan  = document.createElement('span');
+        changeSpan.textContent = `变动能量：${item.energy_change}`;
+
+        const beforeAfter = document.createElement('span');
+        beforeAfter.textContent = `变动前：${item.balance_before_change} / 变动后：${item.balance_after_change}`;
+
+        const reasonSpan  = document.createElement('span');
+        reasonSpan.textContent = `原因：${item.reason || ''}`;
+
+        const timeSpan    = document.createElement('span');
+        timeSpan.textContent = `时间：${item.created_at || ''}`;
+
+        info.appendChild(venueName);
+        info.appendChild(userSpan);
+        info.appendChild(changeSpan);
+        info.appendChild(beforeAfter);
+        info.appendChild(reasonSpan);
+        info.appendChild(timeSpan);
+
+        const actions = document.createElement('div');
+        actions.className = 'venue-actions';
+        const idSpan = document.createElement('span');
+        idSpan.textContent = `记录ID：${item.id}`;
+        actions.appendChild(idSpan);
+
+        card.appendChild(info);
+        card.appendChild(actions);
+        frag.appendChild(card);
+      });
+
+      recordsContainer.innerHTML = '';
+      recordsContainer.appendChild(frag);
+
+      // 更新分页
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      pagination.style.display = 'flex';
+      pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页，共 ${total} 条`;
+
+      prevPageBtn.disabled = currentPage <= 1;
+      nextPageBtn.disabled = currentPage >= totalPages;
+    }
+
+    // 加载赠送记录（参考你给的 fetch FormData 写法）
+    function loadGiftRecords(page = 1) {
+      currentPage = page;
+      recordsContainer.innerHTML = '<div class="loading">正在加载记录…</div>';
+
+      const formData = new FormData();
+      formData.append('action', 'get_gift_records');
+      formData.append('page', currentPage);
+      formData.append('page_size', pageSize);
+
+      const selectedVenueId = venueSelect.value;
+      const searchUid       = userIdInput.value.trim();
+
+      if (selectedVenueId) {
+        formData.append('venue_id', selectedVenueId);
+      }
+      if (searchUid) {
+        formData.append('user_id', searchUid);
+      }
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'  // 带上 cookie（session_token）
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.code === 0 && res.data) {
+            total = res.data.total || 0;
+            renderRecords(res.data.list || []);
+          } else {
+            recordsContainer.innerHTML = '<div class="empty">加载失败：' + (res.msg || '未知错误') + '</div>';
+            pagination.style.display = 'none';
+          }
+        })
+        .catch(err => {
+          console.error('获取记录异常', err);
+          recordsContainer.innerHTML = '<div class="empty">请求异常，请稍后重试</div>';
+          pagination.style.display = 'none';
+        });
+    }
+
+    // 事件绑定
+    searchBtn.addEventListener('click', function () {
+      loadGiftRecords(1);
+    });
+
+    resetBtn.addEventListener('click', function () {
+      venueSelect.value = '';
+      userIdInput.value = '';
+      loadGiftRecords(1);
+    });
+
+    prevPageBtn.addEventListener('click', function () {
+      if (currentPage > 1) {
+        loadGiftRecords(currentPage - 1);
+      }
+    });
+
+    nextPageBtn.addEventListener('click', function () {
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage < totalPages) {
+        loadGiftRecords(currentPage + 1);
+      }
+    });
+
+    // 初始化：先拉场地，再拉记录
+    loadVenues();
+    loadGiftRecords(1);
+  });
+</script>
+</body>
+</html>

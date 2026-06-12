@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>导航栏管理</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.7.6/dist/css/layui.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"> <!-- 加这行 -->
+  
+  <style>
+    body {
+      background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+      padding: 20px;
+      font-family: "PingFang SC", system-ui;
+    }
+    .card {
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .card-title {
+      font-size: 20px;
+      color: #333;
+      font-weight: bold;
+      border-bottom: 2px solid #5b8cff;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      display: flex;
+      flex-wrap: wrap; /* ⬅ 允许换行 */
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .nav-item {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: box-shadow 0.2s ease;
+    }
+    
+    .nav-item:hover {
+      background: #fefefe;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    .drag-handle {
+      font-size: 20px;
+      color: #aaa;
+      text-align: center;
+      user-select: none;
+    }
+
+    .nav-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .nav-info small {
+      font-size: 13px;
+      color: #666;
+      white-space: nowrap;      /* 不换行 */
+      overflow: hidden;         /* 溢出隐藏 */
+      text-overflow: ellipsis;  /* 尾部省略号 */
+      max-width: 100%;          /* 防止撑出父容器 */
+      display: block;           /* 保证能应用 ellipsis */
+    }
+
+    .nav-actions button {
+      margin-left: 6px;
+    }
+    .edit-btn {
+      background-color: #5b8cff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 14px;
+      white-space: nowrap;  /* ⬅ 避免按钮换行 */
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .edit-btn:hover {
+      background-color: #4a77e4;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .modal-content input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    #iconSuggestions li:hover {
+      background-color: #f0f0f0;
+    }
+    @media (max-width: 480px) {
+      .nav-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    
+      .nav-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+    
+      .edit-btn {
+        flex: 1 1 30%;
+      }
+      .nav-info small {
+        display: none;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      导航配置：
+      <button class="edit-btn" onclick="switchTab('navItems')">平台</button>
+      <button class="edit-btn" onclick="switchTab('navItems2')">代理商</button>
+    </div>
+    <button class="edit-btn" onclick="openModal(currentTab)">➕ 添加</button>
+  </div>
+  <div id="navItems" class="nav-list"></div>
+  <div id="navItems2" class="nav-list" style="display: none;"></div>
+</div>
+
+
+<div class="modal" id="editModal" onclick="closeModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <input type="hidden" id="modalName">
+    <input type="hidden" id="modalIndex">
+    <input id="modalLabel" placeholder="菜单名">
+    <input id="modalHref" placeholder="跳转链接">
+    <input id="modalIcon" placeholder="图标类名，如 fa-car 支持模糊输入预览图标">
+    <div id="iconPreview" style="font-size: 20px; margin-top: 4px;"></div>
+    <ul id="iconSuggestions" style="margin: 0; padding: 0; list-style: none; border: 1px solid #ccc; border-radius: 6px; max-height: 120px; overflow-y: auto; display: none;"></ul>
+
+    <button class="edit-btn" onclick="submitModal()">提交</button>
+    <button class="edit-btn" style="background:#ccc;color:#000" onclick="closeModal()">取消</button>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+let currentTab = 'navItems'; // 默认显示平台
+
+let navData = { navItems: [], navItems2: [] };
+
+async function loadNavJSON(name, file) {
+  const res = await fetch(file);
+  navData[name] = await res.json();
+  renderNavList(name);
+}
+function switchTab(tabName) {
+  currentTab = tabName;
+  document.getElementById('navItems').style.display = tabName === 'navItems' ? 'block' : 'none';
+  document.getElementById('navItems2').style.display = tabName === 'navItems2' ? 'block' : 'none';
+}
+
+function renderNavList(name) {
+  const list = document.getElementById(name);
+  list.innerHTML = '';
+  navData[name].forEach((item, newIndex) => {
+  const row = document.createElement('div');
+  row.className = 'nav-item';
+  row.setAttribute('data-index', newIndex); // ✅ 使用新顺序下标
+  row.innerHTML = `
+    <div class="drag-handle" style="cursor: move; margin-right: 10px;">☰</div>
+    <div class="nav-info">
+      <strong>${item.label || item.title || '未命名'}</strong>
+      <small>${item.id} | ${item.icon} | ${item.href}</small>
+    </div>
+    <div class="nav-actions">
+      <button class="edit-btn" onclick="openModal('${name}', ${newIndex})">编辑</button>
+      <button class="edit-btn" style="background:#f44336" onclick="deleteItem('${name}', ${newIndex})">删除</button>
+    </div>`;
+      list.appendChild(row);
+    });
+
+}
+async function saveNavData() {
+  const res = await fetch('/api/operat/save_nav_config.php', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(navData)
+  });
+  const result = await res.json();
+  if (result.code === 0) {
+    console.log('✅ 保存成功');
+  } else {
+    alert('❌ 保存失败：' + result.msg);
+  }
+//   if (saveBtn) saveBtn.disabled = false;
+}
+
+function openModal(name, index = -1) {
+  document.getElementById('modalName').value = name;
+  document.getElementById('modalIndex').value = index;
+  const item = navData[name][index] || {};
+  document.getElementById('modalLabel').value = item.label || item.title || '';
+  document.getElementById('modalHref').value = item.href || '';
+//   document.getElementById('modalIcon').value = item.icon || '';
+//   document.getElementById('modalIcon').value = item.icon ? `fas ${item.icon}` : '';
+    const icon = item.icon || '';
+    document.getElementById('modalIcon').value =
+      /^(fas|far|fab)\s/.test(icon) ? icon : `fas ${icon}`;
+
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
+
+function submitModal() {
+  const name = document.getElementById('modalName').value;
+  const index = parseInt(document.getElementById('modalIndex').value);
+  const label = document.getElementById('modalLabel').value;
+  const href = document.getElementById('modalHref').value;
+  const icon = document.getElementById('modalIcon').value;
+
+  const newItem = {
+    id: index >= 0 ? navData[name][index].id : 'item_' + Date.now(),
+    label,
+    title: label,
+    href,
+    page: href,
+    icon
+  };
+
+  if (index >= 0) navData[name][index] = newItem;
+  else navData[name].push(newItem);
+
+  closeModal();
+  renderNavList(name);
+  saveNavData();
+}
+function deleteItem(name, index) {
+  if (confirm('确定删除该菜单？')) {
+    navData[name].splice(index, 1);
+    renderNavList(name);
+    saveNavData();
+  }
+}
+
+
+
+loadNavJSON('navItems', '/res/navItems.json').then(() => enableDragSort('navItems'));
+loadNavJSON('navItems2', '/res/navItems2.json').then(() => enableDragSort('navItems2'));
+
+let allIcons = [];
+
+async function fetchFontAwesomeIcons() {
+  try {
+    const res = await fetch('/res/fontawesome-icons.json');
+    const data = await res.json();
+    // 只取支持 solid 的图标，拼接为 fa-xxx
+    allIcons = Object.keys(data)
+      .filter(key => data[key].styles.includes('solid'))
+      .map(key => `fa-${key}`);
+    console.log(`✅ 已加载 Font Awesome 图标 ${allIcons.length} 个`);
+  } catch (err) {
+    console.error('❌ 图标加载失败：', err);
+  }
+}
+
+fetchFontAwesomeIcons();
+const iconInput = document.getElementById('modalIcon');
+const suggestionsBox = document.getElementById('iconSuggestions');
+const iconPreview = document.getElementById('iconPreview');
+
+iconInput.addEventListener('input', () => {
+  const val = iconInput.value.replace(/^fas\s*/, '').toLowerCase();
+
+  if (!val) {
+    suggestionsBox.style.display = 'none';
+    iconPreview.innerHTML = '';
+    return;
+  }
+
+  // 实时预览
+  iconPreview.innerHTML = `<i class="fas ${val}"></i>`;
+
+  // 搜索匹配
+  const suggestions = allIcons.filter(icon => icon.includes(val)).slice(0, 15); // 限制最多15项
+  suggestionsBox.innerHTML = suggestions.map(icon => `
+    <li style="padding:6px; cursor:pointer" onclick="selectIcon('${icon}')">
+      <i class="fas ${icon}"></i> ${icon}
+    </li>
+  `).join('');
+  suggestionsBox.style.display = suggestions.length ? 'block' : 'none';
+});
+
+function selectIcon(icon) {
+  iconInput.value = `fas ${icon}`;
+  iconPreview.innerHTML = `<i class="fas ${icon}"></i>`;
+  suggestionsBox.style.display = 'none';
+}
+let sortableInstances = {}; // 存储每个 tab 的 sortable 实例
+
+function enableDragSort(name) {
+  const list = document.getElementById(name);
+  // 若已存在 sortable 实例，则销毁
+  if (sortableInstances[name]) {
+    sortableInstances[name].destroy();
+  }
+  // 创建新的 sortable 实例
+  sortableInstances[name] = new Sortable(list, {
+    animation: 150,
+    handle: '.drag-handle',
+    onEnd: function (evt) {
+      const newOrder = Array.from(list.children).map(el => parseInt(el.getAttribute('data-index')));
+      navData[name] = newOrder.map(i => navData[name][i]);
+      renderNavList(name); // 重新渲染（会重建 DOM）
+      enableDragSort(name); // 重新绑定拖拽
+      saveNavData(); // 保存
+    }
+  });
+}
+  // 禁用文字选中
+  document.addEventListener('selectstart', e => e.preventDefault());
+</script>
+
+</body>
+</html>

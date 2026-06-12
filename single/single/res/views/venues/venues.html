@@ -1,0 +1,97 @@
+<title>场地列表</title>
+  
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>场地</cite></a>
+    <a><cite>场地列表</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="layadmin-venue-formlist">
+      <div class="layui-form-item">
+        <!-- 任何需要的搜索字段 -->
+        <div class="layui-inline">
+          <label class="layui-form-label">场地名称</label>
+          <div class="layui-input-block">
+            <input type="text" name="venue_name" placeholder="请输入场地名称" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-venue-front-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="layui-card-body">
+      <table id="LAY-venue-manage" lay-filter="LAY-venue-manage"></table>
+      <script type="text/html" id="table-venue-list">
+        <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i>编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del"><i class="layui-icon layui-icon-delete"></i>删除</a>
+      </script>
+    </div>
+  </div>
+</div>
+
+<script>
+layui.use(['table', 'form', 'layer'], function(){
+  var table = layui.table,
+      form = layui.form,
+      layer = layui.layer;
+
+  table.render({
+    elem: '#LAY-venue-manage',
+    url: '/api/venue/getVenueList.php', // 替换为实际的后端接口
+    cols: [[
+      {type: 'checkbox', fixed: 'left'},
+      {field: 'id', width: 100, title: 'ID', sort: true},
+      {field: 'venue_name', title: '场地名称', minWidth: 100},
+      {field: 'image_url', title: '场地图片', width: 100, templet: '<div><img src="{{d.image_url}}" alt="{{d.venue_name}}" style="height: 100%; width: auto; max-width: 90px;"></div>'},
+      {field: 'venue_description', title: '描述', minWidth: 200},
+      {field: 'venue_tags', title: '标签', width: 90},
+      {field: 'venue_type', title: '类型', width: 100, sort: true},
+      {field: 'event_id', title: '活动ID', width: 100},
+      {field: 'start_time', title: '开放时间', width: 110},
+      {field: 'queue_length', title: '排队人数', width: 90},
+      {
+        field: 'venue_status', 
+        title: '状态', 
+        width: 100, 
+        templet: function(d) {
+          return d.venue_status === '营业中' ? '<span class="layui-badge layui-bg-green">营业中</span>' : '<span class="layui-badge">休息</span>';
+        }
+      },
+      {title: '操作', width: 150, align: 'center', fixed: 'right', toolbar: '#table-venue-list'}
+    ]],
+    page: true,
+    limit: 10,
+    height: 'full-220',
+    text: '对不起，加载出现异常！'
+  });
+
+  table.on('tool(LAY-venue-manage)', function(obj){
+    var data = obj.data;
+    if(obj.event === 'del'){
+      layer.confirm('真的删除行么', function(index){
+        obj.del();
+        layer.close(index);
+      });
+    } else if(obj.event === 'edit'){
+      // 编辑操作
+    }
+  });
+
+  form.on('submit(LAY-venue-front-search)', function(data){
+    var field = data.field;
+
+    // 执行重载
+    table.reload('LAY-venue-manage', {
+      where: field
+    });
+  });
+});
+</script>

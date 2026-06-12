@@ -1,0 +1,617 @@
+<!DOCTYPE html> 
+<html lang="zh-CN"> 
+ 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>加盟管理</title> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">   
+    <style> 
+        :root { 
+            --primary: #5b8cff; 
+            --secondary: #7f8fa4; 
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+        } 
+ 
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: "PingFang SC", system-ui; 
+        } 
+ 
+        body { 
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+        } 
+ 
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        } 
+ 
+        .card { 
+            background: #ffffff; 
+            border-radius: 24px; 
+            padding: 24px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 24px; 
+        } 
+ 
+        .card-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .card-title .right-buttons {
+            display: flex;
+            gap: 8px;               /* 按钮之间间距 */
+            flex-wrap: wrap;        /* 宽度不够时自动换行 */
+            align-items: center;
+        }
+
+ 
+        .pricing-item { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            margin-top: 20px; 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            grid-template-columns: 120px 1fr; 
+            gap: 12px; 
+        } 
+ 
+        .pricing-item .label { 
+            color: var(--secondary); 
+            font-size: 14px; 
+            text-align: left; 
+        } 
+ 
+        .pricing-item .value { 
+            color: #333; 
+            font-size: 16px; 
+            text-align: right; 
+        } 
+ 
+        .edit-btn, 
+        .save-btn, 
+        .delete-btn, 
+        .add-btn {
+            padding: 6px 12px;
+            background-color: #409EFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        } 
+         
+        .edit-btn, 
+        .save-btn, 
+        .add-btn,
+        .submit-btn{ 
+            background-color: var(--primary); 
+            color: white; 
+        } 
+ 
+        .delete-btn { 
+            background-color: #ff4d4f; 
+            color: white; 
+        } 
+ 
+        .edit-btn:hover, 
+        .save-btn:hover, 
+        .add-btn:hover,
+        .submit-btn:hover{ 
+            background-color: #4c6ef5; 
+        } 
+ 
+        .delete-btn:hover { 
+            background-color: #ff7875; 
+        } 
+ 
+        .edit-input { 
+            background-color: #f8f9ff; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd; 
+            width: 100%; 
+            box-sizing: border-box; 
+        } 
+ 
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0, 0, 0, 0.4); 
+        } 
+ 
+        .modal-content { 
+            background-color: #fefefe; 
+            margin: 15% auto; 
+            padding: 20px; 
+            border: 1px solid #888; 
+            width: 80%; 
+            border-radius: 12px; 
+        } 
+ 
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+        } 
+ 
+        .close:hover, 
+        .close:focus { 
+            color: black; 
+            text-decoration: none; 
+            cursor: pointer; 
+        } 
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            margin: 16px auto 0 auto;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #search-input {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            min-width: 150px;       /* PC 上不要太小 */
+            flex: 1 0 auto;         /* 在 PC 上能稍微拉伸一点 */
+        }
+
+        @media (max-width: 1080px) { 
+            .pricing-item { 
+                grid-template-columns: 1fr; 
+            } 
+        
+            /* 标题和右侧区域垂直排列 */
+            .card-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        
+            .card-title .right-buttons {
+                width: 100%;
+            }
+        
+            /* 搜索框在手机上占满一行 */
+            #search-input {
+                flex: 1 0 100%;
+                width: 100%;
+            }
+        }
+
+
+        .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: red;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 12px;
+            display: none;
+        }
+
+    </style> 
+    <script src="../../assets/translator/lang-boot.js"
+            data-base="../../assets/translator/"            
+            data-api="/api/config/get_language.php">    
+    </script>
+    <script> 
+        document.addEventListener('DOMContentLoaded', function () { 
+            // 模式：add / edit
+            let formMode = 'add';
+
+            const venueSelect   = document.getElementById('venue-select');   
+            const roleSelect    = document.getElementById('role-select');   
+            const container     = document.getElementById('list-container');  
+            const usernameInput = document.querySelector('input[name="username"]');
+            const passwordInput = document.querySelector('input[name="password"]');
+            const uidInput      = document.querySelector('input[name="uid"]');
+            const idInput       = document.getElementById('user-id');
+
+            const addBtn   = document.getElementById('add-btn');   
+            const modal    = document.getElementById('add-modal');   
+            const closeBtn = document.getElementsByClassName('close')[0];   
+
+            const keepPwWrap     = document.getElementById('keep-pw-wrap');
+            const keepPwCheckbox = document.getElementById('keep-password');
+            const pwInputWrap    = document.getElementById('pw-input-wrap');
+ 
+            // 用户名变化：仅在新增模式下自动生成密码
+            usernameInput.addEventListener('input', function () {
+                if (formMode !== 'add') return;
+
+                const phone = this.value;
+                if (/^\d{11}$/.test(phone)) {
+                    passwordInput.value = phone.slice(-6);
+                } else {
+                    passwordInput.value = '';
+                }
+            });
+
+            // 勾选「本次不修改密码」 -> 控制密码输入框显隐
+            keepPwCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    passwordInput.value = '';
+                    pwInputWrap.style.display = 'none';
+                } else {
+                    pwInputWrap.style.display = 'block';
+                }
+            });
+            
+            let fran_count = null;
+            fetch('https://open.rcwulian.cn/api/franchise/FranchiesList.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.code === 200 && Array.isArray(data.data)) {
+                        const badge = document.getElementById('franchise-count');
+                        const count = data.data.length;
+                        badge.textContent = count;
+                        fran_count = count;
+                        badge.style.display = count > 0 ? 'inline-block' : 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('获取加盟待处理数量失败', err);
+                });
+
+            // 加载加盟账号列表
+            fetch('https://open.rcwulian.cn/api/franchise/FranchiseManagement.php', { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/x-www-form-urlencoded' 
+                }, 
+                body: 'action=loadingdata' 
+            }) 
+            .then(response => response.json())   
+            .then(data => { 
+                if (data.code === 200) { 
+                    const users = data.data;   
+                    users.forEach(item => { 
+                        const pricingItem = document.createElement('div');   
+                        pricingItem.classList.add('pricing-item');   
+                        pricingItem.innerHTML = ` 
+                            <div class="label">ID</div> 
+                            <div class="value">${item.id}</div>   
+
+                            <div class="label">用户名</div> 
+                            <div class="value">${item.username}</div>   
+
+                            <div class="label">权限角色ID</div> 
+                            <div class="value">${item.role_id}</div>   
+
+                            <div class="label">场地名称</div> 
+                            <div class="value">${item.venue_name}</div>   
+
+                            <div class="label">绑定的场地ID</div> 
+                            <div class="value">${item.venue_id}</div>   
+
+                            <div class="label">绑定的用户uid</div> 
+                            <div class="value">${item.uid}</div>   
+
+                            <div class="label">创建时间</div> 
+                            <div class="value">${item.created_at}</div>   
+
+                            <div class="label">更新时间</div> 
+                            <div class="value">${item.updated_at}</div>   
+
+                            <div class="label">操作</div>
+                            <div class="value">
+                                <button 
+                                    class="edit-btn"
+                                    data-id="${item.id}"
+                                    data-username="${item.username}"
+                                    data-role_id="${item.role_id}"
+                                    data-venue_id="${item.venue_id}"
+                                    data-uid="${item.uid || ''}"
+                                >编辑</button>
+                            </div>
+                        `; 
+                        container.appendChild(pricingItem);   
+                    }); 
+ 
+                    // 填充场地下拉框选项 
+                    fetch('https://open.rcwulian.cn/api/franchise/FranchiseManagement.php', { 
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/x-www-form-urlencoded' 
+                        }, 
+                        body: 'action=get_venues' 
+                    }) 
+                    .then(response => response.json())   
+                    .then(venueData => { 
+                        if (venueData.code === 200) { 
+                            const venues = venueData.data;  
+                            venues.sort((a, b) => b.id - a.id);
+                            venues.forEach(item => { 
+                                const option = document.createElement('option');   
+                                option.value = item.id;   
+                                option.textContent = `${item.id}-${item.venue_name}`;   
+                                venueSelect.appendChild(option);   
+                            }); 
+                                                     // ✅ 默认选中最新场地
+                            if (venues.length > 0) {
+                                venueSelect.value = String(venues[0].id);
+                             }
+                        } else { 
+                            console.error(venueData.msg);   
+                        } 
+                    }) 
+                    .catch(error => { 
+                        console.error('请求出错:', error); 
+                    }); 
+ 
+                    // 填充角色下拉框选项 
+                    fetch('https://open.rcwulian.cn/api/franchise/FranchiseManagement.php', { 
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/x-www-form-urlencoded' 
+                        }, 
+                        body: 'action=get_role' 
+                    }) 
+                    .then(response => response.json())   
+                    .then(roleData => { 
+                        if (roleData.code === 200) { 
+                            const roles = roleData.data;   
+                            roles.forEach(item => { 
+                                const option = document.createElement('option');   
+                                option.value = item.id;   
+                                option.textContent = item.role_name;   
+                                roleSelect.appendChild(option);   
+                            }); 
+                             // ✅ 默认选中代理商（假设 id = 3）
+                             roleSelect.value = '3';
+                        } else { 
+                            console.error(roleData.msg);   
+                        } 
+                    }) 
+                    .catch(error => { 
+                        console.error('请求出错:', error); 
+                    }); 
+                } else { 
+                    console.error(data.msg);   
+                } 
+            }) 
+            .catch(error => { 
+                console.error('请求出错:', error); 
+            }); 
+ 
+
+            // 打开「新增」弹窗 
+         addBtn.onclick = function () { 
+    formMode = 'add';
+
+    idInput.value = '';
+    usernameInput.value = '';
+    passwordInput.value = '';
+    uidInput.value = '';
+
+    // 再保险设一次默认
+    if (roleSelect.options.length > 0) {
+        roleSelect.value = '3';  // 代理商
+    }
+    if (venueSelect.options.length > 0) {
+        // 选第一个 option（你前面已经把 venues 按 id 倒序排了）
+        venueSelect.value = venueSelect.options[0].value;
+    }
+
+    keepPwWrap.style.display = 'none';
+    keepPwCheckbox.checked = false;
+    pwInputWrap.style.display = 'block';
+    passwordInput.required = true;
+
+    modal.style.display = "block"; 
+};
+
+ 
+            closeBtn.onclick = function () { 
+                modal.style.display = "none"; 
+            }; 
+ 
+            window.onclick = function (event) { 
+                if (event.target === modal) { 
+                    modal.style.display = "none"; 
+                } 
+            }; 
+
+            // 列表中的编辑按钮（事件委托）
+            container.addEventListener('click', function (e) {
+                const btn = e.target.closest('.edit-btn');
+                if (!btn) return;
+
+                formMode = 'edit';
+
+                const id        = btn.getAttribute('data-id');
+                const username  = btn.getAttribute('data-username');
+                const role_id   = btn.getAttribute('data-role_id');
+                const venue_id  = btn.getAttribute('data-venue_id');
+                const uid       = btn.getAttribute('data-uid');
+
+                idInput.value        = id || '';
+                usernameInput.value  = username || '';
+                passwordInput.value  = ''; // 不回显旧密码
+                uidInput.value       = uid || '';
+
+                roleSelect.value  = role_id || '';
+                venueSelect.value = venue_id || '';
+
+                // 编辑：默认不修改密码 -> 显示勾选 + 勾上 + 隐藏输入框
+                keepPwWrap.style.display = 'block';
+                keepPwCheckbox.checked = true;
+                pwInputWrap.style.display = 'none';
+                passwordInput.required = false;
+
+                modal.style.display = "block";
+            });
+ 
+            // 提交表单：新增 or 更新
+            const addForm = document.getElementById('add-form');   
+            addForm.onsubmit = function (event) { 
+                event.preventDefault();   
+                const formData = new FormData(addForm); 
+
+                if (formMode === 'edit') {
+                    formData.append('action', 'updateuser');
+                } else {
+                    formData.append('action', 'adduser');
+                }
+                
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+                
+                fetch('https://open.rcwulian.cn/api/franchise/FranchiseManagement.php', { 
+                    method: 'POST', 
+                    body: formData 
+                }) 
+                .then(response => response.json())   
+                .then(data => { 
+                    console.log('服务器响应:', data); 
+                    if (data.code === 0) { 
+                        alert((formMode === 'edit' ? '更新成功：' : '添加成功：') + JSON.stringify(data));   
+                        location.reload();   
+                    } else { 
+                        alert((formMode === 'edit' ? '更新失败：' : '添加失败：') + JSON.stringify(data));   
+                    } 
+                }) 
+                .catch(error => { 
+                    console.error('请求出错:', error); 
+                    alert('请求出错：' + error.message);
+                }); 
+            }; 
+ 
+            roleSelect.addEventListener('change', function() { 
+                const selectedRoleId = this.value;  
+                console.log('选中的权限角色 ID:', selectedRoleId); 
+            }); 
+ 
+            venueSelect.addEventListener('change', function() { 
+                const selectedVenueId = this.value;  
+                console.log('选中的场地 ID:', selectedVenueId); 
+            }); 
+            // =============================
+            // 🔍 模糊搜索功能
+            // =============================
+            const searchInput = document.getElementById('search-input');
+            
+            searchInput.addEventListener('input', function () {
+                const keyword = this.value.trim().toLowerCase();
+    
+                // ✅ 改成只在列表容器里找卡片：
+                const items = container.querySelectorAll('.pricing-item');
+            
+                items.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    if (text.includes(keyword)) {
+                        item.style.display = 'grid';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+
+        }); 
+    </script> 
+</head> 
+ 
+<body> 
+    <div class="container"> 
+        <div class="card"> 
+            <div class="card-title">
+                <div>加盟管理</div>
+                <div class="right-buttons">
+                    <button id="add-btn" class="add-btn">添加</button> 
+                    <button id="apply-btn" class="add-btn" onclick="window.location.href='FranchiseList.html'" style="position: relative;">
+                        加盟申请
+                        <span id="franchise-count" class="badge" style="display:none;">0</span>
+                    </button>
+                
+                    <!-- 🔍 模糊搜索框 -->
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="搜索用户名 / 场地 / UID ..." 
+                  
+                    >
+                </div>
+
+            </div>
+            <div id="list-container"></div> 
+        </div> 
+    </div> 
+ 
+    <!-- 添加 / 编辑 加盟商弹窗 --> 
+    <div id="add-modal" class="modal"> 
+        <div class="modal-content"> 
+            <span class="close">&times;</span> 
+            <h2>加盟商信息</h2> 
+            <form id="add-form" method="post"> 
+                <input type="hidden" name="id" id="user-id">
+
+                <div class="pricing-item"> 
+                    <div class="label">用户名</div> 
+                    <input type="text" name="username" class="edit-input" required> 
+                </div> 
+
+                <div class="pricing-item">
+                    <div class="label">密码</div>
+                    <div class="value" style="text-align:left;">
+                        <div style="font-size:13px;color:#999;margin-bottom:6px;">
+                            密码为不可逆加密存储，设置后编辑修改时无法查看明文，只能修改为新的密码。
+                        </div>
+
+                        <label id="keep-pw-wrap" style="font-size:14px;color:#666;display:none;">
+                            <input type="checkbox" id="keep-password" checked style="margin-right:4px;">
+                            本次不修改密码
+                        </label>
+
+                        <div id="pw-input-wrap" style="margin-top:8px;position:relative;">
+                            <input type="password" name="password" class="edit-input" id="password-input">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pricing-item"> 
+                    <div class="label">权限角色</div> 
+                    <select id="role-select" name="role" class="edit-input"></select> 
+                </div> 
+
+                <div class="pricing-item"> 
+                    <div class="label">绑定场地</div> 
+                    <select id="venue-select" name="venue_id" class="edit-input"></select> 
+                </div> 
+
+                <div class="pricing-item"> 
+                    <div class="label">绑定的用户 uid</div> 
+                    <input type="text" name="uid" class="edit-input"> 
+                </div> 
+
+                <button type="submit" class="submit-btn">提交</button> 
+            </form> 
+        </div> 
+    </div> 
+</body> 
+ 
+</html>

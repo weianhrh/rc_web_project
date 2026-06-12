@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>金币套餐管理</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --line: #e9eef5;
+      --line-soft: #eef2f7;
+      --text: #1f2937;
+      --text-strong: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-soft: #eef4ff;
+      --danger: #ef4444;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --danger-bg: #ffe4e6;
+      --danger-text: #9f1239;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      --radius: 16px;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: var(--text-strong);
+      letter-spacing: -0.02em;
+    }
+
+    .page-desc {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-strong);
+    }
+
+    .btn {
+      height: 38px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      transition: .18s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-gray { background: #e2e8f0; color: #334155; }
+    .btn-red { background: var(--danger); color: #fff; }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1120px;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      background: #fff;
+    }
+
+    thead th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 13px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 14px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--line-soft);
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    tbody tr:hover {
+      background: #fafcff;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .empty-row {
+      text-align: center;
+      color: #94a3b8;
+      padding: 40px 12px;
+    }
+
+    .col-package { width: 28%; }
+    .col-platform { width: 16%; }
+    .col-gold { width: 13%; }
+    .col-price { width: 11%; }
+    .col-status { width: 10%; }
+    .col-time { width: 14%; }
+    .col-actions { width: 8%; }
+
+    .package-main {
+      min-width: 0;
+    }
+
+    .package-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-strong);
+      line-height: 1.35;
+      margin-bottom: 4px;
+    }
+
+    .package-id {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+      word-break: break-all;
+    }
+
+    .platform-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .platform-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 46px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--primary-soft);
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    .gold-box,
+    .price-box,
+    .time-box {
+      line-height: 1.45;
+    }
+
+    .gold-main,
+    .price-main {
+      font-weight: 800;
+      color: var(--text-strong);
+      font-size: 14px;
+    }
+
+    .gold-sub,
+    .price-sub,
+    .time-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .time-main {
+      font-size: 12px;
+      color: #334155;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 66px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+      transition: .16s ease;
+      white-space: nowrap;
+    }
+
+    .tag:hover { transform: translateY(-1px); }
+
+    .tag-on {
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    .tag-off {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .actions .btn {
+      min-width: 56px;
+      height: 31px;
+      padding: 0 10px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .muted {
+      color: var(--text-muted);
+    }
+
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 9999;
+    }
+
+    .modal-mask.show {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 680px;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid #eef2f7;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 2;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-strong);
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 18px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .form-control {
+      width: 100%;
+      height: 44px;
+      padding: 0 12px;
+      border: 1px solid #dbe3ee;
+      border-radius: 10px;
+      outline: none;
+      background: #fff;
+      font-size: 14px;
+      color: var(--text-strong);
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .platform-select {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .platform-select label {
+      cursor: pointer;
+    }
+
+    .platform-select input {
+      display: none;
+    }
+
+    .platform-select span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 78px;
+      height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid #dbe3ee;
+      background: #fff;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 700;
+      transition: .16s ease;
+    }
+
+    .platform-select input:checked + span {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: #1d4ed8;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+    }
+
+    .modal-foot {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 18px 20px 20px;
+      border-top: 1px solid #eef2f7;
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+    }
+
+    /* 手机端优化 */
+    @media (max-width: 900px) {
+      body {
+        padding: 12px;
+      }
+
+      .wrap {
+        max-width: 100%;
+      }
+
+      .page-head {
+        align-items: stretch;
+      }
+
+      .page-title {
+        font-size: 26px;
+      }
+
+      .page-desc {
+        font-size: 13px;
+      }
+
+      .card {
+        padding: 12px;
+        border-radius: 14px;
+      }
+
+      .toolbar {
+        margin-bottom: 10px;
+      }
+
+      .toolbar-title {
+        font-size: 18px;
+      }
+
+      .btn {
+        height: 40px;
+      }
+
+      .table-wrap {
+        border: none;
+        background: transparent;
+        overflow: visible;
+      }
+
+      table {
+        min-width: 100%;
+        border-collapse: separate;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: block;
+      }
+
+      tbody tr {
+        display: block;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        margin-bottom: 12px;
+        padding: 12px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+      }
+
+      tbody td {
+        display: block;
+        border: none;
+        padding: 6px 0;
+      }
+
+      tbody td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+        font-weight: 700;
+      }
+
+      .package-name {
+        font-size: 15px;
+      }
+
+      .actions {
+        flex-direction: row;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .actions .btn {
+        flex: 1;
+        min-width: 0;
+        height: 36px;
+      }
+
+      .tag {
+        min-width: 72px;
+        height: 30px;
+      }
+
+      .modal-mask {
+        padding: 0;
+        align-items: flex-end;
+      }
+
+      .modal {
+        max-width: 100%;
+        width: 100%;
+        border-radius: 18px 18px 0 0;
+        max-height: 92vh;
+      }
+
+      .modal-body {
+        padding: 16px;
+      }
+
+      .modal-head,
+      .modal-foot {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
+
+      .form-control {
+        height: 46px;
+        font-size: 16px;
+      }
+
+      .platform-select span {
+        min-width: 72px;
+        height: 38px;
+      }
+
+      .modal-foot .btn {
+        flex: 1;
+        height: 42px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">金币套餐管理</h1>
+        <div class="page-desc">支持多平台套餐；展示页隐藏币种，编辑弹窗中仍可修改币种。</div>
+      </div>
+      <button class="btn btn-primary" type="button" id="btnAdd">+ 新增套餐</button>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="toolbar-title">套餐列表</div>
+        <button class="btn btn-gray" type="button" id="btnRefresh">刷新列表</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-package">套餐信息</th>
+              <th class="col-platform">平台</th>
+              <th class="col-gold">金币信息</th>
+              <th class="col-price">价格</th>
+              <th class="col-status">状态</th>
+              <th class="col-time">时间</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody id="listBody">
+            <tr>
+              <td colspan="7" class="empty-row">加载中...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="modalMask">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 class="modal-title" id="modalTitle">新增套餐</h2>
+        <button class="modal-close" type="button" id="btnClose">×</button>
+      </div>
+
+      <form id="packageForm">
+        <div class="modal-body">
+          <input type="hidden" id="id" name="id" value="0" />
+
+          <div class="form-group">
+            <label class="form-label">商品ID</label>
+            <input class="form-control" type="text" id="product_id" name="product_id" required />
+<div class="hint">建议格式：com.rcwulian.gold.x</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">支持平台</label>
+            <div class="platform-select">
+              <label>
+                <input type="checkbox" name="platform_type[]" value="ios" />
+                <span>iOS</span>
+              </label>
+              <label>
+                <input type="checkbox" name="platform_type[]" value="web" />
+                <span>Web</span>
+              </label>
+              <label>
+                <input type="checkbox" name="platform_type[]" value="android" />
+                <span>Android</span>
+              </label>
+            </div>
+            <div class="hint">可多选</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">商品名称</label>
+            <input class="form-control" type="text" id="product_name" name="product_name" placeholder="例如：7金币" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">金币数量</label>
+              <input class="form-control" type="number" min="0" step="1" id="gold_amount" name="gold_amount" value="0" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">赠送金币</label>
+              <input class="form-control" type="number" min="0" step="1" id="bonus_gold" name="bonus_gold" value="0" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">价格</label>
+              <input class="form-control" type="number" min="0" step="0.01" id="price" name="price" value="0.00" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">币种</label>
+              <input class="form-control" type="text" maxlength="16" id="currency" name="currency" value="RMB" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">是否启用</label>
+            <select class="form-control" id="is_active" name="is_active">
+              <option value="1">启用</option>
+              <option value="0">停用</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-gray" type="button" id="btnCancel">取消</button>
+          <button class="btn btn-primary" type="submit" id="submitBtn">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/api/admin/gold_package_manage.php';
+const PRODUCT_PREFIX = 'com.rcwulian.gold.';
+
+    const listBodyEl = document.getElementById('listBody');
+    const modalMaskEl = document.getElementById('modalMask');
+    const modalTitleEl = document.getElementById('modalTitle');
+    const packageFormEl = document.getElementById('packageForm');
+    const btnAddEl = document.getElementById('btnAdd');
+    const btnRefreshEl = document.getElementById('btnRefresh');
+    const btnCloseEl = document.getElementById('btnClose');
+    const btnCancelEl = document.getElementById('btnCancel');
+    const submitBtnEl = document.getElementById('submitBtn');
+
+    const idEl = document.getElementById('id');
+    const productIdEl = document.getElementById('product_id');
+    const productNameEl = document.getElementById('product_name');
+    const goldAmountEl = document.getElementById('gold_amount');
+    const bonusGoldEl = document.getElementById('bonus_gold');
+    const priceEl = document.getElementById('price');
+    const currencyEl = document.getElementById('currency');
+    const isActiveEl = document.getElementById('is_active');
+    const platformEls = Array.from(document.querySelectorAll('input[name="platform_type[]"]'));
+
+    let syncing = false;
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, {
+        credentials: 'include',
+        ...options
+      });
+      return response.json();
+    }
+
+    function getCheckedPlatforms() {
+      return platformEls.filter(el => el.checked).map(el => el.value);
+    }
+
+    function setCheckedPlatforms(values) {
+      const arr = Array.isArray(values)
+        ? values
+        : String(values || '').split(',').map(v => v.trim()).filter(Boolean);
+
+      const set = new Set(arr);
+      platformEls.forEach(el => {
+        el.checked = set.has(el.value);
+      });
+    }
+
+    function renderPlatformTags(raw) {
+      const arr = String(raw || '')
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+
+      if (!arr.length) {
+        return '<span class="muted">-</span>';
+      }
+
+      return '<div class="platform-tags">' + arr.map(item => {
+        let label = item;
+        if (item === 'ios') label = 'iOS';
+        if (item === 'web') label = 'Web';
+        if (item === 'android') label = 'Android';
+        return '<span class="platform-chip">' + escapeHtml(label) + '</span>';
+      }).join('') + '</div>';
+    }
+
+    function formatDateTimeText(value) {
+      const text = String(value || '').trim();
+      if (!text) return '-';
+      return text.replace(' ', '<br>');
+    }
+
+    function resetForm() {
+      packageFormEl.reset();
+      idEl.value = '0';
+      productIdEl.value = PRODUCT_PREFIX;
+      productNameEl.value = '';
+      goldAmountEl.value = '0';
+      bonusGoldEl.value = '0';
+      priceEl.value = '0.00';
+      currencyEl.value = 'RMB';
+      isActiveEl.value = '1';
+      setCheckedPlatforms(['ios', 'web', 'android']);
+    }
+
+    function openAddModal() {
+      resetForm();
+      modalTitleEl.textContent = '新增套餐';
+      submitBtnEl.textContent = '保存';
+      modalMaskEl.classList.add('show');
+      setTimeout(() => productIdEl.focus(), 0);
+    }
+
+    function openEditModal() {
+      modalTitleEl.textContent = '编辑套餐';
+      submitBtnEl.textContent = '保存修改';
+      modalMaskEl.classList.add('show');
+    }
+
+    function closeModal() {
+      modalMaskEl.classList.remove('show');
+    }
+function parseXFromProductId(value) {
+  const match = String(value || '').trim().match(/^com\.rcwulian\.gold\.(\d+)$/);
+  return match ? match[1] : '';
+}
+
+    function parseXFromProductName(value) {
+      const match = String(value || '').trim().match(/^(\d+)金币$/);
+      return match ? match[1] : '';
+    }
+
+    function parseXFromGoldAmount(value) {
+      const text = String(value || '').trim();
+      return /^\d+$/.test(text) ? text : '';
+    }
+
+    function syncFields(source) {
+      if (syncing) return;
+      syncing = true;
+
+      let x = '';
+      if (source === 'product_id') x = parseXFromProductId(productIdEl.value);
+      if (source === 'product_name') x = parseXFromProductName(productNameEl.value);
+      if (source === 'gold_amount') x = parseXFromGoldAmount(goldAmountEl.value);
+
+      if (x !== '') {
+        if (source !== 'product_id') productIdEl.value = PRODUCT_PREFIX + x;
+        if (source !== 'product_name') productNameEl.value = x + '金币';
+        if (source !== 'gold_amount') goldAmountEl.value = x;
+      }
+
+      syncing = false;
+    }
+
+    function validateLinkedFields() {
+      const x1 = parseXFromProductId(productIdEl.value);
+      const x2 = parseXFromProductName(productNameEl.value);
+      const x3 = parseXFromGoldAmount(goldAmountEl.value);
+      const platforms = getCheckedPlatforms();
+
+      if (!x1) {
+        alert('商品ID格式必须是：' + PRODUCT_PREFIX + 'x');
+        productIdEl.focus();
+        return false;
+      }
+
+      if (!x2) {
+        alert('商品名称格式必须是：x金币');
+        productNameEl.focus();
+        return false;
+      }
+
+      if (!x3) {
+        alert('金币数量必须是整数 x');
+        goldAmountEl.focus();
+        return false;
+      }
+
+      if (!(x1 === x2 && x2 === x3)) {
+        alert('商品ID、商品名称、金币数量三者的 x 必须一致');
+        return false;
+      }
+
+      if (!platforms.length) {
+        alert('请至少选择一个平台');
+        return false;
+      }
+
+      return true;
+    }
+
+    async function loadList() {
+      listBodyEl.innerHTML = '<tr><td colspan="7" class="empty-row">加载中...</td></tr>';
+
+      try {
+        const res = await request(API_URL + '?action=list');
+
+        if (res.code !== 200) {
+          listBodyEl.innerHTML = '<tr><td colspan="7" class="empty-row">' + escapeHtml(res.msg || '加载失败') + '</td></tr>';
+          alert(res.msg || '加载失败');
+          return;
+        }
+
+        const rows = Array.isArray(res.data) ? res.data : [];
+        if (!rows.length) {
+          listBodyEl.innerHTML = '<tr><td colspan="7" class="empty-row">暂无金币套餐数据</td></tr>';
+          return;
+        }
+
+        listBodyEl.innerHTML = rows.map(row => {
+          const id = Number(row.id) || 0;
+          const isActive = Number(row.is_active) === 1;
+          const nextStatus = isActive ? 0 : 1;
+          const bonusGold = Number(row.bonus_gold) || 0;
+
+          return `
+            <tr>
+              <td data-label="套餐信息">
+                <div class="package-main">
+                  <div class="package-name">${escapeHtml(row.product_name || '-')}</div>
+                  <div class="package-id">${escapeHtml(row.product_id || '-')}</div>
+                </div>
+              </td>
+
+              <td data-label="平台">
+                ${renderPlatformTags(row.platform_type)}
+              </td>
+
+              <td data-label="金币信息">
+                <div class="gold-box">
+                  <div class="gold-main">${Number(row.gold_amount) || 0} 金币</div>
+                  <div class="gold-sub">赠送 ${bonusGold} 金币</div>
+                </div>
+              </td>
+
+              <td data-label="价格">
+                <div class="price-box">
+                  <div class="price-main">${escapeHtml(row.price || '0.00')}</div>
+                </div>
+              </td>
+
+              <td data-label="状态">
+                <span class="tag ${isActive ? 'tag-on' : 'tag-off'}" onclick="toggleItem(${id}, ${nextStatus})">
+                  ${isActive ? '启用中' : '已停用'}
+                </span>
+              </td>
+
+              <td data-label="时间">
+                <div class="time-box">
+                  <div class="time-main">创：${formatDateTimeText(row.created_at)}</div>
+                  <div class="time-sub">更：${formatDateTimeText(row.updated_at)}</div>
+                </div>
+              </td>
+
+              <td data-label="操作">
+                <div class="actions">
+                  <button class="btn btn-primary" type="button" onclick="editItem(${id})">编辑</button>
+                  <button class="btn btn-red" type="button" onclick='deleteItem(${id}, ${JSON.stringify(String(row.product_name || ""))})'>删除</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        listBodyEl.innerHTML = '<tr><td colspan="7" class="empty-row">加载失败</td></tr>';
+        alert('加载失败：' + error.message);
+      }
+    }
+
+    async function editItem(id) {
+      try {
+        const res = await request(API_URL + '?action=detail&id=' + encodeURIComponent(id));
+        if (res.code !== 200) {
+          alert(res.msg || '加载详情失败');
+          return;
+        }
+
+        const row = res.data || {};
+        idEl.value = row.id || 0;
+        productIdEl.value = row.product_id || PRODUCT_PREFIX;
+        productNameEl.value = row.product_name || '';
+        goldAmountEl.value = row.gold_amount || 0;
+        bonusGoldEl.value = row.bonus_gold || 0;
+        priceEl.value = row.price || '0.00';
+        currencyEl.value = row.currency || 'RMB';
+        isActiveEl.value = String(Number(row.is_active) === 1 ? 1 : 0);
+        setCheckedPlatforms(row.platform_type || '');
+
+        openEditModal();
+      } catch (error) {
+        alert('加载详情失败：' + error.message);
+      }
+    }
+
+    async function deleteItem(id, name) {
+      if (!confirm('确定删除套餐【' + (name || id) + '】吗？')) {
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('action', 'delete');
+        formData.append('id', String(id));
+
+        const res = await request(API_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.code !== 200) {
+          alert(res.msg || '删除失败');
+          return;
+        }
+
+        alert(res.msg || '删除成功');
+        loadList();
+      } catch (error) {
+        alert('删除失败：' + error.message);
+      }
+    }
+
+    async function toggleItem(id, isActive) {
+      const text = isActive === 1 ? '启用' : '停用';
+
+      if (!confirm('确定要' + text + '这个套餐吗？')) {
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('action', 'toggle');
+        formData.append('id', String(id));
+        formData.append('is_active', String(isActive));
+
+        const res = await request(API_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.code !== 200) {
+          alert(res.msg || '操作失败');
+          return;
+        }
+
+        alert(res.msg || '操作成功');
+        loadList();
+      } catch (error) {
+        alert('操作失败：' + error.message);
+      }
+    }
+
+    packageFormEl.addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      syncFields('product_id');
+      if (!validateLinkedFields()) return;
+
+      try {
+        const formData = new FormData(packageFormEl);
+        formData.append('action', 'save');
+
+        const res = await request(API_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (res.code !== 200) {
+          alert(res.msg || '保存失败');
+          return;
+        }
+
+        alert(res.msg || '保存成功');
+        closeModal();
+        loadList();
+      } catch (error) {
+        alert('保存失败：' + error.message);
+      }
+    });
+
+    productIdEl.addEventListener('input', () => syncFields('product_id'));
+    productNameEl.addEventListener('input', () => syncFields('product_name'));
+    goldAmountEl.addEventListener('input', () => syncFields('gold_amount'));
+
+    btnAddEl.addEventListener('click', openAddModal);
+    btnRefreshEl.addEventListener('click', loadList);
+    btnCloseEl.addEventListener('click', closeModal);
+    btnCancelEl.addEventListener('click', closeModal);
+
+    modalMaskEl.addEventListener('click', function(e) {
+      if (e.target === modalMaskEl) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    window.editItem = editItem;
+    window.deleteItem = deleteItem;
+    window.toggleItem = toggleItem;
+
+    loadList();
+  </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quantum Cosmic Simulation</title>
+  <style>
+    body { margin: 0; background: black; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="universe"></canvas>
+  <script>
+    const canvas = document.getElementById("universe");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const numParticles = 150;
+    const gravityCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+    const barrierHeight = 2; // 模拟势垒高度
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 1.5;
+        this.vy = (Math.random() - 0.5) * 1.5;
+        this.energy = Math.random() * 5 + 1;
+      }
+
+      update() {
+        const dx = gravityCenter.x - this.x;
+        const dy = gravityCenter.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const tidalForce = 0.05 / (dist + 10);
+        this.vx += tidalForce * dx;
+        this.vy += tidalForce * dy;
+
+        // 模拟量子隧穿
+        const barrierX = canvas.width / 2;
+        if (this.x < barrierX && this.x + this.vx >= barrierX) {
+          const tunnelingChance = Math.exp(-barrierHeight / this.energy);
+          if (Math.random() < tunnelingChance) {
+            this.x += 20; // 隧穿成功
+          } else {
+            this.vx = -this.vx; // 反弹
+          }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+          this.reset();
+        }
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < numParticles; i++) {
+      particles.push(new Particle());
+    }
+
+    function drawBackground() {
+      const imageData = ctx.createImageData(canvas.width, canvas.height);
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const n = Math.random() * 255;
+        imageData.data[i] = n;
+        imageData.data[i + 1] = n;
+        imageData.data[i + 2] = n;
+        imageData.data[i + 3] = 30; // 半透明宇宙背景
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    function animate() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawBackground();
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

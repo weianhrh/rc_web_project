@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>修改所属场地</title>
+
+<style>
+/* ===== 你提供的完整 UI 样式整合 ===== */
+:root{
+    --primary:#5b8cff;
+    --secondary:#7f8fa4;
+    --background-gradient-start:#f8f9ff;
+    --background-gradient-end:#f0f3ff;
+    --card-bg:#fff;
+    --border-color:#ddd;
+    --text-color:#333;
+    --shadow:0 4px 24px rgba(91,140,255,0.08);
+    --transition:.3s all ease;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC",system-ui}
+
+body{
+    background:linear-gradient(135deg,var(--background-gradient-start),var(--background-gradient-end));
+    min-height:100vh;padding:20px;
+    display:flex;justify-content:center;align-items:flex-start;
+}
+
+.container{
+    max-width:600px;width:100%;
+}
+
+.card{
+    background:var(--card-bg);
+    padding:20px;border-radius:12px;
+    box-shadow:var(--shadow);
+}
+
+.card-title{
+    font-size:22px;font-weight:600;
+    border-left:4px solid var(--primary);
+    padding-left:10px;margin-bottom:20px;
+}
+
+.btn{
+    padding:10px 18px;border:none;
+    background:var(--primary);color:#fff;
+    border-radius:8px;font-size:15px;
+    cursor:pointer;transition:var(--transition);
+}
+
+.btn:hover{background:#4a77e4;}
+
+select{
+    width:100%;padding:10px;border:1px solid var(--border-color);
+    border-radius:8px;margin-bottom:20px;
+    font-size:15px;
+}
+
+/* ===== Modal 弹窗 ===== */
+.modal{
+    display:none;position:fixed;
+    left:0;top:0;width:100vw;height:100vh;
+    background:rgba(0,0,0,0.6);
+    justify-content:center;align-items:center;
+    z-index: 999;
+}
+
+.modal-content{
+    width:400px;max-width:90%;
+    background:#fff;border-radius:12px;
+    padding:25px;box-shadow:0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal input{
+    width:100%;padding:10px;
+    border:1px solid #ccc;border-radius:6px;
+    margin-top:10px;margin-bottom:20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="card">
+        <div class="card-title">修改管理员所属场地</div>
+
+        <label>请选择场地：</label>
+        <select id="venue_select">
+            <option value="">加载中...</option>
+        </select>
+
+        <button class="btn" onclick="updateVenue()">保存修改</button>
+    </div>
+</div>
+
+<script>
+// ================= 获取场地列表 =================
+function loadVenues(){
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://open.rcwulian.cn/api/operat/AdminVenueSetting.php", true);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onload = function(){
+        const res = JSON.parse(xhr.responseText);
+        const sel = document.getElementById("venue_select");
+        sel.innerHTML = "";
+
+        if(res.code === 0){
+            const currentVenue = res.venue_id; // ⭐ 当前管理员的场地 ID
+
+            res.data.forEach(v => {
+                const op = document.createElement("option");
+                op.value = v.id;
+                op.textContent = `${v.id} - ${v.venue_name}`;
+
+                // ⭐ 默认选中
+                if (v.id == currentVenue) {
+                    op.selected = true;
+                }
+
+                sel.appendChild(op);
+            });
+        }else{
+            sel.innerHTML = "<option>加载失败</option>";
+        }
+    };
+    xhr.send("action=get_venues");
+}
+
+
+loadVenues();
+
+// ================= 保存修改 =================
+function updateVenue(){
+    const venue = document.getElementById("venue_select").value;
+    if(!venue){ alert("请选择场地"); return; }
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/operat/AdminVenueSetting.php", true);
+    xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+    xhr.onload = function(){
+        const res = JSON.parse(xhr.responseText);
+        if(res.code === 0){
+            alert("修改成功！");
+            location.reload();
+        }else{
+            alert(res.msg);
+        }
+    };
+
+    xhr.send("action=update_venue&venue_id=" + venue);
+}
+</script>
+
+</body>
+</html>

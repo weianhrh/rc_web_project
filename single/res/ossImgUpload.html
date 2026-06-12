@@ -1,0 +1,453 @@
+<!DOCTYPE html> 
+<html lang="zh-CN"> 
+ 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>图片上传到 OSS</title> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">   
+    <style> 
+        :root { 
+            --primary: #5b8cff; 
+            --secondary: #7f8fa4; 
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+        } 
+ 
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: "PingFang SC", system-ui; 
+        } 
+ 
+        body { 
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+        } 
+ 
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+        } 
+ 
+        .card { 
+            background: #ffffff; 
+            border-radius: 24px; 
+            padding: 24px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 24px; 
+        } 
+ 
+        .card-title { 
+            font-size: 20px; 
+            color: #333; 
+            margin-bottom: 24px; 
+            font-weight: 600; 
+        } 
+ 
+        .pricing-item { 
+            background: #ffffff; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+        } 
+ 
+        .pricing-item .label { 
+            color: var(--secondary); 
+            font-size: 14px; 
+            text-align: left; 
+        } 
+ 
+        .pricing-item .value { 
+            color: #333; 
+            font-size: 16px; 
+            text-align: right; 
+        } 
+ 
+        .upload-btn { 
+            background-color: var(--primary); 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            border: none; 
+            cursor: pointer; 
+            transition: background-color 0.3s; 
+            margin-top: 16px; 
+        } 
+ 
+        .upload-btn:hover { 
+            background-color: #4c6ef5; 
+        } 
+ 
+        .edit-input { 
+            background-color: #f8f9ff; 
+            padding: 8px 12px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd; 
+            width: 100%; 
+        } 
+ 
+        .copy-btn { 
+            background-color: var(--primary); 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            border: none; 
+            cursor: pointer; 
+            transition: background-color 0.3s; 
+            margin-left: 10px; 
+        } 
+ 
+        .copy-btn:hover { 
+            background-color: #4c6ef5; 
+        } 
+ 
+        @media (max-width: 768px) { 
+            .pricing-item { 
+                grid-template-columns: 1fr; 
+            } 
+        } 
+        @media (max-width: 480px) {
+    .upload-btn {
+        display: block;
+        width: 100%;
+        margin: 10px 0 !important;
+        text-align: center;
+    }
+}
+
+    </style> 
+</head> 
+ 
+<body> 
+    <div class="container"> 
+        <div class="card"> 
+            <h2 class="card-title">图片上传到 OSS</h2> 
+            <div class="pricing-item"> 
+                <label class="label" for="venue">选择场地</label> 
+                <select class="edit-input" id="venue"> 
+                    <option value="">请选择场地</option> 
+                </select> 
+            </div> 
+            <div class="pricing-item"> 
+                <label class="label" for="file">选择图片</label> 
+                <input class="edit-input" type="file" id="file" accept="image/*"> 
+            </div> 
+            <button class="upload-btn" id="uploadBtn">上传图片</button> 
+            <button class="upload-btn" id="toLocalBtn" style="margin-left: 10px;">切换到本地</button>
+            <button class="upload-btn" id="toOssBtn" style="margin-left: 10px;">切换到OSS</button>
+            <button class="upload-btn" id="updateVenueBtn" style="margin-left: 10px;">上传OSS并修改场地头像</button> 
+            <button class="upload-btn" id="uploadToMyServerBtn" style="margin-left: 10px;">上传图片至本地服务器</button>
+            <button class="upload-btn" id="uploadLocalAndUpdateVenueBtn" style="margin-left: 10px;">本地上传并设为场地头像</button>
+
+            <button class="upload-btn" id="addToCarouselBtn" style="margin-left: 10px;">上传OSS并添加到APP轮播图</button> 
+         
+            
+            <div id="updateStatus" style="margin-top: 20px;"></div>
+            <div id="result" style="margin-top: 20px;"></div> 
+        </div> 
+    </div> 
+    
+    
+    <script>
+        async function startUpdate(mode) {
+            if (!confirm(`确定要切换到${mode === 'local' ? '本地' : 'OSS'}模式吗？`)) return;
+        
+            async function runBatch() {
+                try {
+                    const response = await fetch('https://open.rcwulian.cn/api/operat/update_image_prefix.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `mode=${mode}`
+                    });
+                    const result = await response.json();
+        
+                    document.getElementById('updateStatus').innerText = result.msg;
+        
+                    if (result.code === 0 && result.next) {
+                        setTimeout(runBatch, 500);
+                    } else if (result.code === 0 && !result.next) {
+                        alert('全部完成！');
+                    } else {
+                        alert('出错：' + result.msg);
+                    }
+                } catch (error) {
+                    console.error('异常:', error);
+                    alert('请求出错，请稍后重试');
+                }
+            }
+        
+            runBatch();
+        }
+        
+        document.getElementById('toLocalBtn').addEventListener('click', function() {
+            startUpdate('local');
+        });
+        
+        document.getElementById('toOssBtn').addEventListener('click', function() {
+            startUpdate('oss');
+        });
+    </script>
+   
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.17.0.min.js"></script>   
+    <script> 
+        let ossConfig = null; 
+        
+        // 页面加载时获取场地列表和OSS配置 
+        window.onload = async function() { 
+            try { 
+                // 获取OSS配置 
+                const configResponse = await fetch('https://open.rcwulian.cn/api/operat/upload.php?get_config=1'); 
+                const configData = await configResponse.json(); 
+                if (configData.code === 0) { 
+                    ossConfig = configData.data; 
+                } 
+ 
+                // 获取场地列表 
+                const venueResponse = await fetch('https://open.rcwulian.cn/api/operat/upload.php?get_venues=1'); 
+                const venueData = await venueResponse.json(); 
+                if (venueData.code === 0) { 
+                    const select = document.getElementById('venue'); 
+                    venueData.data.venues.forEach(venue => { 
+                        const option = document.createElement('option'); 
+                        option.value = venue.id; 
+                        option.textContent = `${venue.id}  - ${venue.venue_name}`; 
+                        select.appendChild(option); 
+                    }); 
+                } 
+            } catch (error) { 
+                console.error('初始化失败:', error); 
+            } 
+        }; 
+ 
+        // 普通上传图片 
+        document.getElementById('uploadBtn').addEventListener('click', async () => { 
+            const fileInput = document.getElementById('file'); 
+            const file = fileInput.files[0]; 
+ 
+            if (!file) { 
+                alert('请选择一张图片'); 
+                return; 
+            } 
+ 
+            if (!ossConfig) { 
+                alert('OSS配置获取失败'); 
+                return; 
+            } 
+ 
+            const client = new OSS(ossConfig); 
+ 
+            try { 
+                const filename = `app/img/${Date.now()}_${file.name}`; 
+                const result = await client.put(filename, file); 
+                const resultDiv = document.getElementById('result'); 
+                resultDiv.innerHTML = `图片上传成功！<a href="${result.url}" target="_blank">点击查看图片</a> 
+                    <button class="copy-btn" onclick="copyUrl('${result.url}')">复制链接</button>`; 
+            } catch (error) { 
+                console.error('上传失败:', error); 
+                alert('图片上传失败，请稍后重试'); 
+            } 
+        }); 
+ 
+        // 上传并更新场地头像 
+        document.getElementById('updateVenueBtn').addEventListener('click', async () => { 
+            const fileInput = document.getElementById('file'); 
+            const venueSelect = document.getElementById('venue'); 
+            const file = fileInput.files[0]; 
+            const venueId = venueSelect.value; 
+ 
+            if (!venueId) { 
+                alert('请选择场地'); 
+                return; 
+            } 
+ 
+            if (!file) { 
+                alert('请选择一张图片'); 
+                return; 
+            } 
+ 
+            if (!ossConfig) { 
+                alert('OSS配置获取失败'); 
+                return; 
+            } 
+ 
+            const client = new OSS(ossConfig); 
+ 
+            try { 
+                const filename = `app/img/${Date.now()}_${file.name}`; 
+                const result = await client.put(filename, file); 
+                
+                // 更新数据库 
+                const response = await fetch('https://open.rcwulian.cn/api/operat/upload.php', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                    }, 
+                    body: JSON.stringify({ 
+                        venue_id: venueId, 
+                        image_url: result.url 
+                    }) 
+                }); 
+ 
+                const data = await response.json(); 
+                if (data.code === 0) { 
+                    document.getElementById('result').innerHTML = 
+                        `场地头像更新成功！<a href="${result.url}" target="_blank">点击查看图片</a>`; 
+                } else { 
+                    alert(data.msg || '更新失败'); 
+                } 
+            } catch (error) { 
+                console.error('上传失败:', error); 
+                alert('图片上传失败，请稍后重试'); 
+            } 
+        }); 
+ 
+        // 上传并添加到APP轮播图 
+        document.getElementById('addToCarouselBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('请选择一张图片');
+                return;
+            }
+
+            if (!ossConfig) {
+                alert('OSS配置获取失败');
+                return;
+            }
+
+            const client = new OSS(ossConfig);
+            let uploadedUrl = '';
+
+            try {
+                // 先尝试上传到OSS
+                const filename = `app/img/${Date.now()}_${file.name}`;
+                const result = await client.put(filename, file);
+                uploadedUrl = result.url;
+
+                // OSS上传成功后，再进行数据库操作
+                if (uploadedUrl) {
+                    const response = await fetch(`https://rcwulian.cn/app/index/testdemo.php?image_url=${encodeURIComponent(uploadedUrl)}`);
+                    const data = await response.json();
+                    
+                    if (data.status_code === 200) {
+                        document.getElementById('result').innerHTML = 
+                            `轮播图添加成功！<a href="${uploadedUrl}" target="_blank">点击查看图片</a>
+                            <button class="copy-btn" onclick="copyUrl('${uploadedUrl}')">复制链接</button>`;
+                    } else {
+                        throw new Error(data.message || '添加轮播图失败');
+                    }
+                }
+            } catch (error) {
+                console.error('操作失败:', error);
+                // 显示更具体的错误信息
+                if (!uploadedUrl) {
+                    alert('图片上传到OSS失败，请稍后重试');
+                } else {
+                    alert('图片已上传');
+                }
+            }
+        });
+ document.getElementById('uploadToMyServerBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('file');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('请选择一张图片');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('https://rcwulian.cn/app/img/userimg/upload_profile.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP 错误：${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('返回结果', result);
+
+        if (result.code === 0) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `图片上传成功！<a href="${result.url}" target="_blank">点击查看图片</a>
+                <button class="copy-btn" onclick="copyUrl('${result.url}')">复制链接</button>`;
+        } else {
+            alert('上传失败: ' + result.msg);
+        }
+    } catch (error) {
+        console.error('上传失败:', error);
+        alert('上传失败，请稍后重试');
+    }
+});
+document.getElementById('uploadLocalAndUpdateVenueBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('file');
+    const venueSelect = document.getElementById('venue');
+    const file = fileInput.files[0];
+    const venueId = venueSelect.value;
+
+    if (!venueId) {
+        alert('请选择场地');
+        return;
+    }
+
+    if (!file) {
+        alert('请选择一张图片');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('action', 'update_venue_pictrue');
+    formData.append('venue_id', venueId);
+
+
+    try {
+        const response = await fetch('https://rcwulian.cn/app/img/userimg/upload_profile.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        console.log('返回结果', result);
+
+        if (result.code === 0) {
+            document.getElementById('result').innerHTML =
+                `本地上传并设置头像成功！<a href="${result.url}" target="_blank">点击查看图片</a>
+                 <button class="copy-btn" onclick="copyUrl('${result.url}')">复制链接</button>`;
+        } else {
+            alert('操作失败：' + result.msg);
+        }
+    } catch (error) {
+        console.error('请求失败:', error);
+        alert('上传或更新失败，请稍后重试');
+    }
+});
+
+
+        function copyUrl(url) { 
+            const textArea = document.createElement('textarea'); 
+            textArea.value = url; 
+            document.body.appendChild(textArea); 
+            textArea.select(); 
+            document.execCommand('copy'); 
+            document.body.removeChild(textArea); 
+            alert('链接已复制到剪贴板'); 
+        } 
+    </script> 
+</body> 
+ 
+</html> 

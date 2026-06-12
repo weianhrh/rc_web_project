@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>资费商品</title>
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --border: rgba(91, 140, 255, 0.14);
+      --bg-soft: #f8f9ff;
+      --text: #111827;
+      --danger: #ff4d4f;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .card-title h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .add-btn,
+    .edit-btn,
+    .save-btn,
+    .delete-btn,
+    .cancel-btn {
+      height: 34px;
+      padding: 0 16px;
+      border-radius: 9px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .add-btn,
+    .edit-btn,
+    .save-btn {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .delete-btn {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .cancel-btn {
+      background: #f2f4f7;
+      color: #475467;
+    }
+
+    .add-btn:hover,
+    .edit-btn:hover,
+    .save-btn:hover {
+      background: #4c6ef5;
+    }
+
+    .delete-btn:hover {
+      background: #ff7875;
+    }
+
+    .product-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .product-header,
+    .product-row {
+      display: grid;
+      grid-template-columns: 80px minmax(180px, 1.4fr) 120px 120px 120px 170px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .product-header {
+      padding: 0 14px 6px;
+      color: var(--secondary);
+      font-size: 13px;
+    }
+
+    .product-row {
+      min-height: 58px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(91, 140, 255, 0.05);
+    }
+
+    .cell {
+      min-width: 0;
+      font-size: 14px;
+      color: #111827;
+    }
+
+    .cell-title {
+      font-size: 16px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cell-id span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: var(--primary);
+      border: 1px solid rgba(91, 140, 255, 0.22);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .cell-price {
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .cell-price::before {
+      content: '¥';
+      color: var(--primary);
+      margin-right: 1px;
+      font-size: 13px;
+    }
+
+    .action-cell {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .empty-tip,
+    .loading-tip,
+    .error-tip {
+      padding: 18px;
+      border-radius: 14px;
+      background: var(--bg-soft);
+      color: var(--secondary);
+      font-size: 14px;
+    }
+
+    .error-tip {
+      color: #d92d20;
+      background: #fef3f2;
+    }
+
+    .mobile-label {
+      display: none;
+      color: var(--secondary);
+      font-size: 12px;
+      font-weight: 500;
+      margin-right: 8px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(15, 23, 42, 0.42);
+      padding: 24px;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: min(92vw, 460px);
+      margin: 8vh auto;
+      padding: 20px;
+      border-radius: 18px;
+      box-shadow: 0 16px 45px rgba(15, 23, 42, 0.18);
+    }
+
+    .modal-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-title-row h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .close {
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 50%;
+      background: #f2f4f7;
+      color: #667085;
+      font-size: 20px;
+      line-height: 30px;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: #475467;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .edit-input {
+      width: 100%;
+      height: 38px;
+      padding: 8px 12px;
+      border: 1px solid #d9e2ff;
+      border-radius: 10px;
+      background: #f8f9ff;
+      color: #111827;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .edit-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 1080px) {
+      body {
+        padding: 14px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 20px;
+      }
+
+      .product-header {
+        display: none;
+      }
+
+      .product-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        padding: 12px;
+        min-height: auto;
+      }
+
+      .cell {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .mobile-label {
+        display: inline;
+      }
+
+      .cell-id,
+      .cell-title,
+      .action-cell {
+        grid-column: 1 / -1;
+      }
+
+      .cell-title {
+        font-size: 16px;
+        justify-content: flex-start;
+      }
+
+      .action-cell {
+        justify-content: flex-start;
+        padding-top: 2px;
+      }
+
+      .action-cell button {
+        flex: 1;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .card-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .add-btn {
+        width: 100%;
+      }
+
+      .product-row {
+        grid-template-columns: 1fr;
+      }
+
+      .cell-id,
+      .cell-title,
+      .action-cell {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">
+        <h2>资费商品</h2>
+        <button class="add-btn" onclick="openAddModal()">添加商品</button>
+      </div>
+
+      <div class="product-header">
+        <div>商品ID</div>
+        <div>标题</div>
+        <div>价格</div>
+        <div>价值</div>
+        <div>额外价值</div>
+        <div style="text-align:right;">操作</div>
+      </div>
+
+      <div id="product-list" class="product-list"></div>
+    </div>
+  </div>
+
+  <!-- 添加商品弹窗 -->
+  <div id="add-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title-row">
+        <h2>添加商品</h2>
+        <button class="close" onclick="closeAddModal()" type="button">×</button>
+      </div>
+
+      <div class="form-group">
+        <label for="add-title">标题</label>
+        <input type="text" id="add-title" class="edit-input" />
+      </div>
+
+      <div class="form-group">
+        <label for="add-price">价格</label>
+        <input type="number" id="add-price" class="edit-input" value="0.00" />
+      </div>
+
+      <div class="form-group">
+        <label for="add-value">价值</label>
+        <input type="number" id="add-value" class="edit-input" value="0.00" />
+      </div>
+
+      <div class="form-group">
+        <label for="add-extra-value">额外价值</label>
+        <input type="number" id="add-extra-value" class="edit-input" value="0.00" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="closeAddModal()" type="button">取消</button>
+        <button class="add-btn" onclick="addProduct()" type="button">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑商品弹窗 -->
+  <div id="edit-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title-row">
+        <h2>编辑商品</h2>
+        <button class="close" onclick="closeEditModal()" type="button">×</button>
+      </div>
+
+      <input type="hidden" id="edit-product-id" />
+
+      <div class="form-group">
+        <label for="edit-title">标题</label>
+        <input type="text" id="edit-title" class="edit-input" />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-price">价格</label>
+        <input type="number" id="edit-price" class="edit-input" />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-value">价值</label>
+        <input type="number" id="edit-value" class="edit-input" />
+      </div>
+
+      <div class="form-group">
+        <label for="edit-extra-value">额外价值</label>
+        <input type="number" id="edit-extra-value" class="edit-input" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="closeEditModal()" type="button">取消</button>
+        <button class="save-btn" onclick="saveProduct()" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://open.rcwulian.cn/api/tariffPlan/CommodityTariff.php';
+    const productCache = {};
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatNumber(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '0.00';
+      return num.toFixed(2);
+    }
+
+    function setLoading() {
+      document.getElementById('product-list').innerHTML = '<div class="loading-tip">加载中...</div>';
+    }
+
+    function fetchProducts() {
+      setLoading();
+
+      fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+          const productList = document.getElementById('product-list');
+          productList.innerHTML = '';
+
+          if (data.data && data.data.length > 0) {
+            data.data.forEach(product => {
+              productCache[String(product.id)] = product;
+
+              const item = document.createElement('div');
+              item.className = 'product-row';
+              item.innerHTML = `
+                <div class="cell cell-id"><span>${escapeHtml(product.id)}</span></div>
+                <div class="cell cell-title" title="${escapeHtml(product.title)}">${escapeHtml(product.title)}</div>
+                <div class="cell cell-price"><span class="mobile-label">价格</span>${formatNumber(product.price)}</div>
+                <div class="cell"><span class="mobile-label">价值</span>${formatNumber(product.value)}</div>
+                <div class="cell"><span class="mobile-label">额外价值</span>${formatNumber(product.extra_value)}</div>
+                <div class="cell action-cell">
+                  <button class="edit-btn" type="button" onclick="editProduct('${escapeHtml(product.id)}')">编辑</button>
+                  <button class="delete-btn" type="button" onclick="deleteProduct('${escapeHtml(product.id)}')">删除</button>
+                </div>
+              `;
+              productList.appendChild(item);
+            });
+          } else {
+            productList.innerHTML = '<div class="empty-tip">没有找到商品</div>';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('product-list').innerHTML = '<div class="error-tip">加载失败，请检查网络</div>';
+        });
+    }
+
+    function editProduct(productId) {
+      const product = productCache[String(productId)];
+      if (!product) return;
+
+      document.getElementById('edit-product-id').value = product.id;
+      document.getElementById('edit-title').value = product.title ?? '';
+      document.getElementById('edit-price').value = product.price ?? '0.00';
+      document.getElementById('edit-value').value = product.value ?? '0.00';
+      document.getElementById('edit-extra-value').value = product.extra_value ?? '0.00';
+
+      document.getElementById('edit-modal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    function saveProduct() {
+      const productId = document.getElementById('edit-product-id').value;
+      const titleInput = document.getElementById('edit-title');
+      const priceInput = document.getElementById('edit-price');
+      const valueInput = document.getElementById('edit-value');
+      const extraValueInput = document.getElementById('edit-extra-value');
+
+      const formData = new FormData();
+      formData.append('update-btn', 'true');
+      formData.append('product_id', productId);
+      formData.append('title', titleInput.value);
+      formData.append('price', priceInput.value);
+      formData.append('value', valueInput.value);
+      formData.append('extra_value', extraValueInput.value);
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.msg);
+          closeEditModal();
+          fetchProducts();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function deleteProduct(productId) {
+      if (confirm('确定要删除该商品吗？')) {
+        const formData = new FormData();
+        formData.append('delete-btn', 'true');
+        formData.append('product_id', productId);
+
+        fetch(API_URL, {
+          method: 'POST',
+          body: formData
+        })
+          .then(response => response.json())
+          .then(data => {
+            alert(data.msg);
+            fetchProducts();
+          })
+          .catch(error => console.error('Error:', error));
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById('add-modal').style.display = 'block';
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-modal').style.display = 'none';
+    }
+
+    function addProduct() {
+      const titleInput = document.getElementById('add-title');
+      const priceInput = document.getElementById('add-price');
+      const valueInput = document.getElementById('add-value');
+      const extraValueInput = document.getElementById('add-extra-value');
+
+      const formData = new FormData();
+      formData.append('add-btn', 'true');
+      formData.append('title', titleInput.value);
+      formData.append('price', priceInput.value);
+      formData.append('value', valueInput.value);
+      formData.append('extra_value', extraValueInput.value);
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.msg);
+          if (data.code === 200) {
+            titleInput.value = '';
+            priceInput.value = '0.00';
+            valueInput.value = '0.00';
+            extraValueInput.value = '0.00';
+          }
+          closeAddModal();
+          fetchProducts();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    window.addEventListener('click', function (e) {
+      const addModal = document.getElementById('add-modal');
+      const editModal = document.getElementById('edit-modal');
+      if (e.target === addModal) closeAddModal();
+      if (e.target === editModal) closeEditModal();
+    });
+
+    window.onload = fetchProducts;
+  </script>
+</body>
+
+</html>

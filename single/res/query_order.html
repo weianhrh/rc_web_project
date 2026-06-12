@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单查询统计</title>
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .form-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .form-item {
+            display: inline-block;
+            margin-right: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-input {
+            width: 150px;
+            padding: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+        }
+
+        .form-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        /* 总金额统计卡片样式 */
+        .total-sum-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(91, 140, 255, 0.2);
+        }
+
+        .total-sum-title {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .total-sum-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .cards-container {
+            padding-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .order-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .item-label {
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .item-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* 建议列表样式 */
+        .suggestions-list {
+            position: absolute;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card">
+        <h1 class="card-title">订单查询统计</h1>
+        
+        <div class="form-container">
+            <div class="form-item">
+                <label class="form-label">场地</label>
+                <input type="text" id="reservationId" class="form-input" placeholder="请输入预约ID">
+            </div>
+            <div class="form-item">
+                <label class="form-label">用户ID</label>
+                <input type="text" id="uid" class="form-input" placeholder="请输入用户ID">
+            </div>
+            <div class="form-item">
+                <label class="form-label">订单编号</label>
+                <div style="position: relative;">
+                    <input type="text" id="orderNumber" class="form-input" placeholder="请输入订单编号">
+                    <div id="suggestions" class="suggestions-list"></div>
+                </div>
+            </div>
+            <div class="form-item">
+                <label class="form-label">开始日期</label>
+                <input type="date" id="startDate" class="form-input">
+            </div>
+            <div class="form-item">
+                <label class="form-label">结束日期</label>
+                <input type="date" id="endDate" class="form-input">
+            </div>
+            <div class="form-item">
+                <label class="form-label">&nbsp;</label>
+                <button onclick="searchOrders()" class="form-button">查询</button>
+            </div>
+        </div>
+
+        <!-- 总金额统计卡片 -->
+        <div class="total-sum-card">
+            <div class="total-sum-title">订单总金额</div>
+            <div class="total-sum-value">￥<span id="totalSum">0.00</span></div>
+            <div class="page-info" style="margin-top: 10px; color: var(--secondary); font-size: 14px;">
+                共 <span id="totalCount">0</span> 条记录
+            </div>
+        </div>
+
+        <div class="cards-container" id="orderCardsContainer">
+            <!-- 数据将通过 JavaScript 动态插入 -->
+        </div>
+
+        <!-- 添加分页控件 -->
+        <div class="pagination">
+            <button id="prevPage" class="form-button" style="margin-right: 10px;">上一页</button>
+            <span id="pageInfo" style="margin: 0 10px;">第 1 页 / 共 1 页</span>
+            <button id="nextPage" class="form-button" style="margin-left: 10px;">下一页</button>
+        </div>
+    </div>
+
+    <script>
+        // 添加分页相关变量
+        let currentPage = 1;
+        const pageSize = 10; // 每页显示10条
+        let totalPages = 1;
+        let totalCount = 0;
+
+        function searchOrders(page = 1) {
+            currentPage = page;
+            const reservationId = document.getElementById('reservationId').value;
+            const uid = document.getElementById('uid').value;
+            const orderNumber = document.getElementById('orderNumber').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            let url = `https://open.rcwulian.cn/api/orders/query_order.php?page=${page}&page_size=${pageSize}`;
+            if (reservationId) url += `&reservation_id=${encodeURIComponent(reservationId)}`;
+            if (uid) url += `&uid=${encodeURIComponent(uid)}`;
+            if (orderNumber) url += `&order_number=${encodeURIComponent(orderNumber)}`;
+            if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+            if (endDate) url += `&end_date=${encodeURIComponent(endDate)}`;
+
+            // 显示加载状态
+            document.getElementById('orderCardsContainer').innerHTML = '<div style="text-align: center; padding: 20px;">加载中...</div>';
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        displayOrders(data.data.list);
+                        updateTotalSum(data.data.total_sum);
+                        updatePagination(data.data.total_count);
+                    } else {
+                        alert(data.msg);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('查询失败，请稍后重试');
+                });
+        }
+
+        function updatePagination(total) {
+            totalCount = total;
+            totalPages = Math.ceil(total / pageSize);
+            
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            
+            // 更新按钮状态
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+
+        // 添加分页事件监听
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                searchOrders(currentPage - 1);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                searchOrders(currentPage + 1);
+            }
+        });
+
+        // 修改页面加载初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置默认日期范围为最近7天
+            const today = new Date();
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+
+            document.getElementById('startDate').value = sevenDaysAgo.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
+            // 执行首次查询
+            searchOrders(1);
+        });
+
+        function displayOrders(orders) {
+            const container = document.getElementById('orderCardsContainer');
+            container.innerHTML = '';
+
+            orders.forEach(order => {
+                const card = document.createElement('div');
+                card.className = 'order-card';
+                
+                card.innerHTML = `
+                    <div class="order-item">
+                        <span class="item-label">预约ID</span>
+                        <span class="item-value">${order.reservation_id}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">用户ID</span>
+                        <span class="item-value">${order.uid}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">订单编号</span>
+                        <span class="item-value">${order.order_number}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">商品名称</span>
+                        <span class="item-value">${order.product_name}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">创建时间</span>
+                        <span class="item-value">${order.created_at}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">支付金额</span>
+                        <span class="item-value">￥${order.total_payment}</span>
+                    </div>`;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function updateTotalSum(totalSum) {
+            document.getElementById('totalSum').textContent = 
+                parseFloat(totalSum).toLocaleString('zh-CN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+        }
+
+        // 订单号输入联想功能
+        const orderInput = document.getElementById('orderNumber');
+        const suggestionsDiv = document.getElementById('suggestions');
+        
+        let debounceTimer;
+        orderInput.addEventListener('input', function(e) {
+            clearTimeout(debounceTimer);
+            const value = e.target.value.trim();
+            
+            if (value.length < 3) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                fetch(`https://open.rcwulian.cn/api/orders/query_order.php?order_number=${encodeURIComponent(value)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.code === 0) {
+                            updateSuggestions(data.data.list);
+                        }
+                    });
+            }, 300);
+        });
+
+        function updateSuggestions(orders) {
+            suggestionsDiv.innerHTML = '';
+            
+            if (orders.length > 0) {
+                orders.slice(0, 10).forEach(order => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.textContent = order.order_number;
+                    div.addEventListener('click', () => {
+                        orderInput.value = order.order_number;
+                        suggestionsDiv.style.display = 'none';
+                        searchOrders();
+                    });
+                    suggestionsDiv.appendChild(div);
+                });
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        // 点击外部关闭建议列表
+        document.addEventListener('click', function(e) {
+            if (!orderInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 

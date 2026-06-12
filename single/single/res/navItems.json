@@ -1,0 +1,154 @@
+[
+    {
+        "id": "Withdrawal-approval",
+        "title": "提现审批",
+        "icon": "fas fa-file-invoice-dollar",
+        "page": "paylist",
+        "href": "paylist.html",
+        "badgeId": "approval-count"
+    },
+    {
+        "id": "Performance-ranking",
+        "title": "业绩排行",
+        "icon": "fas fa-trophy",
+        "page": "top",
+        "href": "top.html"
+    },
+    {
+        "id": "xls",
+        "label": "订单申诉",
+        "title": "订单申诉",
+        "href": "order_report.html",
+        "page": "order_report.html",
+        "icon": "fas fa-radiation"
+    },
+    {
+        "id": "Reporthand",
+        "title": "投诉处理",
+        "icon": "fas fa-headset",
+        "page": "reporthand",
+        "href": "reporthand.html"
+    },
+    {
+        "id": "CommodityTariff",
+        "title": "资费商品",
+        "icon": "fas fa-shopping-cart",
+        "page": "pricing_options",
+        "href": "pricing_options.html"
+    },
+    {
+        "id": "Balancerecharge",
+        "title": "余额充值",
+        "icon": "fas fa-coins",
+        "page": "Balancerecharge",
+        "href": "Balancerecharge.html"
+    },
+    {
+        "id": "ComsumQuery",
+        "title": "消费查询",
+        "icon": "fas fa-money-bill-wave",
+        "page": "ComsumQuery",
+        "href": "ComsumQuery.html"
+    },
+    {
+        "id": "OrderSelect",
+        "title": "订单查询",
+        "icon": "fas fa-search",
+        "page": "views\/venues\/AdminDrivingOrders",
+        "href": "views\/venues\/AdminDrivingOrders.html"
+    },
+    {
+        "id": "VenuesManagement",
+        "title": "场地管理",
+        "icon": "fas fa-map-marked-alt",
+        "page": "VenuesManagement",
+        "href": "VenuesManagement.html"
+    },
+    {
+        "id": "vehicleslite",
+        "title": "设备管理",
+        "icon": "fas fa-cogs",
+        "page": "devMgtV2",
+        "href": "devMgtV2.html"
+    },
+    {
+        "id": "FranchiseManagement",
+        "title": "加盟管理",
+        "icon": "fas fa-users",
+        "page": "FranchiseManagement",
+        "href": "FranchiseManagement.html",
+        "badgeId": "franchise-count"
+    },
+    {
+        "id": "ZoneMgt",
+        "title": "专区管理",
+        "icon": "fas fa-layer-group",
+        "page": "zone",
+        "href": "zone.html"
+    },
+    {
+        "id": "admin_menu_mgt",
+        "label": "菜单管理",
+        "title": "菜单管理",
+        "href": "admin_menu_mgt.html",
+        "page": "admin_menu_mgt.html",
+        "icon": "fas fa-dice-d6"
+    },
+    {
+        "id": "item_1750670987249",
+        "label": "导航管理",
+        "href": "navmanager.html",
+        "icon": "fas fa-box"
+    },
+    {
+        "id": "MessageMgmt",
+        "title": "消息管理",
+        "icon": "fas fa-comment-dots",
+        "page": "MessageMgmt",
+        "href": "MessageMgmt.html"
+    },
+    {
+        "id": "OSSImgUpload",
+        "title": "图床管理",
+        "icon": "fas fa-images",
+        "page": "ossImgGetlist",
+        "href": "ossImgGetlist.html"
+    },
+    {
+        "id": "ViolationRcordQuery",
+        "title": "违规查询",
+        "icon": "fas fa-ban",
+        "page": "ban_Record",
+        "href": "ban_Record.html?dropdown=1"
+    },
+    {
+        "id": "CompensationEnergy",
+        "title": "补偿能量",
+        "icon": "fas fa-battery-full",
+        "page": "energygift",
+        "href": "energygift.html"
+    },
+    {
+        "id": "pendImageAtext",
+        "title": "图文审核",
+        "icon": "fas fa-shield-alt",
+        "page": "peddingMain",
+        "href": "peddingMain.html",
+        "badgeId": "pending-count"
+    },
+    {
+        "id": "RefundQequest",
+        "title": "退款申请",
+        "icon": "fas fa-undo-alt",
+        "page": "RefundQequest",
+        "href": "RefundQequest.html"
+    },
+    {
+        "id": "item_1753865505683",
+        "label": "能量分配",
+        "title": "能量分配",
+        "href": "energy_log_view.html",
+        "page": "energy_log_view.html",
+        "icon": "fas fa-envelope"
+    }
+]

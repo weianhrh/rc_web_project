@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>驾驶管理</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+            --success: #18a058;
+            --danger: #ff4d4f;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #5b8cff 0%, #4b74f2 100%);
+            border-radius: 24px;
+            padding: 20px 24px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+            margin-bottom: 18px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .header-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: rgba(255,255,255,.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .header-subtitle {
+            margin-top: 6px;
+            font-size: 13px;
+            opacity: .9;
+        }
+
+        .header-tabs {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            height: 40px;
+            padding: 0 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,.35);
+            background: rgba(255,255,255,.12);
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all .2s ease;
+        }
+
+        .tab-btn.active {
+            background: #fff;
+            color: var(--primary);
+            border-color: #fff;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+        }
+
+        .list-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .card-desc {
+            color: var(--secondary);
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .refresh-btn {
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: none;
+            background: #eef3ff;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .order-item {
+            border-radius: 16px;
+            margin-bottom: 14px;
+            padding: 18px;
+            box-shadow: var(--shadow);
+            border: 1px solid #edf0f7;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 18px;
+            background: #fff;
+        }
+
+        .order-id {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--primary);
+            word-break: break-all;
+        }
+
+        .status {
+            font-weight: 700;
+            font-size: 13px;
+            text-align: right;
+        }
+
+        .status.completed {
+            color: var(--success);
+        }
+
+        .status.cancelled {
+            color: var(--danger);
+        }
+
+        .status.pending {
+            color: var(--warning);
+        }
+
+        .label {
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .value {
+            color: #333;
+            font-size: 15px;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .op-btn {
+            grid-column: 1 / -1;
+            height: 38px;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .cancel-btn {
+            background: var(--danger);
+        }
+
+        .complete-btn {
+            background: var(--primary);
+        }
+
+        .op-btn:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--secondary);
+            padding: 36px 0;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--primary);
+            padding: 36px 0;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
+                padding: 18px;
+            }
+
+            .header-tabs {
+                width: 100%;
+            }
+
+            .tab-btn {
+                flex: 1;
+                justify-content: center;
+                padding: 0 10px;
+            }
+
+            .card {
+                padding: 16px;
+            }
+
+            .list-head {
+                align-items: flex-start;
+            }
+
+            .order-item {
+                grid-template-columns: 1fr;
+                padding: 16px;
+            }
+
+            .status,
+            .value {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="page-header">
+        <div class="header-left">
+            <div class="header-icon">
+                <i class="fas fa-car-side"></i>
+            </div>
+            <div>
+                <div class="header-title">驾驶管理</div>
+                <div class="header-subtitle" id="header-subtitle">查看待驾驶预约记录，并可快速取消未开始的预约订单</div>
+            </div>
+        </div>
+
+        <div class="header-tabs">
+            <button type="button" class="tab-btn active" id="reservation-tab" onclick="switchTab('reservation')">
+                <i class="fas fa-clock"></i> 预约管理
+            </button>
+            <button type="button" class="tab-btn" id="driving-tab" onclick="switchTab('driving')">
+                <i class="fas fa-car"></i> 订单管理
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="list-head">
+            <div>
+                <div class="card-title" id="card-title">预约管理</div>
+                <div class="card-desc" id="card-desc">当前展示：等待驾驶的预约订单</div>
+            </div>
+
+            <button type="button" class="refresh-btn" onclick="loadData(currentType)">
+                <i class="fas fa-sync-alt"></i> 刷新
+            </button>
+        </div>
+
+        <div id="order-list"></div>
+    </div>
+
+</div>
+
+<script>
+    const API_BASE = 'https://open.rcwulian.cn';
+
+    // 默认进预约管理
+    let currentType = 'reservation';
+
+    const pageConfig = {
+        reservation: {
+            title: '预约管理',
+            desc: '当前展示：等待驾驶的预约订单',
+            subtitle: '查看待驾驶预约记录，并可快速取消未开始的预约订单',
+            status: '等待驾驶',
+            emptyText: '暂无预约记录'
+        },
+        driving: {
+            title: '订单管理',
+            desc: '当前展示：正在驾驶的订单',
+            subtitle: '查看正在驾驶订单，并可手动结束异常订单',
+            status: '正在驾驶',
+            emptyText: '暂无正在驾驶订单'
+        }
+    };
+
+    function switchTab(type) {
+        currentType = type;
+
+        document.getElementById('reservation-tab').classList.toggle('active', type === 'reservation');
+        document.getElementById('driving-tab').classList.toggle('active', type === 'driving');
+
+        const cfg = pageConfig[type];
+        document.getElementById('card-title').textContent = cfg.title;
+        document.getElementById('card-desc').textContent = cfg.desc;
+        document.getElementById('header-subtitle').textContent = cfg.subtitle;
+
+        loadData(type);
+    }
+
+    function loadData(type) {
+        const cfg = pageConfig[type];
+        const orderListContainer = document.getElementById('order-list');
+
+        orderListContainer.innerHTML = '<div class="loading">正在加载...</div>';
+
+        const url = `${API_BASE}/api/venue/getReservationsList.php?page=1&limit=20&order_number=&reservation_date=&reservation_location=&status=${encodeURIComponent(cfg.status)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                orderListContainer.innerHTML = '';
+
+                if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
+                    data.data.forEach(order => {
+                        orderListContainer.insertAdjacentHTML('beforeend', renderOrderItem(order, type));
+                    });
+                } else {
+                    orderListContainer.innerHTML = `<div class="empty">${cfg.emptyText}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('数据加载失败:', error);
+                orderListContainer.innerHTML = '<div class="empty">数据加载失败，请稍后重试</div>';
+            });
+    }
+
+    function renderOrderItem(order, type) {
+        const orderNumber = escapeHtml(order.order_number || '');
+        const status = escapeHtml(getStatusText(order.order_status));
+        const statusClass = getStatusClass(order.order_status);
+
+        let rows = '';
+
+        if (type === 'reservation') {
+            rows = `
+                <div class="label">用户昵称</div>
+                <div class="value">${escapeHtml(order.nickname || '-')} (ID: ${escapeHtml(order.user_id || '-')})</div>
+
+                <div class="label">预约时长</div>
+                <div class="value">${escapeHtml(order.driving_duration || '0')}分钟</div>
+
+                <div class="label">预约时间</div>
+                <div class="value">${escapeHtml(order.reservation_time || '-')}</div>
+
+                <div class="label">支付方式</div>
+                <div class="value">${escapeHtml(order.pay_type || '-')}</div>
+
+                <button class="op-btn cancel-btn"
+                        data-order="${orderNumber}"
+                        ${order.order_status === "已取消" ? "disabled" : ""}
+                        onclick="cancelReservation(this.dataset.order, this)">
+                    ${order.order_status === "已取消" ? "已取消" : "取消预约"}
+                </button>
+            `;
+        } else {
+            rows = `
+                <div class="label">用户昵称</div>
+                <div class="value">${escapeHtml(order.nickname || '-')} (ID: ${escapeHtml(order.user_id || '-')})</div>
+
+                <div class="label">可驾驶时长</div>
+                <div class="value">${escapeHtml(order.driving_duration || '0')}分钟</div>
+
+                <div class="label">驾驶开始时间</div>
+                <div class="value">${escapeHtml(order.driving_start_time || '-')}</div>
+
+                <div class="label">支付方式</div>
+                <div class="value">${escapeHtml(order.pay_type || '-')}</div>
+
+                <div class="label">驾驶车辆</div>
+                <div class="value">${escapeHtml(order.vehicle_name || '-')}</div>
+
+                <button class="op-btn complete-btn"
+                        data-order="${orderNumber}"
+                        ${order.order_status !== "正在驾驶" ? "disabled" : ""}
+                        onclick="completeOrder(this.dataset.order, this)">
+                    结束订单
+                </button>
+            `;
+        }
+
+        return `
+            <div class="order-item">
+                <div class="order-id">订单编号：${orderNumber}</div>
+                <div class="status ${statusClass}">${status}</div>
+                ${rows}
+            </div>
+        `;
+    }
+
+    function getStatusText(status) {
+        if (!status) return '未知';
+        return status;
+    }
+
+    function getStatusClass(status) {
+        const s = String(status || '');
+
+        if (s.includes('完成')) return 'completed';
+        if (s.includes('取消')) return 'cancelled';
+
+        return 'pending';
+    }
+
+    function cancelReservation(orderNumber, buttonElement) {
+        if (!confirm('确认取消该预约吗？')) return;
+
+        const url = `${API_BASE}/api/venue/CancelReservation.php?order_number=${encodeURIComponent(orderNumber)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                alert(data.msg || '操作完成');
+
+                if (data.code === 200) {
+                    loadData(currentType);
+                }
+            })
+            .catch(error => {
+                console.error('取消预约失败:', error);
+                alert('网络错误，取消预约失败');
+            });
+    }
+
+    function completeOrder(orderNumber, buttonElement) {
+        if (!confirm('确认结束该订单吗？')) return;
+
+        const url = `${API_BASE}/api/orders/CompleteOrder.php?order_id=${encodeURIComponent(orderNumber)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 200) {
+                    alert(data.msg || '订单已结束');
+                    loadData(currentType);
+                } else {
+                    alert(data.msg || '结束订单失败');
+                }
+            })
+            .catch(error => {
+                console.error('结束订单失败:', error);
+                alert('网络错误，结束订单失败');
+            });
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, function (m) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[m];
+        });
+    }
+
+    // 默认进入预约管理
+    switchTab('reservation');
+</script>
+
+</body>
+</html>

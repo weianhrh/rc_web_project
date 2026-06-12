@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>能量赠送</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+:root{
+  --primary:#5b8cff;
+  --primary-dark:#4778ee;
+  --primary-light:#eef4ff;
+
+  --danger:#ff4d4f;
+  --danger-dark:#d9363e;
+  --danger-light:#fff1f0;
+
+  --warning:#f59e0b;
+  --warning-light:#fff7e6;
+
+  --success:#16a34a;
+  --success-light:#ecfdf3;
+
+  --text:#1f2937;
+  --muted:#64748b;
+  --light-muted:#94a3b8;
+
+  --border:#e6eaf2;
+  --card:#ffffff;
+
+  --page-start:#f8faff;
+  --page-end:#eef3ff;
+
+  --shadow:0 10px 30px rgba(91,140,255,.10);
+  --soft-shadow:0 4px 16px rgba(15,23,42,.05);
+  --dialog-shadow:0 20px 60px rgba(15,23,42,.22);
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:"PingFang SC",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,
+body{
+  width:100%;
+  min-height:100%;
+}
+
+body{
+  min-height:100vh;
+  padding:16px;
+  color:var(--text);
+  background:linear-gradient(135deg,var(--page-start) 0%,var(--page-end) 100%);
+  overflow-x:hidden;
+}
+
+button,
+input{
+  font-family:inherit;
+}
+
+button{
+  user-select:none;
+}
+
+input{
+  outline:none;
+}
+
+/* ==============================
+   主卡片
+============================== */
+.dashboard-card{
+  width:100%;
+  max-width:1100px;
+  margin:0 auto;
+  padding:24px;
+  border-radius:24px;
+  background:rgba(255,255,255,.96);
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:var(--shadow);
+}
+
+/* ==============================
+   标题 + 警告
+============================== */
+.header-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:16px;
+}
+
+.card-title{
+  position:relative;
+  flex:0 0 auto;
+  padding-left:12px;
+  font-size:21px;
+  line-height:1.2;
+  color:var(--text);
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.card-title::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:50%;
+  width:4px;
+  height:21px;
+  border-radius:999px;
+  background:var(--primary);
+  transform:translateY(-50%);
+}
+
+.warn-text{
+  flex:1 1 auto;
+  min-width:0;
+  padding:8px 12px;
+  border-radius:12px;
+  background:var(--danger-light);
+  border:1px solid #ffd7d7;
+  color:var(--danger-dark);
+  font-size:12px;
+  line-height:1.45;
+  font-weight:700;
+  text-align:right;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.warn-text::before{
+  content:"\f071";
+  font-family:"Font Awesome 5 Free";
+  font-weight:900;
+  margin-right:6px;
+}
+
+/* ==============================
+   顶部操作条
+============================== */
+.top-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  margin-bottom:16px;
+  border-radius:18px;
+  background:#f8fbff;
+  border:1px solid var(--border);
+}
+
+.config-button{
+  flex:0 0 auto;
+  height:42px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:0 16px;
+  border-radius:13px;
+  border:1px solid #d8e2f3;
+  background:#fff;
+  color:#334155;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:var(--soft-shadow);
+  white-space:nowrap;
+  transition:.18s ease;
+}
+
+.config-button i{
+  color:var(--primary);
+  font-size:14px;
+}
+
+.config-button:hover{
+  color:var(--primary);
+  border-color:#bdd0ff;
+  transform:translateY(-1px);
+}
+
+/* ==============================
+   搜索
+============================== */
+.search-container{
+  flex:1 1 auto;
+  min-width:280px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+}
+
+.search-input{
+  flex:1;
+  min-width:0;
+  height:42px;
+  padding:0 14px;
+  border-radius:13px;
+  border:1px solid #d8e2f3;
+  background:#fff;
+  color:var(--text);
+  font-size:14px;
+  outline:none;
+  transition:.18s ease;
+}
+
+.search-input::placeholder{
+  color:#94a3b8;
+}
+
+.search-input:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(91,140,255,.12);
+}
+
+.search-button{
+  flex:0 0 84px;
+  height:42px;
+  padding:0 12px;
+  border-radius:13px;
+  border:none;
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;
+  font-size:14px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(91,140,255,.22);
+  transition:.18s ease;
+}
+
+.search-button:hover{
+  filter:brightness(.98);
+  transform:translateY(-1px);
+}
+
+/* ==============================
+   用户列表
+============================== */
+.user-list{
+  display:grid;
+  gap:12px;
+  margin-top:16px;
+}
+
+.user-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:16px;
+  border-radius:18px;
+  background:#fff;
+  border:1px solid var(--border);
+  box-shadow:var(--soft-shadow);
+  transition:.18s ease;
+}
+
+.user-item:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 24px rgba(15,23,42,.07);
+}
+
+.user-info{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.user-info img{
+  flex:0 0 52px;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  object-fit:cover;
+  background:#eef2ff;
+  border:3px solid #fff;
+  box-shadow:0 4px 12px rgba(15,23,42,.10);
+}
+
+.user-details{
+  min-width:0;
+  color:var(--text);
+  word-break:break-word;
+  white-space:normal;
+}
+
+.user-id{
+  margin-bottom:4px;
+  font-size:15px;
+  font-weight:800;
+  color:#111827;
+}
+
+.user-nickname,
+.user-registered{
+  font-size:13px;
+  line-height:1.65;
+  color:var(--muted);
+}
+
+/* ==============================
+   用户操作按钮
+============================== */
+.user-actions{
+  flex:0 0 auto;
+  display:grid;
+  grid-template-columns:repeat(3,auto);
+  gap:8px;
+  margin:0;
+}
+
+.user-button{
+  min-width:92px;
+  height:38px;
+  padding:0 14px;
+  border-radius:999px;
+  border:1px solid transparent;
+  background:var(--primary);
+  color:#fff;
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+  transition:.18s ease;
+  white-space:nowrap;
+}
+
+.user-button:hover{
+  filter:brightness(.97);
+  transform:translateY(-1px);
+}
+
+.user-button.danger{
+  background:var(--danger-light);
+  color:var(--danger-dark);
+  border-color:#ffd7d7;
+}
+
+.user-button.danger:hover{
+  background:#ffe7e6;
+}
+
+.user-button.toggle{
+  background:var(--warning-light);
+  color:#b26a00;
+  border-color:#ffe0a3;
+}
+
+.user-button.toggle:hover{
+  background:#fff0c2;
+}
+
+.user-button[disabled]{
+  opacity:.65;
+  cursor:not-allowed;
+  transform:none;
+}
+
+/* ==============================
+   场地赠送能量设置弹窗
+============================== */
+.modal-mask{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(15,23,42,.42);
+  z-index:999;
+}
+
+.modal{
+  width:100%;
+  max-width:380px;
+  padding:20px;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:var(--dialog-shadow);
+}
+
+.modal-title{
+  margin-bottom:10px;
+  font-size:17px;
+  font-weight:800;
+  color:var(--text);
+}
+
+.modal-body{
+  margin-bottom:14px;
+  font-size:14px;
+  color:#475569;
+  line-height:1.65;
+}
+
+.modal-label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:10px;
+  font-size:14px;
+  color:var(--text);
+}
+
+.modal-input{
+  flex:0 0 120px;
+  height:38px;
+  padding:0 10px;
+  border-radius:10px;
+  border:1px solid #d8e2f3;
+  font-size:14px;
+  text-align:right;
+  outline:none;
+}
+
+.modal-input:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(91,140,255,.12);
+}
+
+.modal-tip{
+  margin-top:8px;
+  font-size:12px;
+  color:var(--light-muted);
+}
+
+.modal-footer{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:14px;
+}
+
+.modal-btn{
+  min-width:80px;
+  height:38px;
+  padding:0 16px;
+  border-radius:999px;
+  border:none;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:800;
+}
+
+.modal-btn.cancel{
+  background:#f1f5f9;
+  color:#475569;
+}
+
+.modal-btn.confirm{
+  background:var(--primary);
+  color:#fff;
+}
+
+/* ==============================
+   通用自定义提示弹窗
+   替代 alert / confirm / prompt
+============================== */
+.app-dialog-mask{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  background:rgba(15,23,42,.42);
+  z-index:1200;
+}
+
+.app-dialog{
+  width:100%;
+  max-width:380px;
+  padding:20px 18px 16px;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:var(--dialog-shadow);
+  animation:appDialogIn .18s ease-out;
+}
+
+@keyframes appDialogIn{
+  from{
+    opacity:0;
+    transform:translateY(10px) scale(.98);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+.app-dialog-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.app-dialog-icon{
+  flex:0 0 34px;
+  width:34px;
+  height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  background:var(--primary-light);
+  color:var(--primary);
+}
+
+.app-dialog-icon.success{
+  background:var(--success-light);
+  color:var(--success);
+}
+
+.app-dialog-icon.warning{
+  background:var(--warning-light);
+  color:var(--warning);
+}
+
+.app-dialog-icon.danger{
+  background:var(--danger-light);
+  color:var(--danger);
+}
+
+.app-dialog-title{
+  font-size:17px;
+  font-weight:800;
+  color:var(--text);
+}
+
+.app-dialog-message{
+  font-size:14px;
+  color:#475569;
+  line-height:1.65;
+  word-break:break-word;
+  white-space:pre-wrap;
+}
+
+.app-dialog-input{
+  width:100%;
+  height:42px;
+  margin-top:12px;
+  padding:0 12px;
+  border-radius:12px;
+  border:1px solid #d8e2f3;
+  font-size:14px;
+  outline:none;
+  display:none;
+}
+
+.app-dialog-input:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(91,140,255,.12);
+}
+
+.app-dialog-footer{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:16px;
+}
+
+.app-dialog-footer.only-confirm{
+  justify-content:flex-end;
+}
+
+.app-dialog-btn{
+  min-width:78px;
+  height:38px;
+  padding:0 16px;
+  border-radius:999px;
+  border:none;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:800;
+}
+
+.app-dialog-btn.cancel{
+  background:#f1f5f9;
+  color:#475569;
+}
+
+.app-dialog-btn.confirm{
+  background:var(--primary);
+  color:#fff;
+}
+
+.app-dialog-btn.danger{
+  background:var(--danger);
+  color:#fff;
+}
+
+/* ==============================
+   手机端重点优化
+============================== */
+@media (max-width:768px){
+  body{
+    padding:10px;
+    background:#f4f7ff;
+  }
+
+  .dashboard-card{
+    padding:14px;
+    border-radius:18px;
+    box-shadow:none;
+  }
+
+  .header-row{
+    display:block;
+    margin-bottom:12px;
+  }
+
+  .card-title{
+    margin-bottom:10px;
+    font-size:18px;
+  }
+
+  .warn-text{
+    width:100%;
+    display:block;
+    padding:9px 10px;
+    border-radius:12px;
+    font-size:12px;
+    line-height:1.5;
+    text-align:left;
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+  }
+
+  .top-actions{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+    padding:10px;
+    border-radius:15px;
+    margin-bottom:12px;
+  }
+
+  .config-button{
+    width:100%;
+    height:44px;
+    justify-content:center;
+  }
+
+  .search-container{
+    width:100%;
+    min-width:0;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 72px;
+    gap:8px;
+  }
+
+  .search-input{
+    width:100%;
+    min-width:0;
+    height:44px;
+    padding:0 12px;
+    font-size:14px;
+  }
+
+  .search-button{
+    width:72px;
+    height:44px;
+    flex:none;
+    padding:0;
+    font-size:14px;
+  }
+
+  .user-list{
+    gap:10px;
+    margin-top:12px;
+  }
+
+  .user-item{
+    display:block;
+    padding:12px;
+    border-radius:16px;
+  }
+
+  .user-info{
+    width:100%;
+    align-items:flex-start;
+    gap:10px;
+  }
+
+  .user-info img{
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+  }
+
+  .user-details{
+    flex:1;
+    min-width:0;
+  }
+
+  .user-id{
+    max-width:100%;
+    font-size:15px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .user-nickname,
+  .user-registered{
+    font-size:12px;
+    line-height:1.55;
+  }
+
+  .user-actions{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    margin-top:12px;
+  }
+
+  .user-button{
+    width:100%;
+    min-width:0;
+    height:42px;
+    padding:0 6px;
+    font-size:13px;
+  }
+
+  .blacklist-toggle{
+    grid-column:1 / -1;
+  }
+
+  .modal-mask,
+  .app-dialog-mask{
+    align-items:flex-end;
+    padding:0;
+  }
+
+  .modal,
+  .app-dialog{
+    width:100%;
+    max-width:100%;
+    border-radius:20px 20px 0 0;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+
+  .modal-label{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .modal-input{
+    width:100%;
+    flex:none;
+    height:42px;
+    text-align:left;
+  }
+
+  .modal-footer,
+  .app-dialog-footer{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:14px;
+  }
+
+  .modal-btn,
+  .app-dialog-btn{
+    width:100%;
+    height:42px;
+  }
+
+  .app-dialog-footer.only-confirm{
+    grid-template-columns:1fr;
+  }
+}
+
+/* ==============================
+   极小屏手机
+============================== */
+@media (max-width:360px){
+  body{
+    padding:8px;
+  }
+
+  .dashboard-card{
+    padding:12px;
+  }
+
+  .search-container{
+    grid-template-columns:minmax(0,1fr) 64px;
+  }
+
+  .search-button{
+    width:64px;
+    font-size:13px;
+  }
+
+  .user-button{
+    font-size:12px;
+  }
+
+  .warn-text{
+    font-size:11px;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="dashboard-card">
+   <div class="header-row">
+  <div class="card-title">能量赠送</div>
+  <div class="warn-text">
+    能量仅用于营销和补偿使用，不可用于和用户的私下交易，一经发现私下交易的将冻结场地账号提现金额
+  </div>
+</div>
+
+
+    <div class="top-actions">
+      <!-- 场地赠送能量设置按钮 -->
+      <button class="config-button" onclick="openGiftConfigModal()">
+        <i class="fas fa-sliders-h"></i>
+        <span>场地赠送能量设置</span>
+      </button>
+
+      <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="搜索用户ID...">
+        <button class="search-button" onclick="searchUser()">搜索</button>
+      </div>
+    </div>
+
+    <div class="user-list" id="user-list"></div>
+  </div>
+
+  <!-- 场地赠送能量配置模态框 -->
+  <div class="modal-mask" id="gift-config-mask">
+    <div class="modal">
+      <div class="modal-title">场地赠送能量设置</div>
+      <div class="modal-body">
+        <div>设置当前场地单次默认赠送的能量数量。</div>
+        <div class="modal-label">
+          <span>默认赠送能量</span>
+          <input type="number" id="gift-config-input" class="modal-input" min="0" max="5" step="1">
+        </div>
+        <div class="modal-tip">数值不能大于 5，建议范围 1 ~ 5。</div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel" onclick="closeGiftConfigModal()">取消</button>
+        <button class="modal-btn confirm" onclick="saveGiftConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+<!-- 通用自定义提示弹窗：替代 alert / confirm / prompt -->
+<div class="app-dialog-mask" id="app-dialog-mask">
+  <div class="app-dialog">
+    <div class="app-dialog-head">
+      <div class="app-dialog-icon" id="app-dialog-icon">
+        <i class="fas fa-info-circle"></i>
+      </div>
+      <div class="app-dialog-title" id="app-dialog-title">提示</div>
+    </div>
+
+    <div class="app-dialog-message" id="app-dialog-message"></div>
+
+    <input
+      type="text"
+      class="app-dialog-input"
+      id="app-dialog-input"
+      autocomplete="off"
+    >
+    <label
+      id="app-dialog-checkbox-wrap"
+      style="display:none;margin-top:12px;font-size:14px;color:#475569;align-items:center;gap:8px;"
+    >
+      <input
+        type="checkbox"
+        id="app-dialog-checkbox"
+        style="width:16px;height:16px;"
+      >
+      <span id="app-dialog-checkbox-text">发送移除语音房指令，把这个用户拉黑并且移除语音房</span>
+    </label>
+    <div class="app-dialog-footer" id="app-dialog-footer">
+      <button class="app-dialog-btn cancel" id="app-dialog-cancel">取消</button>
+      <button class="app-dialog-btn confirm" id="app-dialog-confirm">确定</button>
+    </div>
+  </div>
+</div>
+  <script>
+    // ====== 分页 ======
+    let currentPage = 1;
+    
+    // ====== 通用自定义模态框：替代 alert / confirm / prompt ======
+const AppDialog = (() => {
+  let resolver = null;
+
+  function getEls() {
+    return {
+      mask: document.getElementById('app-dialog-mask'),
+      icon: document.getElementById('app-dialog-icon'),
+      title: document.getElementById('app-dialog-title'),
+      message: document.getElementById('app-dialog-message'),
+input: document.getElementById('app-dialog-input'),
+checkboxWrap: document.getElementById('app-dialog-checkbox-wrap'),
+checkbox: document.getElementById('app-dialog-checkbox'),
+footer: document.getElementById('app-dialog-footer'),
+      cancel: document.getElementById('app-dialog-cancel'),
+      confirm: document.getElementById('app-dialog-confirm')
+    };
+  }
+
+  function setIcon(type) {
+    const { icon } = getEls();
+
+    icon.className = 'app-dialog-icon';
+
+    if (type === 'success') {
+      icon.classList.add('success');
+      icon.innerHTML = '<i class="fas fa-check"></i>';
+    } else if (type === 'warning') {
+      icon.classList.add('warning');
+      icon.innerHTML = '<i class="fas fa-exclamation"></i>';
+    } else if (type === 'danger') {
+      icon.classList.add('danger');
+      icon.innerHTML = '<i class="fas fa-times"></i>';
+    } else {
+      icon.innerHTML = '<i class="fas fa-info-circle"></i>';
+    }
+  }
+
+  function close(value) {
+    const { mask } = getEls();
+    mask.style.display = 'none';
+
+    if (resolver) {
+      resolver(value);
+      resolver = null;
+    }
+  }
+
+  function open(options = {}) {
+    const {
+      mode = 'alert',
+      title = '提示',
+      message = '',
+      type = 'info',
+      placeholder = '',
+      defaultValue = '',
+      confirmText = '确定',
+      cancelText = '取消',
+      closeOnMask = true,
+    
+      // 新增：复选框
+      checkboxLabel = '',
+      checkboxDefault = false
+    } = options;
+
+    const els = getEls();
+
+    return new Promise(resolve => {
+      resolver = resolve;
+
+      setIcon(type);
+
+      els.title.textContent = title;
+      els.message.textContent = message;
+
+      els.confirm.textContent = confirmText;
+      els.cancel.textContent = cancelText;
+
+      els.input.value = defaultValue || '';
+      els.input.placeholder = placeholder || '';
+      els.input.style.display = mode === 'prompt' ? 'block' : 'none';
+        if (els.checkboxWrap && els.checkbox) {
+          if (checkboxLabel) {
+            els.checkboxWrap.style.display = 'flex';
+            els.checkbox.checked = !!checkboxDefault;
+            const textEl = document.getElementById('app-dialog-checkbox-text');
+            if (textEl) textEl.textContent = checkboxLabel;
+          } else {
+            els.checkboxWrap.style.display = 'none';
+            els.checkbox.checked = false;
+          }
+        }
+      if (mode === 'alert') {
+        els.cancel.style.display = 'none';
+        els.footer.classList.add('only-confirm');
+      } else {
+        els.cancel.style.display = 'inline-flex';
+        els.footer.classList.remove('only-confirm');
+      }
+
+      if (type === 'danger') {
+        els.confirm.classList.add('danger');
+      } else {
+        els.confirm.classList.remove('danger');
+      }
+
+      els.mask.style.display = 'flex';
+
+      els.cancel.onclick = () => {
+        close(mode === 'prompt' ? null : false);
+      };
+
+    els.confirm.onclick = () => {
+      if (mode === 'prompt') {
+        if (checkboxLabel) {
+          close({
+            value: els.input.value,
+            checked: els.checkbox ? els.checkbox.checked : false
+          });
+        } else {
+          close(els.input.value);
+        }
+      } else if (mode === 'confirm') {
+        close(true);
+      } else {
+        close(true);
+      }
+    };
+
+      els.mask.onclick = e => {
+        if (closeOnMask && e.target === els.mask) {
+          close(mode === 'prompt' ? null : false);
+        }
+      };
+
+      document.onkeydown = e => {
+        if (els.mask.style.display !== 'flex') return;
+
+        if (e.key === 'Escape') {
+          close(mode === 'prompt' ? null : false);
+        }
+
+        if (e.key === 'Enter') {
+          els.confirm.click();
+        }
+      };
+
+      setTimeout(() => {
+        if (mode === 'prompt') {
+          els.input.focus();
+        } else {
+          els.confirm.focus();
+        }
+      }, 50);
+    });
+  }
+
+  return {
+    alert(message, title = '提示', type = 'info') {
+      return open({
+        mode: 'alert',
+        title,
+        message,
+        type,
+        confirmText: '知道了'
+      });
+    },
+
+    confirm(message, title = '确认操作', type = 'warning') {
+      return open({
+        mode: 'confirm',
+        title,
+        message,
+        type,
+        confirmText: '确认',
+        cancelText: '取消'
+      });
+    },
+
+prompt(message, options = {}) {
+  return open({
+    mode: 'prompt',
+    title: options.title || '请输入',
+    message,
+    type: options.type || 'info',
+    placeholder: options.placeholder || '',
+    defaultValue: options.defaultValue || '',
+    confirmText: options.confirmText || '确定',
+    cancelText: options.cancelText || '取消',
+
+    // 关键：这里必须继续传给 open()
+    checkboxLabel: options.checkboxLabel || '',
+    checkboxDefault: !!options.checkboxDefault
+  });
+}
+  };
+});
+
+const appDialog = AppDialog();
+
+function showAppAlert(message, title = '提示', type = 'info') {
+  return appDialog.alert(message, title, type);
+}
+
+function showAppConfirm(message, title = '确认操作', type = 'warning') {
+  return appDialog.confirm(message, title, type);
+}
+
+function showAppPrompt(message, options = {}) {
+  return appDialog.prompt(message, options);
+}
+    
+    const pageSize = 20;
+
+    // 当前场地默认赠送能量（从接口拉取），最大不超过 5
+    let venueGiftEnergy = 5;
+
+    // ====== API ======
+    const BL_API = {
+      BLOCK: 'https://open.rcwulian.cn/api/operat/block_user.php',
+      UNBLOCK: 'https://open.rcwulian.cn/api/operat/unblock_user.php'
+    };
+    const BL_API_BASE = 'https://open.rcwulian.cn/api/operat';
+    const BL_LIST = `${BL_API_BASE}/blacklist_list.php`;
+
+    // 场地赠送能量配置接口
+    const VENUE_GIFT_API = 'https://open.rcwulian.cn/api/venue/venue_gift_energy.php';
+    // 每次都从服务器拉取最新的场地赠送能量
+    async function fetchLatestVenueGiftEnergy() {
+      try {
+        const resp = await fetch(VENUE_GIFT_API, {
+          method: 'GET',
+          credentials: 'include'
+        });
+        const json = await resp.json();
+        if (json.code !== 0 || !json.data) {
+          throw new Error(json.msg || '获取场地赠送能量失败');
+        }
+    
+        const data = json.data || {};
+    
+        // 后端返回的是 gift_energy，这里要把它也算进去
+        let amount = Number(
+          data.gift_energy_effect ??
+          data.gift_energy ??        // ⭐ 关键：加上这个
+          data.gift_energy_raw ??
+          5
+        );
+    
+        if (isNaN(amount)) amount = 5;
+    
+        return amount;
+      } catch (e) {
+        console.error('fetchLatestVenueGiftEnergy error:', e);
+        throw e;
+      }
+    }
+
+    // 拉取场地赠送能量配置
+async function loadVenueGiftEnergy(showToast = false) {
+  try {
+    const resp = await fetch(VENUE_GIFT_API, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    const json = await resp.json();
+    if (json.code === 0 && json.data) {
+      const data = json.data || {};
+      const val = Number(
+        data.gift_energy_effect ??
+        data.gift_energy ??       // ⭐ 同样加上这个
+        data.gift_energy_raw ??
+        5
+      );
+      venueGiftEnergy = isNaN(val) ? 5 : Math.min(5, Math.max(0, val));
+    } else {
+      venueGiftEnergy = 5;
+      if (showToast) showAppAlert(json.msg || '获取场地赠送能量失败，已使用默认 5', '获取失败', 'warning');
+    }
+  } catch (e) {
+    console.error('loadVenueGiftEnergy error:', e);
+    venueGiftEnergy = 5;
+    if (showToast) showAppAlert('获取场地赠送能量失败，已使用默认 5', '获取失败', 'warning');
+  }
+}
+
+    // 打开场地配置模态框
+    async function openGiftConfigModal() {
+      // 确保先拉一次
+      await loadVenueGiftEnergy();
+      const input = document.getElementById('gift-config-input');
+      input.value = venueGiftEnergy;
+      document.getElementById('gift-config-mask').style.display = 'flex';
+    }
+
+    function closeGiftConfigModal() {
+      document.getElementById('gift-config-mask').style.display = 'none';
+    }
+
+// 保存场地配置
+async function saveGiftConfig() {
+  const input = document.getElementById('gift-config-input');
+  let val = Number(input.value);
+
+  if (isNaN(val) || val < 0) {
+    await showAppAlert('请输入大于等于 0 的数字', '输入错误', 'warning');
+    input.focus();
+    return;
+  }
+
+  if (val > 5) {
+    await showAppAlert('场地赠送能量最大不能超过 5', '超过限制', 'warning');
+    val = 5;
+    input.value = 5;
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.append('gift_energy', String(Math.round(val)));
+
+  try {
+    const resp = await fetch(VENUE_GIFT_API, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+
+    const json = await resp.json();
+
+    if (json.code === 0) {
+      venueGiftEnergy = Math.min(5, Math.max(0, Math.round(val)));
+      closeGiftConfigModal();
+      await showAppAlert(json.msg || '保存成功', '保存成功', 'success');
+    } else {
+      await showAppAlert(json.msg || '保存失败', '保存失败', 'danger');
+    }
+  } catch (e) {
+    console.error('saveGiftConfig error:', e);
+    await showAppAlert('保存失败，请检查网络', '网络错误', 'danger');
+  }
+}
+
+    // ====== 加载用户列表 ======
+    function loadUserData(searchQuery = '') {
+      const url = `https://open.rcwulian.cn/api/user/getUserList.php?page=${currentPage}&limit=${pageSize}&id=${searchQuery.id || ''}&username=${searchQuery.username || ''}&phone=${searchQuery.phone || ''}&access_token=df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4`;
+
+      return fetch(url)
+        .then(r => r.json())
+        .then(data => {
+          const userListContainer = document.getElementById('user-list');
+          userListContainer.innerHTML = '';
+
+          if (data.code !== 0 || !Array.isArray(data.data)) {
+            userListContainer.innerHTML = '<div style="color:#7f8fa4">没有更多用户数据</div>';
+            return;
+          }
+
+          data.data.forEach(user => {
+            const userItem = document.createElement('div');
+            userItem.classList.add('user-item');
+            userItem.innerHTML = `
+              <div class="user-info">
+                <img src="${user.avatar}" alt="User Image">
+                <div class="user-details">
+                  <div class="user-id">用户ID: ${user.id}</div>
+                  <div class="user-nickname">昵称: ${user.username}</div>
+                  <div class="user-nickname">能量: ${user.energy ?? '0.00'}</div>
+                  <div class="user-registered">登录时间: ${user.jointime ?? '-'}</div>
+                </div>
+              </div>
+              <div class="user-actions">
+                <button class="user-button" onclick="giftEnergy('${user.id}')">赠送能量</button>
+                <button class="user-button danger" onclick="clearEnergy('${user.id}')">清除能量</button>
+                <button class="user-button toggle blacklist-toggle"
+                    data-black="0"
+                    data-uid="${user.id}"
+                    disabled>状态加载中…</button>
+              </div>
+            `;
+            userListContainer.appendChild(userItem);
+          });
+          return initBlacklistStatus();
+        })
+        .catch(err => {
+          console.error('数据加载失败:', err);
+          showAppAlert('数据加载失败，请检查网络', '加载失败', 'danger');
+        });
+    }
+
+    // ====== 黑名单 ======
+    async function isBlacklisted(uid) {
+      try {
+        const params = new URLSearchParams({ page: 1, page_size: 1, kw: uid });
+        const resp = await fetch(`${BL_LIST}?${params.toString()}`, { credentials: 'include' });
+        const json = await resp.json();
+        if (json.code !== 0) return false;
+        const list = (json.data && json.data.list) || [];
+        return list.some(r => String(r.uid) === String(uid));
+      } catch {
+        return false;
+      }
+    }
+
+    function setBlackBtnState(btn, isBlack) {
+      btn.dataset.black = isBlack ? '1' : '0';
+      btn.textContent = isBlack ? '取消拉黑' : '拉黑用户';
+      btn.disabled = false;
+      if (!btn._bound) {
+        btn.addEventListener('click', () => toggleBlacklist(btn));
+        btn._bound = true;
+      }
+    }
+
+    async function initBlacklistStatus() {
+      const btns = Array.from(document.querySelectorAll('.blacklist-toggle'));
+      let idx = 0;
+      const CONCURRENCY = 6;
+
+      async function worker() {
+        while (idx < btns.length) {
+          const i = idx++;
+          const btn = btns[i];
+          const uid = btn.dataset.uid;
+          const isBlack = await isBlacklisted(uid);
+          setBlackBtnState(btn, isBlack);
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, btns.length) }, worker));
+    }
+
+async function toggleBlacklist(btn) {
+  const uid = btn.dataset.uid;
+  const isBlack = btn.dataset.black === '1';
+
+  btn.disabled = true;
+  btn.textContent = isBlack ? '取消中…' : '拉黑中…';
+
+  let finalBlackState = isBlack;
+
+  try {
+    if (!isBlack) {
+        let result = await showAppPrompt('请输入拉黑原因，最多 255 字。', {
+          title: '拉黑用户',
+          placeholder: '例如：违规操作、恶意刷量等',
+          type: 'warning',
+          confirmText: '确认拉黑',
+          checkboxLabel: '发送移除语音房指令，把这个用户移除语音房',
+          checkboxDefault: false
+        });
+        
+        if (result === null) {
+          return;
+        }
+        
+        let reason = '';
+        let removeVoiceRoom = 0;
+        
+        if (typeof result === 'object') {
+          reason = String(result.value || '').trim();
+          removeVoiceRoom = result.checked ? 1 : 0;
+        } else {
+          reason = String(result || '').trim();
+        }
+
+      if (reason === null) {
+        return;
+      }
+
+      reason = reason.trim();
+
+      if (!reason) {
+        await showAppAlert('拉黑原因不能为空', '请输入原因', 'warning');
+        return;
+      }
+
+      if (reason.length > 255) {
+        await showAppAlert('原因过长，请控制在 255 字以内', '内容过长', 'warning');
+        return;
+      }
+
+    //   const ok = await blockUser(uid, reason);
+    const ok = await blockUser(uid, reason, removeVoiceRoom);
+      if (ok) {
+        finalBlackState = true;
+      }
+    } else {
+      const confirmed = await showAppConfirm('确认取消拉黑该用户？', '取消拉黑', 'warning');
+
+      if (!confirmed) {
+        return;
+      }
+
+      const ok = await unblockUser(uid);
+      if (ok) {
+        finalBlackState = false;
+      }
+    }
+  } finally {
+    setBlackBtnState(btn, finalBlackState);
+  }
+}
+
+async function blockUser(uid, reason, removeVoiceRoom = 0){
+  try{
+    const resp = await fetch(BL_API.BLOCK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+          uid,
+          reason,
+          remove_voice_room: removeVoiceRoom
+        })
+    });
+
+    const json = await resp.json();
+
+    if (json.code === 0) {
+      await showAppAlert(json.msg || '已拉黑', '操作成功', 'success');
+      return true;
+    } else {
+      await showAppAlert(json.msg || '拉黑失败', '操作失败', 'danger');
+      return false;
+    }
+  }catch(e){
+    console.error('blockUser error:', e);
+    await showAppAlert('拉黑失败，请检查网络', '网络错误', 'danger');
+    return false;
+  }
+}
+
+async function unblockUser(uid){
+  try{
+    const resp = await fetch(BL_API.UNBLOCK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ uid })
+    });
+
+    const json = await resp.json();
+
+    if (json.code === 0) {
+      await showAppAlert(json.msg || '已取消拉黑', '操作成功', 'success');
+      return true;
+    } else {
+      await showAppAlert(json.msg || '取消拉黑失败', '操作失败', 'danger');
+      return false;
+    }
+  }catch(e){
+    console.error('unblockUser error:', e);
+    await showAppAlert('取消拉黑失败，请检查网络', '网络错误', 'danger');
+    return false;
+  }
+}
+
+    // ====== 搜索 ======
+    function searchUser() {
+      const v = document.getElementById('search-input').value.trim();
+      currentPage = 1;
+      loadUserData({ id: v });
+    }
+
+// 点击「赠送能量」：
+// 1. 每次实时从后台读取当前场地最新的赠送能量配置
+// 2. 不弹输入框，直接按配置值赠送
+// 3. 如果配置 >5，直接提示并阻止，不再自动按 5 赠送
+async function giftEnergy(userId) {
+  let amount;
+
+  try {
+    amount = await fetchLatestVenueGiftEnergy();
+  } catch (e) {
+    await showAppAlert('获取场地赠送能量失败，请稍后重试', '获取失败', 'danger');
+    return;
+  }
+
+  if (amount <= 0 || isNaN(amount)) {
+    await showAppAlert('当前场地赠送能量配置不正确，请先在上方设置中调整为 1~5', '配置错误', 'warning');
+    return;
+  }
+
+  if (amount > 5) {
+    await showAppAlert(
+      `当前场地赠送能量配置为 ${amount}，已超过最大 5，请先在「场地赠送能量设置」中改为不超过 5`,
+      '超过限制',
+      'warning'
+    );
+    return;
+  }
+
+  const confirmed = await showAppConfirm(
+    `确认给用户 ${userId} 赠送 ${amount} 能量？`,
+    '确认赠送',
+    'warning'
+  );
+
+  if (!confirmed) return;
+
+  const params = new URLSearchParams();
+  params.append('uid', userId);
+  params.append('amount', amount);
+
+  try {
+    const r = await fetch('https://open.rcwulian.cn/api/user/recharges.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+
+    const data = await r.json();
+
+    if (data.code === 0 && data.success) {
+      await showAppAlert(
+        `本次赠送：${amount} 能量\n当前总能量余额：${data.message}`,
+        '赠送成功',
+        'success'
+      );
+      loadUserData();
+    } else {
+      await showAppAlert(data.msg || '能量赠送失败，请重试', '赠送失败', 'danger');
+    }
+  } catch (err) {
+    console.error('giftEnergy error:', err);
+    await showAppAlert('能量赠送失败，请检查网络', '网络错误', 'danger');
+  }
+}
+
+
+async function clearEnergy(userId) {
+  const amount = await showAppPrompt('请输入要清除的能量数量，留空则全部清除。', {
+    title: '清除能量',
+    placeholder: '留空则全部清除',
+    type: 'warning',
+    confirmText: '确认清除'
+  });
+
+  if (amount === null) return;
+
+  const confirmed = await showAppConfirm(
+    amount.trim() === ''
+      ? `确认清除用户 ${userId} 的全部能量？`
+      : `确认清除用户 ${userId} 的 ${amount.trim()} 能量？`,
+    '确认清除',
+    'danger'
+  );
+
+  if (!confirmed) return;
+
+  const params = new URLSearchParams();
+  params.append('uid', userId);
+
+  if (amount.trim() !== '') {
+    params.append('amount', amount.trim());
+  }
+
+  try {
+    const res = await fetch('https://open.rcwulian.cn/api/user/getUserList.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+
+    const data = await res.json();
+
+    if (data.code === 0) {
+      await showAppAlert(data.detail || '清除成功', '操作成功', 'success');
+      loadUserData();
+    } else {
+      await showAppAlert('清除失败：' + (data.msg || '未知错误'), '操作失败', 'danger');
+    }
+  } catch (e) {
+    console.error('clearEnergy error:', e);
+    await showAppAlert('清除失败，请检查网络', '网络错误', 'danger');
+  }
+}
+
+    // ====== 触底加载 ======
+    window.addEventListener('scroll', () => {
+      const scrollPosition = window.scrollY + window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      if (scrollPosition >= documentHeight) {
+        currentPage++;
+        loadUserData();
+      }
+    });
+
+    // 初次加载
+    (async () => {
+      await loadVenueGiftEnergy();
+      loadUserData();
+    })();
+  </script>
+</body>
+</html>

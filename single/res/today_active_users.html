@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>今日活跃用户</title>
+
+  <style>
+    :root { --primary:#5b8cff; --secondary:#7f8fa4; --background-gradient-start:#f8f9ff; --background-gradient-end:#f0f3ff; --card-bg:#ffffff; --border-color:#ddd; --text-color:#333; --shadow:0 4px 24px rgba(91,140,255,0.08); --transition:all 0.3s ease; --hover-bg:#f9f9f9;}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC",system-ui}
+    body{background:linear-gradient(135deg,var(--background-gradient-start) 0%,var(--background-gradient-end) 100%);min-height:100vh;padding:20px;display:flex;justify-content:center;align-items:flex-start}
+    .container { max-width: 900px; width: 100%; }
+
+    .card{background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:20px;transition:var(--transition)}
+    .card-title{font-size:24px;color:var(--text-color);margin-bottom:20px;font-weight:600;border-bottom:2px solid var(--primary);padding-bottom:10px;text-align:left}
+
+    .loading{text-align:center;font-size:16px;color:var(--primary);padding:20px}
+
+    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+    .toolbar input{flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;outline:none}
+    .toolbar input:focus{border-color:var(--primary)}
+    .edit-btn{background-color:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;transition:var(--transition);white-space:nowrap}
+    .edit-btn:hover{background-color:#4a77e4}
+
+    .pager{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;color:var(--secondary);font-size:14px;flex-wrap:wrap}
+    .pager .link{color:var(--primary);cursor:pointer;user-select:none;font-weight:600}
+    .pager .link.disabled{opacity:.45;cursor:not-allowed}
+    .muted{color:var(--secondary)}
+
+    /* ✅ 扁平卡片 */
+    .venue-card{background:#fff;border:1px solid var(--border-color);border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;gap:12px;transition:var(--transition);align-items:center}
+    .venue-card:hover{background-color:var(--hover-bg)}
+    .venue-img{width:72px;height:72px;object-fit:cover;border-radius:10px}
+
+    .venue-info{
+      flex:1;
+      font-size:14px;color:var(--text-color);
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 18px;
+      row-gap: 4px;
+      line-height: 1.25;
+    }
+    .venue-info .venue-name{grid-column:1 / -1;font-size:16px;font-weight:600;color:var(--primary);margin-bottom:2px}
+    .venue-info span{display:block;margin:0}
+
+    .venue-actions{display:flex;flex-direction:column;justify-content:center;padding-left:8px;gap:8px}
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">今日活跃用户</div>
+
+      <div class="toolbar">
+        <input id="kw" placeholder="搜索昵称/手机号" onkeydown="if(event.key==='Enter'){ doSearch(); }" />
+        <button class="edit-btn" onclick="doSearch()">查询</button>
+        <button class="edit-btn" onclick="clearSearch()" title="清空关键词并从第一页刷新">清空</button>
+      </div>
+
+      <div id="list"></div>
+
+      <div class="pager">
+        <div>
+          总数：<span id="total">0</span>
+          <span class="muted">｜每页 <span id="ps">20</span></span>
+        </div>
+        <div>
+          <span id="prevBtn" class="link" onclick="prevPage()">上一页</span>
+          <span class="muted">第 <span id="page">1</span> / <span id="maxPage">1</span> 页</span>
+          <span id="nextBtn" class="link" onclick="nextPage()">下一页</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const TYPE = "active";
+  const pageSize = 20;
+
+  let curKw = "";     // ✅ 锁定生效的搜索词（分页也用它）
+  let curPage = 1;
+  let total = 0;
+
+  document.getElementById('ps').textContent = pageSize;
+
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function formatMoney(v){
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(2) : escapeHtml(v);
+  }
+
+  function userCard(u){
+    const avatar = u.headimgurl ? u.headimgurl : 'https://rcwulian.cn/img/logo.png';
+    return `
+      <div class="venue-card">
+        <img class="venue-img" src="${escapeHtml(avatar)}" />
+        <div class="venue-info">
+          <span class="venue-name">${escapeHtml(u.nickname)} <span class="muted">（UID: ${escapeHtml(u.uid)}）</span></span>
+          <span>手机号：${escapeHtml(u.phone || '')}</span>
+          <span>钱包：${formatMoney(u.wallet)}</span>
+          <span>注册时间：${escapeHtml(u.created_at || '')}</span>
+          <span>最后登录：${escapeHtml(u.last_login || '')}</span>
+        </div>
+        <div class="venue-actions">
+          <button class="edit-btn" onclick="copyUid('${escapeHtml(u.uid)}')">复制UID</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function copyUid(uid){
+    navigator.clipboard?.writeText(uid)
+      .then(()=>alert('已复制：' + uid))
+      .catch(()=>alert('复制失败'));
+  }
+
+  function calcMaxPage(){
+    const mp = Math.max(1, Math.ceil((total || 0) / pageSize));
+    document.getElementById('maxPage').textContent = mp;
+    return mp;
+  }
+
+  function updatePagerState(){
+    const mp = calcMaxPage();
+    document.getElementById('page').textContent = curPage;
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    prevBtn.classList.toggle('disabled', curPage <= 1);
+    nextBtn.classList.toggle('disabled', curPage >= mp);
+  }
+
+  function doSearch(){
+    curKw = document.getElementById('kw').value.trim(); // ✅ 锁定关键词
+    reloadList(1);                                      // ✅ 永远从第一页
+  }
+
+  function clearSearch(){
+    document.getElementById('kw').value = '';
+    curKw = '';
+    reloadList(1);
+  }
+
+  async function reloadList(page){
+    curPage = page;
+
+    const listDom = document.getElementById('list');
+    listDom.innerHTML = `<div class="loading">加载中...</div>`;
+
+    // ✅ 用 curKw（不是 kw）
+    const url = `/api/index/user_today_list.php?type=${TYPE}&page=${curPage}&page_size=${pageSize}&kw=${encodeURIComponent(curKw)}`;
+
+    let json;
+    try{
+      const res = await fetch(url, {credentials:'include'});
+      json = await res.json();
+    }catch(e){
+      listDom.innerHTML = `<div class="loading">请求失败，请检查接口路径</div>`;
+      return;
+    }
+
+    if (json.code !== 0){
+      listDom.innerHTML = `<div class="loading">${escapeHtml(json.msg || '查询失败')}</div>`;
+      return;
+    }
+
+    total = json.data.total ?? 0;
+    document.getElementById('total').textContent = total;
+
+    // 如果搜索后总页数变小，自动把页码拉回有效范围
+    const mp = calcMaxPage();
+    if (curPage > mp) curPage = mp;
+
+    const list = json.data.list || [];
+    listDom.innerHTML = list.length ? list.map(userCard).join('') : `<div class="loading">暂无数据</div>`;
+
+    updatePagerState();
+  }
+
+  function prevPage(){
+    if (curPage <= 1) return;
+    reloadList(curPage - 1);
+  }
+
+  function nextPage(){
+    const mp = calcMaxPage();
+    if (curPage >= mp) return;
+    reloadList(curPage + 1);
+  }
+
+  // 初次加载
+  reloadList(1);
+</script>
+</body>
+</html>

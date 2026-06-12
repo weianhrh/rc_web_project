@@ -1,0 +1,104 @@
+
+    <form class="layui-form layuiadmin-form-vehicleadd">
+        <div class="layui-form-item">
+            <label class="layui-form-label">设备ID</label>
+            <div class="layui-input-block">
+                <input type="text" name="serial_number" required  lay-verify="required" placeholder="请输入设备ID" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">前图传</label>
+            <div class="layui-input-block">
+                <input type="text" name="image_device_serial" required lay-verify="required" placeholder="请输入前图传" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">后图传</label>
+            <div class="layui-input-block">
+                <input type="text" name="bk_image_device_serial" required lay-verify="required" placeholder="请输入后图传" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">分享状态</label>
+            <div class="layui-input-block">
+                <select name="sharing_status" required lay-verify="required">
+                    <option value="共享">共享</option>
+                    <option value="私有">私有</option>
+                </select>
+            </div>
+        </div>
+          <div class="layui-form-item">
+            <label class="layui-form-label">设备类型</label>
+            <div class="layui-input-block">
+                <select name="car_type" required lay-verify="required">
+                    <option value="1">攀爬车</option>
+                    <option value="2">竞速车</option>
+                    <option value="9">游艇</option>
+                    <option value="3">挖机</option>
+                    <option value="4">推土机</option>
+                    <option value="5">自卸车</option>
+                    <option value="6">坦克</option>
+                    <option value="7">娃娃机</option>
+                    <option value="8">气球远控</option>
+                </select>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">设备名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="device_name" required lay-verify="required" placeholder="请输入设备名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">分享名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="share_name" required lay-verify="required" placeholder="请输入分享名称" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+       
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn" lay-submit lay-filter="LAY-vehicle-add-submit">提交</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+    </form>
+
+<script>
+layui.use(['form', 'layer', 'view', 'admin'], function(){
+  var $ = layui.$,
+      form = layui.form,
+      layer = layui.layer,
+      view = layui.view,
+      admin = layui.admin;
+  
+  // 渲染表单
+  form.render();
+   // 提交表单
+    form.on('submit(LAY-vehicle-add-submit)', function(submitData){
+        var field = submitData.field;  // 获取表单数据
+
+        // 发送 Ajax 请求
+        $.ajax({
+            url: '/api/vehicle/add.php',  // 后端 API 地址
+            method: 'POST',
+            data: field,  // 表单数据
+            success: function(response) {
+                if (response.code === 0) {
+                    layer.msg('设备添加成功！');
+                    layui.table.reload('LAY-vehicle-manage');  // 重载设备列表
+                    layer.closeAll();  // 关闭弹窗
+                } else {
+                    layer.msg(response.msg || '设备添加失败');
+                }
+            },
+            error: function() {
+                layer.msg('请求失败，请稍后再试');
+            }
+        });
+
+        return false;  // 阻止表单默认提交
+    });
+});
+
+</script>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全局配置管理</title>
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --border: #ddd;
+      --bg: #fff;
+      --text: #333;
+    }
+    body {
+      background: #f5f8ff;
+      font-family: "PingFang SC", sans-serif;
+      padding: 20px;
+    }
+    .card {
+      max-width: 800px;
+      margin: auto;
+      background: var(--bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    h2 {
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-left: 6px;
+    }
+     .btn_add {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      display: none;
+      border-radius: 5px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-left: 6px;
+    }
+    .del-btn{
+      background: #ff4d4f;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-left: 6px;
+    }
+    .form {
+      border: 1px solid var(--border);
+      padding: 15px;
+      margin-top: 12px;
+      border-radius: 8px;
+    }
+    .form-group {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .form-group input[type="text"] {
+      width: 65%;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px; width: 16px;
+      left: 4px; bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>全局配置列表 <button class="btn_add" onclick="addConfig()">添加</button></h2>
+    <div id="configList"></div>
+  </div>
+
+  <script>
+    async function fetchConfigList() {
+      const res = await fetch('/api/operat/global_config_api.php?action=list');
+      const json = await res.json();
+      if (json.code === 0) renderConfigs(json.data);
+    }
+
+    function renderConfigs(configs) {
+      const container = document.getElementById('configList');
+      container.innerHTML = '';
+      configs.forEach(config => {
+        const form = document.createElement('form');
+        form.className = 'form';
+        form.dataset.id = config.id;
+        form.dataset.editing = 'false';
+
+        function createGroup(label, html) {
+          return `<div class="form-group"><label>${label}</label>${html}</div>`;
+        }
+
+        form.innerHTML = `
+          ${createGroup('支付宝：', checkbox('alipay_enabled', config.alipay_enabled))}
+          ${createGroup('微信支付：', checkbox('wechatpay_enabled', config.wechatpay_enabled))}
+          ${createGroup('抖音登录：', checkbox('douyin_login_enabled', config.douyin_login_enabled))}
+          ${createGroup('快手登录：', checkbox('kuaishou_login_enabled', config.kuaishou_login_enabled))}
+         
+          ${createGroup('微信登录：', checkbox('wechat_login_enabled', config.wechat_login_enabled))}
+           ${createGroup('AppleID 登录：', checkbox('appleid_login_enabled', config.appleid_login_enabled))}
+          ${createGroup('APP 域名地址：', text('app_domain', config.app_domain))}
+           ${createGroup('控制域名地址：', text('control_domain', config.control_domain))}
+          ${createGroup('控制端口地址：', text('control_port', config.control_port))}
+         ${createGroup('图传域名地址：', text('video_stream_domain', config.video_stream_domain))}
+          <div style="text-align:right">
+            <button type="button" class="btn" onclick="toggleEdit(this)">编辑</button>
+          
+          </div>
+        `;
+        container.appendChild(form);
+        setDisabled(form, true);
+      });
+    }
+//   <button type="button" class="del-btn" onclick="deleteConfig(${config.id})">删除</button>
+    function checkbox(name, checked) {
+      // checked 参数为 1 表示“关闭”，所以应取消勾选；0 表示开启，应勾选
+      const isChecked = checked == 0; // 0 表示开启 → 要勾选
+      return `<label class="switch"><input name="${name}" type="checkbox" ${isChecked ? 'checked' : ''}><span class="slider"></span></label>`;
+    }
+
+
+    function text(name, value) {
+      return `<input name="${name}" type="text" value="${value || ''}">`;
+    }
+
+    function setDisabled(form, disabled) {
+      const inputs = form.querySelectorAll('input');
+      inputs.forEach(i => i.disabled = disabled);
+    }
+
+    function toggleEdit(btn) {
+      const form = btn.closest('form');
+      const editing = form.dataset.editing === 'true';
+      if (!editing) {
+        setDisabled(form, false);
+        form.dataset.editing = 'true';
+        btn.textContent = '保存';
+      } else {
+        const data = getFormData(form);
+        fetch('/api/operat/global_config_api.php?action=update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        }).then(res => res.json()).then(json => {
+          alert(json.msg);
+          fetchConfigList();
+        });
+      }
+    }
+
+
+function getFormData(form) {
+  return {
+    id: form.dataset.id,
+    alipay_enabled: form.querySelector('[name="alipay_enabled"]').checked ? 0 : 1,
+    wechatpay_enabled: form.querySelector('[name="wechatpay_enabled"]').checked ? 0 : 1,
+    douyin_login_enabled: form.querySelector('[name="douyin_login_enabled"]').checked ? 0 : 1,
+    kuaishou_login_enabled: form.querySelector('[name="kuaishou_login_enabled"]').checked ? 0 : 1,
+    appleid_login_enabled: form.querySelector('[name="appleid_login_enabled"]').checked ? 0 : 1,
+    wechat_login_enabled: form.querySelector('[name="wechat_login_enabled"]').checked ? 0 : 1,
+    app_domain: form.querySelector('[name="app_domain"]').value,
+    control_port: form.querySelector('[name="control_port"]').value,
+    control_domain: form.querySelector('[name="control_domain"]').value,
+    video_stream_domain: form.querySelector('[name="video_stream_domain"]').value
+  };
+}
+
+
+    function deleteConfig(id) {
+      if (!confirm('确定删除此配置？')) return;
+      fetch(`/api/operat/global_config_api.php?action=delete&id=${id}`)
+        .then(res => res.json()).then(json => {
+          alert(json.msg);
+          fetchConfigList();
+        });
+    }
+
+    function addConfig() {
+      const timestamp = Date.now();
+      const data = {
+        alipay_enabled: 0,
+        wechatpay_enabled: 0,
+        douyin_login_enabled: 0,
+        kuaishou_login_enabled: 0,
+        appleid_login_enabled: 0,
+        wechat_login_enabled: 0,
+        app_domain: 'app-' + timestamp,
+        control_port: (8000 + Math.floor(Math.random() * 1000)).toString(),
+        control_domain: 'domain-' + timestamp + '.com'
+      };
+      fetch('/api/operat/global_config_api.php?action=add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).then(res => res.json()).then(json => {
+        alert(json.msg);
+        fetchConfigList();
+      });
+    }
+
+    fetchConfigList();
+  </script>
+</body>
+</html>

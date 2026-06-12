@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>摄像头版本管理</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --hover-bg: #f9f9f9;
+      --highlight-bg: #eff4ff;
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
+    }
+
+    .card-title-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      font-weight: 600;
+      padding-bottom: 10px;
+      flex-grow: 1;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      background-color: #f8f9ff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      width: 100%;
+    }
+
+    .action-button {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      transition: 0.3s;
+    }
+
+    .action-button:hover {
+      background-color: #4a77e4;
+    }
+
+    .output-container {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f4f6f9;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+
+    pre {
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      padding: 10px;
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #444;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .camera-card {
+      background-color: #ffffff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+    
+    .camera-card:hover {
+      box-shadow: 0 4px 16px rgba(91, 140, 255, 0.1);
+    }
+    
+    .camera-card div {
+      margin: 6px 0;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title-container">
+        <h2 class="card-title">摄像头版本管理</h2>
+        <button type="button" class="action-button" onclick="submitForm('get')">获取版本</button>
+        <button type="button" class="action-button" onclick="submitForm('upgrade')">升级版本</button>
+      </div>
+      <form id="cameraForm">
+        <div class="form-group">
+          <label for="dev_ids">设备 DevId（每行一个）</label>
+          <textarea id="dev_ids" name="dev_ids" rows="8" required></textarea>
+        </div>
+      </form>
+    <!-- 渲染区域：清晰表格 -->
+    <div class="output-container">
+      <h3>返回结果：</h3>
+      <div id="result_table"></div>
+    </div>
+
+    </div>
+  </div>
+
+ <script>
+    function submitForm(action) {
+      const form = document.getElementById('cameraForm');
+      const formData = new FormData(form);
+      const url = action === 'get' ? '/api/operat/get_device_ver.php' : '/api/operat/upgrade_device_ver.php';
+
+      fetch(url, {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById('result_table');
+        
+          // 支持 get 和 upgrade 两种结构（兼容数组 / 单个对象）
+          const resultList = Array.isArray(data.list) ? data.list : (Array.isArray(data) ? data : [data]);
+        
+          const cards = resultList.map(item => {
+            const devId = item.DevId || '(未知设备)';
+            const code = item.code ?? 0;
+        
+            // 判断是否 upgrade 类型结果（有 newver）
+            const isUpgradeResult = item.data && (item.data.curver || item.data.newver);
+            const isSuccess = code === 200;
+        
+            if (isUpgradeResult) {
+              const statusHtml = isSuccess
+                ? `<span style="color:green;"><i class="fas fa-check-circle"></i> 升级成功</span>`
+                : `<span style="color:red;"><i class="fas fa-times-circle"></i> 升级失败</span>`;
+        
+              const curver = item.data.curver ?? '-';
+              const newver = item.data.newver ?? '-';
+              const down = item.data.down === 1 ? '✔️ 已下载' : '❌ 未下载';
+              const reason = item.reason ?? '-';
+        
+              return `
+                <div class="camera-card">
+                  <div><strong>📷 DevId：</strong>${devId}</div>
+                  <div><strong>🚀 升级状态：</strong>${statusHtml}</div>
+                  ${isSuccess ? `
+                    <div><strong>🧩 当前版本：</strong>${curver}</div>
+                    <div><strong>📦 新版本：</strong>${newver}</div>
+                    <div><strong>💾 下载状态：</strong>${down}</div>
+                    <div><strong>🧬 RandId：</strong>${item.data?.RandId || '-'}</div>
+                  ` : `
+                    <div><strong>❗ 错误原因：</strong>${reason}</div>
+                  `}
+                </div>
+              `;
+            } else {
+              // get 状态
+              const isOnline = item.status === 1;
+              const statusHtml = isOnline
+                ? `<span style="color:green;"><i class="fas fa-check-circle"></i> 在线</span>`
+                : `<span style="color:red;"><i class="fas fa-times-circle"></i> 离线</span>`;
+        
+              return `
+                <div class="camera-card">
+                  <div><strong>📷 DevId：</strong>${item.DevId}</div>
+                  <div><strong>📶 状态：</strong>${statusHtml}</div>
+                  <div><strong>🔢 版本号：</strong>${item.Ver || '-'}</div>
+                  <div><strong>🌐 控制服务器：</strong>${item.CtlServer || '-'}</div>
+                  <div><strong>🧬 RandId：</strong>${item.RandId || '-'}</div>
+                </div>
+              `;
+            }
+          }).join('');
+        
+          container.innerHTML = cards;
+        })
+
+
+      .catch(err => {
+        document.getElementById('result').textContent = '请求失败：' + err;
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>违规趋势统计</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+         #venue_id,#granularity{ 
+            margin-right: 10px; 
+            padding: 8px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            outline: none; 
+        } 
+    </style>
+</head>
+<body>
+
+<h2>违规趋势图</h2>
+
+<div id="controls">
+    <label>日期粒度:
+        <select id="granularity">
+            <option value="day">每日</option>
+            <option value="week">每周</option>
+            <option value="month">每月</option>
+        </select>
+    </label>
+    
+    <label>场地:
+        <select id="venue_id">
+            <option value="all">全部场地</option>
+        </select>
+    </label>
+
+    <button onclick="loadData()">筛选</button>
+</div>
+
+<canvas id="violationChart"></canvas>
+
+<script>
+let chart;
+
+async function loadVenues() {
+    try {
+        const res = await fetch('https://open.rcwulian.cn/api/operat/EnergyGift.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'action=get_venues'
+        });
+
+        const response = await res.json();
+
+        if (response.code === 0) {
+            const venues = response.data;
+            const venue_id = document.getElementById('venue_id');
+            venue_id.innerHTML = '<option value="all">全部场地</option>'; // 重新添加“全部场地”
+
+            venues.forEach(venue => {
+                const option = document.createElement('option');
+                option.value = venue.id;
+                option.textContent = `${venue.id} - ${venue.venue_name}`;
+                venue_id.appendChild(option);
+            });
+        } else {
+            console.error('获取场地信息失败', response.msg);
+        }
+    } catch (error) {
+        console.error('请求失败:', error);
+    }
+}
+
+async function loadData() {
+    const granularity = document.getElementById('granularity').value;
+    const venueId = document.getElementById('venue_id').value;
+
+    const res = await fetch(`/api/operat/get_violation_trends.php?granularity=${granularity}&venue_id=${venueId}`);
+    const json = await res.json();
+
+    let labels = json.data.labels;
+
+    // 如果是周粒度，转换 ISO 周为 "X月X日 - X月X日"
+    if (granularity === 'week') {
+        labels = labels.map(weekStr => convertISOWeekToDateRange(`${weekStr.slice(0, 4)}-W${weekStr.slice(5)}`));
+    }
+
+    const deviceData = json.data.device_bans;
+    const venueData = json.data.venue_bans;
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById('violationChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '设备违规',
+                    data: deviceData,
+                    borderColor: 'rgb(255, 99, 132)',
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false
+                },
+                {
+                    label: '场地违规',
+                    data: venueData,
+                    borderColor: 'rgb(54, 162, 235)',
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '违规趋势统计图'
+                }
+            },
+       
+            onClick: function(event) {
+                const points = chart.getElementsAtEventForMode(event, 'nearest', {intersect: true}, true);
+                if (points.length) {
+                    const clickedLabel = chart.data.labels[points[0].index]; // e.g. "2025-05" or "04-21 ~ 04-27"
+                    const filterVal = document.getElementById("granularity").value;
+            
+                    let start_date = "";
+                    let end_date = "";
+            
+                    const currentYear = new Date().getFullYear();
+            
+                    if (filterVal === "day") {
+                        // 日粒度 (label: MM-DD)
+                        const [year,month, day] = clickedLabel.split('-');
+                        start_date = `${year}-${month}-${day}`;
+                        end_date = start_date;
+            
+                    } else if (filterVal === "week") {
+                        // 周粒度 (label: MM-DD ~ MM-DD)
+                        const [startPart, endPart] = clickedLabel.split('~').map(s => s.trim());
+                        const [startMonth, startDay] = startPart.split('-');
+                        const [endMonth, endDay] = endPart.split('-');
+            
+                        start_date = `${currentYear}-${startMonth}-${startDay}`;
+                        end_date = `${currentYear}-${endMonth}-${endDay}`;
+            
+                    } else if (filterVal === "month") {
+                        // 月粒度 (label: YYYY-MM)
+                        const [year, month] = clickedLabel.split('-');
+                        const lastDay = new Date(year, month, 0).getDate(); // 获取该月最后一天
+                        start_date = `${year}-${month}-01`;
+                        end_date = `${year}-${month}-${lastDay}`;
+                    }
+            
+                    const url = `ban_Record.html?dropdown=1&filterVal=${filterVal}&start_date=${encodeURIComponent(start_date)}&end_date=${encodeURIComponent(end_date)}`;
+                    window.location.href = url;
+                }
+            }
+
+        }
+    });
+}
+
+// 页面加载完成时自动执行
+document.addEventListener('DOMContentLoaded', function () {
+    loadVenues();
+    loadData();
+});
+
+function convertISOWeekToDateRange(isoWeek) {
+    try {
+        const [year, weekStr] = isoWeek.split('-W');
+        const week = parseInt(weekStr, 10);
+        if (!year || isNaN(week)) return isoWeek;
+
+        const jan4 = new Date(year, 0, 4);
+        const dayOffset = (jan4.getDay() + 6) % 7;
+        const firstMonday = new Date(jan4);
+        firstMonday.setDate(jan4.getDate() - dayOffset);
+
+        const startDate = new Date(firstMonday);
+        startDate.setDate(startDate.getDate() + (week - 1) * 7);
+
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+
+        const pad = n => n.toString().padStart(2, '0');
+        return `${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())} ~ ${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}`;
+    } catch (e) {
+        return isoWeek;
+    }
+}
+
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html> 
+<html lang="zh-CN"> 
+ 
+<head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>设备管理</title> 
+  <!--<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">  -->
+     <link rel="stylesheet" href="/res/fa/css/all.min.css"> 
+  <style> 
+    :root { 
+      --primary: #5b8cff; 
+      --secondary: #7f8fa4; 
+      --background-gradient-start: #f8f9ff; 
+      --background-gradient-end: #f0f3ff; 
+      --card-bg: #ffffff; 
+      --border-color: #ddd; 
+      --text-color: #333; 
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+      --transition: all 0.3s ease; 
+      --hover-bg: #f9f9f9; 
+    } 
+ 
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+      font-family: "PingFang SC", system-ui; 
+    } 
+ 
+    body { 
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%); 
+      min-height: 100vh; 
+      padding: 20px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: flex-start; 
+    } 
+ 
+    .container { 
+      max-width: 1200px; 
+      width: 100%; 
+    } 
+ 
+    .card { 
+      background: var(--card-bg); 
+      border-radius: 12px; 
+      padding: 20px; 
+      box-shadow: var(--shadow); 
+      margin-bottom: 20px; 
+      transition: var(--transition); 
+    } 
+ 
+    .card-title { 
+      font-size: 24px; 
+      color: var(--text-color); 
+      margin-bottom: 20px; 
+      font-weight: 600; 
+      border-bottom: 2px solid var(--primary); 
+      padding-bottom: 10px; 
+      text-align: center; 
+    } 
+ 
+    /* 设备卡片样式 */ 
+    .device-card { 
+      background: #fff; 
+      border: 1px solid var(--border-color); 
+      border-radius: 8px; 
+      padding: 15px; 
+      margin-bottom: 15px; 
+      display: flex; 
+      gap: 15px; 
+      transition: var(--transition); 
+    } 
+ 
+    .device-card:hover { 
+      background-color: var(--hover-bg); 
+    } 
+ 
+    .device-img { 
+      width: 100px; 
+      height: 100px; 
+      object-fit: cover; 
+      border-radius: 8px; 
+    } 
+ 
+    .device-info { 
+      flex: 1; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+      font-size: 14px; 
+      color: var(--text-color); 
+    } 
+ 
+    .device-info .device-name { 
+      font-size: 16px; 
+      font-weight: 600; 
+      color: var(--primary); 
+    } 
+ 
+    .device-info span { 
+      display: block; 
+    } 
+ 
+    .modify-btn { 
+      align-self: flex-start; 
+      background-color: var(--primary); 
+      color: #fff; 
+      border: none; 
+      border-radius: 6px; 
+      padding: 8px 12px; 
+      cursor: pointer; 
+      font-size: 14px; 
+      transition: var(--transition); 
+    } 
+ 
+    .modify-btn:hover { 
+      background-color: #4a77e4; 
+    } 
+ 
+    /* 加载提示 */ 
+    .loading { 
+      text-align: center; 
+      font-size: 16px; 
+      color: var(--primary); 
+      padding: 20px; 
+    } 
+ 
+    @media (max-width: 768px) { 
+      .device-card { 
+        flex-direction: column; 
+        align-items: center; 
+      } 
+      .device-img { 
+        width: 80px; 
+        height: 80px; 
+      } 
+      .device-info { 
+        text-align: center; 
+      } 
+      .modify-btn { 
+        margin-top: 10px; 
+      } 
+    } 
+  </style> 
+</head> 
+ 
+<body> 
+  <div class="container"> 
+    <div class="card"> 
+      <div class="card-title">设备管理</div> 
+      <div id="device-list"> 
+        <!-- 设备信息将动态加载 --> 
+      </div> 
+      <div id="loading" class="loading" style="display: none;">正在加载...</div> 
+    </div> 
+  </div> 
+ 
+  <script> 
+    let currentPage = 1; 
+    const limit = 10; 
+    const accessToken = 'df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4'; 
+ 
+    // 获取设备数据 
+    function loadDeviceData(page) { 
+      const url = `https://open.rcwulian.cn/api/vehicle/getVehicleList.php?page=${page}&limit=${limit}&access_token=${accessToken}`;  
+      document.getElementById('loading').style.display  = 'block'; 
+ 
+      fetch(url) 
+        .then(response => response.json())  
+        .then(data => { 
+          if (data.code  === 0 && data.data  && data.data.length  > 0) { 
+            displayDevices(data.data);  
+            currentPage++; 
+          } else { 
+            document.getElementById('loading').textContent  = '没有更多数据了'; 
+          } 
+          document.getElementById('loading').style.display  = 'none'; 
+        }) 
+        .catch(error => { 
+          console.error(' 数据加载失败:', error); 
+          document.getElementById('loading').textContent  = '加载失败，请重试'; 
+          setTimeout(() => { 
+            document.getElementById('loading').style.display  = 'none'; 
+          }, 2000); 
+        }); 
+    } 
+ 
+    // 显示设备信息 
+    function displayDevices(devices) { 
+      const deviceList = document.getElementById('device-list');  
+      devices.forEach(device  => { 
+        // 将设备对象转为 JSON 字符串，并存入 data-device 属性中 
+        const card = document.createElement('div');  
+        card.classList.add('device-card');  
+        card.setAttribute('data-device',  JSON.stringify(device));  
+        card.setAttribute('data-device-cfg',  JSON.stringify(device));  
+        card.innerHTML = ` 
+  <img class="device-img" src="${device.photo_url}" alt="设备图片"> 
+  <div class="device-info"> 
+    <span class="device-name">${device.name}</span>  
+    <span>序列号: ${device.serial_number}</span>  
+    <span>状态: ${device.status}</span>  
+    <span>车辆状态: ${device.vehicle_status}</span>  
+    <span>共享状态: ${device.sharing_status}</span>  
+    <span>分享标题: ${device.share_name}</span>  
+    <span>前图传: ${device.image_device_serial}</span>  
+    ${device.bk_image_device_serial ? `<span>后图传: ${device.bk_image_device_serial}</span>` : ''} 
+  </div> 
+  <div style="display: flex; flex-direction: column; gap: 5px;">
+    <button class="modify-btn" onclick="modifyDevice(this)">修改信息</button> 
+    <button class="modify-btn" onclick="modifyDeviceCfg(this)">修改配置</button> 
+  </div>
+`;
+
+        deviceList.appendChild(card);  
+      }); 
+    } 
+ 
+   // 修改设备操作：将设备信息作为 URL 参数传递，然后跳转到修改页面 
+    function modifyDevice(button) { 
+      const card = button.closest('.device-card');  
+      const deviceData = card.getAttribute('data-device');  
+      const device = JSON.parse(deviceData);  
+      const queryString = Object.keys(device).map(key  => `${encodeURIComponent(key)}=${encodeURIComponent(device[key])}`).join('&'); 
+      window.location.href  = `modify-device.html?${queryString}`;  
+    } 
+ 
+    function modifyDeviceCfg(button) { 
+      const card = button.closest('.device-card');  
+      const deviceDataCfg = card.getAttribute('data-device-cfg');  
+      const device = JSON.parse(deviceDataCfg);  
+      const queryString = Object.keys(device).map(key  => `${encodeURIComponent(key)}=${encodeURIComponent(device[key])}`).join('&'); 
+      window.location.href  = `modify-deviceCfgTest.html?${queryString}`;  
+    } 
+ 
+    // 自动加载下一页（滚动到底部时） 
+ 
+    // 页面加载时获取第一页数据 
+    loadDeviceData(currentPage); 
+  </script> 
+</body> 
+ 
+</html> 

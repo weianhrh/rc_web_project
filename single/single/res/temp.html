@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>临时修改密码</title>
+</head>
+<body>
+  <h2>重设密码（已登录状态）</h2>
+  <input type="text" id="uid" placeholder="请输入 UID">
+    <!--<input type="text" id="session_token" placeholder="请输入 Session Token">-->
+    <input type="password" id="newpassword" placeholder="请输入新密码">
+    <button onclick="submitData()">提交</button>
+
+
+  <p id="msg"></p>
+
+  <script>
+ function submitData() {
+    const uid = document.getElementById('uid').value;
+    // const session_token = document.getElementById('session_token').value;
+    const newpassword = document.getElementById('newpassword').value;
+
+    if (!uid || !newpassword) {
+        alert("请填写所有字段");
+        return;
+    }
+
+    const payload = {
+        uid: uid,
+        // session_token: session_token,
+        newpassword: newpassword
+    };
+
+    fetch('/api/login/setpasswd.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+        console.log('返回结果：', res);
+        alert(res.message || '提交成功');
+    })
+    .catch(err => {
+        console.error('提交失败：', err);
+        alert('提交失败');
+    });
+}
+
+  </script>
+</body>
+</html>

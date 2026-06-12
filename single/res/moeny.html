@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>财务对账</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* 定义 CSS 变量 */
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+            --highlight-bg: #eff4ff;
+        }
+
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        /* 账单项样式 */
+        .revenue-item {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            transition: var(--transition);
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 8px;
+        }
+
+        .revenue-item:hover {
+            background-color: var(--highlight-bg);
+        }
+
+        /* 字段样式 */
+        .field {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .field.label {
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .field.value {
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .total-revenue {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .status {
+            font-size: 12px;
+            color: #5c5c5c;
+        }
+
+        /* 核对按钮 */
+        .check-button {
+            background-color: var(--primary);
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .check-button:hover {
+            background-color: #4a77e4;
+        }
+
+        .check-button:disabled {
+            background-color: #d0d0d0;
+            cursor: not-allowed;
+        }
+
+        /* 结算状态 */
+        .settled-status {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .settled-status.unsettled {
+            color: #ff6b6b;
+        }
+
+        .settled-status.settled {
+            color: #4caf50;
+        }
+
+        /* 加载更多提示 */
+        .loading {
+            text-align: center;
+            font-size: 16px;
+            color: var(--primary);
+            padding: 20px;
+        }
+
+        /* 自定义弹窗样式 */
+        .custom-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 999;
+            display: none;
+        }
+
+        .custom-alert .message {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .card {
+                padding: 16px;
+            }
+
+            .field {
+                font-size: 12px;
+            }
+
+            .total-revenue {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-title">财务对账</div>
+      
+
+            <div id="revenue-details">
+                <!-- 账单信息将动态加载 -->
+            </div>
+            <div id="loading" class="loading" style="display: none;">正在加载...</div>
+        </div>
+    </div>
+
+    <!-- 自定义弹窗 -->
+    <div id="custom-alert" class="custom-alert">
+        <div class="message">核对成功！</div>
+    </div>
+
+    <script>
+        let currentPage = 1;  // 当前页
+        const limit = 31;  // 每页加载20条
+
+let isLoading = false;      // 防止重复请求
+let noMoreData = false;     // 没有更多数据时停止请求
+
+function loadRevenueData(page) {
+    if (isLoading || noMoreData) return;
+
+    const url = `https://open.rcwulian.cn/api/pay/GetDailyVenueRevenue.php?page=${page}&limit=${limit}&access_token=df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4`;
+    const loadingEl = document.getElementById('loading');
+
+    isLoading = true;
+    loadingEl.style.display = 'block';
+    loadingEl.textContent = '正在加载...';
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 0 && data.data.length > 0) {
+                displayRevenueDetails(data.data);
+                currentPage++; // 下一页
+            } else {
+                noMoreData = true;
+                loadingEl.textContent = '没有更多数据了';
+            }
+        })
+        .catch(error => {
+            console.error('数据加载失败:', error);
+            loadingEl.textContent = '加载失败，请重试';
+            setTimeout(() => {
+                loadingEl.style.display = 'none';
+            }, 2000);
+        })
+        .finally(() => {
+            // 如果还有数据，就隐藏 loading；没有数据就保持“没有更多数据了”提示
+            if (!noMoreData) {
+                loadingEl.style.display = 'none';
+            }
+            isLoading = false;
+        });
+}
+
+
+        // 显示财务数据
+        function displayRevenueDetails(revenues) {
+            const revenueDetailsContainer = document.getElementById('revenue-details');
+
+            revenues.forEach(revenue => {
+                const revenueItem = document.createElement('div');
+                revenueItem.classList.add('revenue-item');
+
+                revenueItem.innerHTML = `
+                    <div class="field">
+                        <div class="label">日期:</div>
+                        <div class="value">${revenue.date}</div> 
+                    </div>
+                    <div class="field">
+                        <div class="label">总收入:</div>
+                        <div class="value total-revenue">${revenue.total_revenue} 元</div>
+                    </div>
+                    <div class="field">
+                        <div class="label">创建时间:</div>
+                        <div class="value">${revenue.created_at}</div> 
+                    </div>
+                    <div class="field">
+                        <div class="label">更新时间:</div>
+                        <div class="value">${revenue.updated_at}</div> 
+                    </div>
+                   
+                    <div class="field">
+                        <div class="label">核对状态:</div>
+                        <div class="value">
+                            ${revenue.is_checked === 1 ? '已核对' : '<button class="check-button" onclick="checkRevenue(' + revenue.id + ', this)">核对</button>'}
+                        </div>
+                    </div>
+                `;
+
+                revenueDetailsContainer.appendChild(revenueItem);
+            });
+        }
+
+        // 核对财务数据
+        function checkRevenue(id, button) {
+            const url = 'https://open.rcwulian.cn/api/pay/CheckDailyVenueRevenue.php';
+            const data = new URLSearchParams();
+            data.append('id', id);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: data
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        // 显示自定义弹窗
+                        document.getElementById('custom-alert').style.display = 'block';
+
+                        // 自动隐藏弹窗
+                        setTimeout(() => {
+                            document.getElementById('custom-alert').style.display = 'none';
+                        }, 2000);
+
+                        // 更新按钮文本和禁用
+                        button.textContent = '已核对';
+                        button.disabled = true;
+
+                        // 刷新数据
+                        loadRevenueData(1);
+                    } else if (data.code === 1002) {
+                        // ✅ 单独处理：未绑定提现账号
+                        alert(data.msg || '需要先绑定提现账号才可以核对');
+
+                    } else {
+                        alert('核对失败，请稍后再试');
+                    }
+                })
+                .catch(error => {
+                    console.error('核对失败:', error);
+                    alert('核对请求失败，请重试');
+                });
+        }
+
+        // 页面加载时获取数据
+        loadRevenueData(currentPage);
+// 滚动到底部时加载下一页（兼容手机）
+window.addEventListener('scroll', function () {
+    const doc = document.documentElement;
+    const scrollTop = doc.scrollTop || document.body.scrollTop;
+    const clientHeight = doc.clientHeight;
+    const scrollHeight = doc.scrollHeight;
+
+    // 预留 50 像素缓冲，避免必须“顶死”才触发
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+        loadRevenueData(currentPage);
+    }
+});
+    </script>
+
+</body>
+
+</html>

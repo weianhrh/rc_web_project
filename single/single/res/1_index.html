@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能工作台</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
+
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* 主卡片容器 */
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        /* 数据指标区 */
+        .metrics-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .metric-item {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .metric-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        /* 导航区 */
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding-top: 24px;
+        }
+
+        .nav-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .nav-text {
+            color: #666;
+            font-size: 10px;
+        }
+
+          #venue-status.green {
+            color: green;
+          }
+        
+          #venue-status.orange {
+            color: orange;
+          }
+        
+          #venue-status.red {
+            color: red;
+          }
+          
+          #venue-status {
+            font-weight: bold !important;
+        }
+
+         /*@keyframes siz {*/
+         /*       0%{*/
+         /*         color:red;*/
+         /*       }*/
+         /*       50%{*/
+         /*         color:blue;*/
+         /*       }*/
+         /*       100%{*/
+         /*         color:green;*/
+         /*       }*/
+         
+         /*     }*/
+         
+         /*     #venue-id{*/
+         /*       animation:  siz 1s linear infinite;*/
+         /*    }*/
+         .badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background-color: #ff3b3b;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+.hidden {
+    display: none !important;
+}
+    </style>
+</head>
+<body>
+    <div class="dashboard-card">
+        <!-- 数据区 -->
+        <div class="metrics-container">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <span id="venue-name">场地名称</span>
+    <span id="venue-status" style="font-weight: normal; margin-left: 10px;">(状态: 加载中)</span>
+  </div>
+  <div id="venue-id" style="font-size: 13px; color: #888;">场地ID: 加载中</div>
+</div>
+
+
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">今日收益</div>
+                    <div class="metric-value" id="totalPayment">¥0.00</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">等待驾驶</div>
+                    <div class="metric-value" id="queue-length">0人</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">投诉待处理</div>
+                    <div class="metric-value" id="reservationCount">0人</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">订单数</div>
+                    <div class="metric-value" id="orderCount">0单</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 导航区 -->
+        <div class="nav-grid">
+            <div class="nav-card" id="reservation-management">
+                <i class="fas fa-calendar-check nav-icon"></i>
+                <div class="nav-text">预约管理</div>
+            </div>
+            
+            <div class="nav-card" id="order-management">
+                <i class="fas fa-shopping-cart nav-icon"></i>
+                <div class="nav-text">订单管理</div>
+            </div>
+            <div class="nav-card" id="user-management">
+                <i class="fas fa-bolt nav-icon"></i>
+                <div class="nav-text">能量赠送</div>
+            </div>
+            
+            <div class="nav-card" id="vehicleslite" >
+                <i class="fas fa-cogs nav-icon"></i>
+                <div class="nav-text">设备管理</div>
+            </div>
+        </div>
+
+        <!-- 导航区 -->
+        <div class="nav-grid">
+            <div class="nav-card" id="venue-management1">
+                <i class="fas fa-map-marker-alt nav-icon"></i>
+                <div class="nav-text">场地管理</div>
+            </div>
+            <div class="nav-card" id="income-details">
+                <i class="fas fa-receipt nav-icon"></i>
+                <div class="nav-text">收入明细</div>
+            </div>
+            <div class="nav-card" id="moeny-details">
+                <i class="fas fa-poll-h nav-icon"></i>
+                <div class="nav-text">财务对账</div>
+            </div>
+            <div class="nav-card" id="PaymentDisbursement">
+                <i class="fas fa-wallet nav-icon"></i>
+                <div class="nav-text">提现申请</div>
+            </div>
+        </div>
+        
+        <!-- 导航区 -->
+        <div class="nav-grid">
+            <div class="nav-card" style="position: relative;" id="FaultDevicesApproval">
+                <i class="fas fa-exclamation-triangle nav-icon"></i>
+                <div class="nav-text">故障审批</div>
+                <span class="badge hidden" id="pending-count">0</span> <!-- 新增徽章 -->
+            </div>
+            <div class="nav-card" id="BindReceiveAccount">
+                <i class="fas fa-credit-card nav-icon"></i>
+                <div class="nav-text">绑定卡号</div>
+            </div>
+            <div class="nav-card" id="PricingOptions">
+                <i class="fas fa-file-invoice-dollar nav-icon"></i>
+                <div class="nav-text">资费套餐</div>
+            </div>
+            <div class="nav-card" id="Reporthand">
+                <i class="fas fa-headset nav-icon"></i>
+                <div class="nav-text">投诉处理</div>
+            </div>
+       
+        </div>
+        <div class="nav-grid">
+            <div class="nav-card" id="ban_Record">
+                <i class="fas fa-clipboard-list nav-icon"></i>
+                <div class="nav-text">违规记录</div>
+            </div>
+            <!--<div class="nav-card" id="ban_recordv2">-->
+            <!--    <i class="fas fa-clipboard-list nav-icon"></i>-->
+            <!--    <div class="nav-text">违规记录</div>-->
+            <!--</div>-->
+        </div>
+    </div>   
+  <!--<iframe src="https://open.rcwulian.cn/res/deviceMgt.html" style="display: none;" id="hidden-timer-frame"></iframe>-->
+   <iframe src="https://open.rcwulian.cn/res/devMgtV2.html" style="display: none;" id="hidden-timer-frame"></iframe>
+    <script>
+    
+        let pic_count = null;
+		 
+		fetch('https://open.rcwulian.cn/api/devMgr/getFaultDevices.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 0) {
+                 
+                   const badge = document.getElementById('pending-count');
+                    if (data.count > 0) {
+                        badge.classList.remove('hidden');
+                        badge.textContent = data.count;
+                    } else {
+                        badge.classList.add('hidden');
+                        badge.textContent = '';
+                    }
+
+
+                }
+            })
+            .catch(err => {
+                console.error('获取待审核数量失败', err);
+            });
+
+        // 发起请求获取数据并更新页面
+        fetch('https://open.rcwulian.cn/api/index/DailySummaryStats.php') 
+            .then(response => response.json()) 
+            .then(data => {
+                if (data.code  === 0) {
+                    // 赋值给页面元素
+                   const venueName = data.data.venue_name || '动物汽车城';
+                        document.getElementById('venue-name').childNodes[0].textContent = venueName + ' ';
+    
+                        document.getElementById('venue-id').textContent = `场地ID: ${data.data.venue_id}`;
+
+
+                      // 设置加载状态
+                    document.getElementById('totalPayment').textContent  = `¥${data.data.totalPayment}`; 
+                    if(data.data.queue_length == null){
+                        data.data.queue_length = 0;
+                    }
+                    document.getElementById('queue-length').textContent  = `${data.data.queue_length} 人`;
+                    
+                    const reportCount = data.data.reportCount; 
+                    document.getElementById('reservationCount').textContent  = `${reportCount}`;
+                    if (reportCount >= 1) {
+                        document.getElementById('reservationCount').style.color  = 'red';
+                    }
+                    document.getElementById('orderCount').textContent  = `${data.data.orderCount} 单`;
+                }
+            })
+            .catch(error => {
+                console.error(' 数据加载失败:', error);
+            });
+
+        // 添加导航点击效果
+        document.querySelectorAll('.nav-card').forEach(item  => {
+            item.addEventListener('click',  function() {
+                // 移除所有激活状态
+                document.querySelectorAll('.nav-card').forEach(el  => {
+                    el.style.background  = '#fff';
+                });
+                // 设置当前激活状态
+                this.style.background  = '#f5f7ff';
+            });
+        });
+        document.getElementById('reservation-management').addEventListener('click',  function() {
+            window.location.href  = 'h.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('order-management').addEventListener('click',  function() {
+            window.location.href  = 'order.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('user-management').addEventListener('click',  function() {
+            window.location.href  = 'user.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('venue-management1').addEventListener('click',  function() {
+            window.location.href  = 'venue.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('income-details').addEventListener('click',  function() {
+            window.location.href  = 'incomedetails.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('moeny-details').addEventListener('click',  function() {
+            window.location.href  = 'moeny.html';   // 这里是你想跳转到的页面
+        });
+         document.getElementById('PaymentDisbursement').addEventListener('click',  function() {
+            window.location.href  = 'PaymentDisbursement.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('vehicleslite').addEventListener('click',  function() {
+            window.location.href  = 'vehicleslite.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('FaultDevicesApproval').addEventListener('click',  function() {
+            window.location.href  = 'getFaultDevices.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('BindReceiveAccount').addEventListener('click',  function() {
+            window.location.href  = 'paybind.html';   // 这里是你想跳转到的页面
+        });
+        // 修改了下面这行的 ID，确保只有一个场地管理元素
+        document.getElementById('PricingOptions').addEventListener('click',  function() {
+            window.location.href  = 'pricing_options.html';   // 这里是你想跳转到的页面
+        });
+        
+        document.getElementById('Reporthand').addEventListener('click',  function() {
+            window.location.href  = 'reporthand.html';   // 这里是你想跳转到的页面
+        });
+        document.getElementById('ban_Record').addEventListener('click', function() {
+            window.location.href = 'ban_Record.html';  
+        });
+        // document.getElementById('ban_recordv2').addEventListener('click', function() {
+        //     window.location.href = 'ban_recordv2.html';  
+        // });
+        function fetchVenueStatus() {
+            fetch('https://open.rcwulian.cn/api/index/get_venue_status.php') // 🔁 替换成真实接口
+              .then(res => res.json())
+              .then(data => {
+              const status = data.status; // 0=正常, 1=异常, 2=高危
+              const statusEl = document.getElementById("venue-status");
+            
+              let statusText = "";
+              let colorClass = "";
+            
+              switch (status) {
+                case 0:
+                  statusText = "正常";
+                  colorClass = "green";
+                  break;
+                case 1:
+                  statusText = "异常";
+                  colorClass = "orange";
+                  break;
+                case 2:
+                  statusText = "高危";
+                  colorClass = "red";
+                  break;
+                default:
+                  statusText = "未知";
+                  colorClass = "";
+              }
+            
+              statusEl.textContent = `(状态: ${statusText})`;
+              statusEl.classList.remove("green", "orange", "red");
+              if (colorClass) statusEl.classList.add(colorClass);
+            })
+
+              .catch(error => {
+                console.error("状态加载失败:", error);
+                const statusEl = document.getElementById("venue-status");
+                statusEl.textContent = "(状态: 获取失败)";
+                statusEl.className = "";
+              });
+          }
+        
+          // ✅ 页面加载完成后立即调用一次
+          fetchVenueStatus();
+        
+          // ✅ 每 30 分钟自动刷新一次
+          setInterval(fetchVenueStatus, 30 * 60 * 1000);
+    </script>
+<script src="canvas-nest-colorful.js"></script>
+</body>
+</html>

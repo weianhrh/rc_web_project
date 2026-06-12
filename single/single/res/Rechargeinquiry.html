@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>充值记录查询02</title>
+    <style>
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .dashboard-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+
+        .form-container {
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .form-item {
+            display: inline-block;
+            margin-right: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            color: var(--secondary);
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-input {
+            width: 150px;
+            padding: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+        }
+
+        .form-button {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .form-button:hover {
+            opacity: 0.9;
+        }
+
+        .cards-container {
+            padding-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .order-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .order-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(91, 140, 255, 0.12);
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-label {
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .item-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-paid {
+            background-color: #e6f7e6;
+            color: #52c41a;
+        }
+
+        .status-pending {
+            background-color: #fff7e6;
+            color: #fa8c16;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            padding: 20px 0;
+        }
+
+        .form-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 添加联想输入相关样式 */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .suggestions-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            min-width: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f0f3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-card">
+        <h1 class="card-title">充值记录查询02</h1>
+        
+        <div class="form-container">
+            <div class="form-item">
+                <label class="form-label">用户ID</label>
+                <input type="text" id="uid" class="form-input" placeholder="请输入用户ID">
+            </div>
+            <div class="form-item">
+                <label class="form-label">订单编号</label>
+                <div class="autocomplete-container">
+                    <input type="text" id="orderNumber" class="form-input" placeholder="请输入订单编号">
+                    <div id="suggestions" class="suggestions-list"></div>
+                </div>
+            </div>
+            <div class="form-item">
+                <label class="form-label">&nbsp;</label>
+                <button onclick="searchOrders()" class="form-button">查询</button>
+            </div>
+        </div>
+
+        <div class="cards-container" id="orderCardsContainer">
+            <!-- 数据将通过 JavaScript 动态插入 -->
+        </div>
+
+        <!-- 添加分页控件 -->
+        <div class="pagination">
+            <button id="prevPage" class="form-button" style="margin-right: 10px;">上一页</button>
+            <span id="pageInfo" style="margin: 0 10px;"></span>
+            <button id="nextPage" class="form-button" style="margin-left: 10px;">下一页</button>
+        </div>
+    </div>
+
+    <script>
+        // 添加分页相关变量
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalOrders = [];
+
+        // 添加联想输入相关代码
+        let orderCache = []; // 用于存储订单数据缓存
+
+        function searchOrders(isAutocomplete = false) {
+            const uid = document.getElementById('uid').value;
+            const orderNumber = document.getElementById('orderNumber').value;
+            
+            // 构建查询URL
+            let url = 'https://open.rcwulian.cn/api/finance/Rechargeinquiry.php?';
+            if (uid) url += `uid=${encodeURIComponent(uid)}&`;
+            if (orderNumber) url += `order_number=${encodeURIComponent(orderNumber)}`;
+
+            // 发送请求
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        if (isAutocomplete) {
+                            // 更新建议列表
+                            updateSuggestions(data.data);
+                        } else {
+                            totalOrders = data.data; // 保存所有订单数据
+                            displayOrders();
+                        }
+                    } else {
+                        if (!isAutocomplete) {
+                            alert(data.msg);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (!isAutocomplete) {
+                        alert('查询失败，请稍后重试');
+                    }
+                });
+        }
+
+        function displayOrders() {
+            const container = document.getElementById('orderCardsContainer');
+            container.innerHTML = '';
+
+            // 计算当前页的数据
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const currentPageOrders = totalOrders.slice(startIndex, endIndex);
+
+            // 更新分页信息
+            const totalPages = Math.ceil(totalOrders.length / pageSize);
+            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            
+            // 更新按钮状态
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+
+            currentPageOrders.forEach(order => {
+                const card = document.createElement('div');
+                card.className = 'order-card';
+                
+                const statusClass = order.status === '支付成功' ? 'status-paid' : 'status-pending';
+                
+                // 基础信息
+                let cardHTML = `
+                    <div class="order-item">
+                        <span class="item-label">用户ID</span>
+                        <span class="item-value">${order.uid}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">订单编号</span>
+                        <span class="item-value">${order.order_number}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">商品名称</span>
+                        <span class="item-value">${order.product_name}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">订单类型</span>
+                        <span class="item-value">${order.shop_type}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">实际支付</span>
+                        <span class="item-value">￥${order.payer_total != null ? order.payer_total : 0}</span>
+                    </div>
+
+                    <div class="order-item">
+                        <span class="item-label">订单状态</span>
+                        <span class="item-value status-badge ${statusClass}">${order.status}</span>
+                    </div>
+                    <div class="order-item">
+                        <span class="item-label">创建时间</span>
+                        <span class="item-value">${order.created_at}</span>
+                    </div>`;
+                
+                // 仅在支付时间不为null时添加
+                if (order.paid_at) {
+                    cardHTML += `
+                        <div class="order-item">
+                            <span class="item-label">支付时间</span>
+                            <span class="item-value">${order.paid_at}</span>
+                        </div>`;
+                }
+                
+                // 仅在预约ID不为null时添加
+                if (order.reservation_id) {
+                    cardHTML += `
+                        <div class="order-item">
+                            <span class="item-label">预约ID</span>
+                            <span class="item-value">${order.reservation_id}</span>
+                        </div>`;
+                }
+                
+                // 添加支付渠道
+                cardHTML += `
+                    <div class="order-item">
+                        <span class="item-label">支付渠道</span>
+                        <span class="item-value">${order.payment_channel || '微信'}</span>
+                    </div>`;
+                
+                card.innerHTML = cardHTML;
+                container.appendChild(card);
+            });
+        }
+
+        // 添加分页事件处理
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                displayOrders();
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            const totalPages = Math.ceil(totalOrders.length / pageSize);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayOrders();
+            }
+        });
+
+        // 初始化时获取订单数据
+        function initializeOrderData() {
+            fetch('https://open.rcwulian.cn/api/finance/Rechargeinquiry.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 0) {
+                        orderCache = data.data;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // 页面加载时获取订单数据
+        document.addEventListener('DOMContentLoaded', initializeOrderData);
+
+        function updateSuggestions(searchText) {
+            const suggestionsDiv = document.getElementById('suggestions');
+            suggestionsDiv.innerHTML = '';
+            
+            if (!searchText || searchText.length < 2) { // 减少最小匹配长度为2
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+
+            // 从缓存中筛选匹配的订单，使用后缀匹配
+            const matchedOrders = orderCache.filter(order => {
+                // 获取订单号的最后6位进行匹配
+                const lastDigits = order.order_number.slice(-6);
+                return lastDigits.includes(searchText);
+            }).slice(0, 10);
+
+            if (matchedOrders.length > 0) {
+                matchedOrders.forEach(order => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    // 显示完整订单号，但高亮匹配部分
+                    const orderNumber = order.order_number;
+                    const lastSix = orderNumber.slice(-6);
+                    const highlightedNumber = orderNumber.slice(0, -6) + 
+                        lastSix.replace(new RegExp(searchText, 'g'), 
+                        `<span style="color: var(--primary); font-weight: bold;">${searchText}</span>`);
+                    
+                    div.innerHTML = highlightedNumber;
+                    div.addEventListener('click', () => {
+                        document.getElementById('orderNumber').value = order.order_number;
+                        suggestionsDiv.style.display = 'none';
+                        searchOrders();
+                    });
+                    suggestionsDiv.appendChild(div);
+                });
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        // 修改订单号输入联想处理
+        const orderInput = document.getElementById('orderNumber');
+        const suggestionsDiv = document.getElementById('suggestions');
+
+        let debounceTimer;
+        orderInput.addEventListener('input', function(e) {
+            const value = e.target.value.trim();
+            
+            clearTimeout(debounceTimer);
+            
+            debounceTimer = setTimeout(() => {
+                updateSuggestions(value);
+            }, 300);
+        });
+
+        // 点击外部时关闭建议列表
+        document.addEventListener('click', function(e) {
+            if (!orderInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+
+        // 处理键盘导航
+        orderInput.addEventListener('keydown', function(e) {
+            const items = suggestionsDiv.getElementsByClassName('suggestion-item');
+            let currentFocus = -1;
+
+            if (e.key === 'ArrowDown') {
+                currentFocus = Math.min(currentFocus + 1, items.length - 1);
+                highlightItem(items, currentFocus);
+            } else if (e.key === 'ArrowUp') {
+                currentFocus = Math.max(currentFocus - 1, 0);
+                highlightItem(items, currentFocus);
+            } else if (e.key === 'Enter') {
+                e.preventDefault(); // 防止表单提交
+                if (items.length > 0) { // 如果有建议项
+                    orderInput.value = items[0].textContent; // 选择第一条
+                    suggestionsDiv.style.display = 'none';
+                    searchOrders(); // 执行搜索
+                }
+            }
+        });
+
+        function highlightItem(items, index) {
+            Array.from(items).forEach((item, idx) => {
+                if (idx === index) {
+                    item.style.backgroundColor = '#f0f3ff';
+                } else {
+                    item.style.backgroundColor = '';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

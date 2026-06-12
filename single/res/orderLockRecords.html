@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>锁定订单</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary: #1677ff;
+      --primary-dark: #0958d9;
+      --bg-start: #eaf3ff;
+      --bg-end: #f7fbff;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-sub: #6b7280;
+      --border: #e5e7eb;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #22c55e;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 18px;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 50%, #f5f7fb 100%);
+      color: var(--text-main);
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .title-main {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .title-sub {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+
+    .count-pill {
+      flex-shrink: 0;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: #f8fbff;
+      border: 1px solid #eaf2ff;
+      border-radius: 14px;
+    }
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-item label {
+      color: var(--text-sub);
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    input,
+    select {
+      height: 38px;
+      min-width: 220px;
+      border: 1px solid #d7deea;
+      border-radius: 10px;
+      padding: 0 12px;
+      background: #fff;
+      color: var(--text-main);
+      outline: none;
+      font-size: 14px;
+    }
+
+    select {
+      min-width: 260px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.12);
+    }
+
+    .btn {
+      height: 38px;
+      border: none;
+      border-radius: 10px;
+      padding: 0 16px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.18s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-default {
+      background: #fff;
+      color: var(--text-main);
+      border: 1px solid #d7deea;
+    }
+
+    .btn-default:hover {
+      background: #f3f6fb;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 120px;
+    }
+
+    .venue-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 15px;
+      transition: all 0.18s ease;
+    }
+
+    .venue-card:hover {
+      border-color: #bfdbfe;
+      box-shadow: 0 6px 18px rgba(22, 119, 255, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .venue-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .venue-title {
+      min-width: 0;
+    }
+
+    .venue-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 5px;
+    }
+
+    .order-id {
+      color: var(--text-sub);
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .money {
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 18px;
+      white-space: nowrap;
+    }
+
+    .venue-info {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
+      padding-top: 12px;
+      border-top: 1px dashed #e5e7eb;
+    }
+
+    .info-item {
+      min-width: 0;
+      display: flex;
+      gap: 8px;
+      line-height: 1.5;
+    }
+
+    .info-label {
+      color: var(--text-sub);
+      white-space: nowrap;
+    }
+
+    .info-value {
+      color: var(--text-main);
+      min-width: 0;
+      word-break: break-all;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge-lock {
+      background: var(--warning);
+    }
+
+    .badge-unlock {
+      background: var(--success);
+    }
+
+    .badge-gray {
+      background: #9ca3af;
+    }
+
+    .empty,
+    .loading {
+      text-align: center;
+      color: var(--text-sub);
+      padding: 40px 10px;
+      background: #fff;
+      border: 1px dashed #d7deea;
+      border-radius: 14px;
+    }
+
+    .pagination {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .page-size {
+      height: 34px;
+      min-width: 110px;
+      border-radius: 8px;
+    }
+
+    .page-info {
+      color: var(--text-sub);
+      font-size: 13px;
+      margin-right: 4px;
+    }
+
+    .page-numbers {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .page-btn {
+      height: 34px;
+      min-width: 34px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid #d7deea;
+      background: #fff;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .page-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .page-btn:disabled {
+      color: #b6beca;
+      cursor: not-allowed;
+      background: #f3f4f6;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .card {
+        padding: 14px;
+        border-radius: 14px;
+      }
+
+      .card-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .filters {
+        display: block;
+      }
+
+      .filter-item {
+        display: block;
+        margin-bottom: 10px;
+      }
+
+      .filter-item label {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      input,
+      select,
+      .btn {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .btn {
+        margin-bottom: 8px;
+      }
+
+      .venue-card-head {
+        flex-direction: column;
+      }
+
+      .venue-info {
+        grid-template-columns: 1fr;
+      }
+
+      .pagination {
+        justify-content: center;
+      }
+    }
+    .page-tabs{
+  display:flex;
+  gap:10px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.page-tabs a{
+  display:inline-block;
+  text-decoration:none;
+  padding:8px 14px;
+  border-radius:6px;
+  border:1px solid var(--primary);
+  color:var(--primary);
+  background:#fff;
+  font-size:14px;
+}
+.page-tabs a.active{
+  background:var(--primary);
+  color:#fff;
+}
+.page-tabs a:hover{
+  background:#edf3ff;
+}
+.page-tabs a.active:hover{
+  background:var(--primary);
+}
+
+/* 锁定/取消锁定操作按钮 */
+.card-actions{
+  margin-top:8px;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.lock-action-btn{
+  height:30px;
+  border:none;
+  border-radius:8px;
+  padding:0 12px;
+  cursor:pointer;
+  font-size:13px;
+  color:#fff;
+  background:var(--primary);
+}
+.lock-action-btn:hover{
+  opacity:.9;
+}
+.lock-action-btn.danger{
+  background:var(--danger);
+}
+.lock-action-btn.secondary{
+  background:#64748b;
+}
+.lock-action-btn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">
+        <div>
+          <div class="title-main">锁定订单记录</div>
+          <div class="title-sub">默认展示锁定订单，可按订单号和场地筛选</div>
+        </div>
+        <div class="count-pill" id="totalText">共 0 条</div>
+      </div>
+<div class="page-tabs">
+  <a href="refund_records.html">退款记录</a>
+  <a href="orderLockRecords.html" class="active">锁定订单</a>
+</div>
+      <div class="filters">
+        <div class="filter-item">
+          <label for="order_id">订单号</label>
+          <input type="text" id="order_id" placeholder="输入订单号，可模糊查询">
+        </div>
+
+        <div class="filter-item">
+          <label for="venue_id">场地</label>
+          <select id="venue_id">
+            <option value="">全部场地</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" onclick="searchList()">查询</button>
+          <button class="btn btn-default" onclick="resetSearch()">重置</button>
+        </div>
+      </div>
+
+      <div id="list" class="list">
+        <div class="loading">加载中...</div>
+      </div>
+
+      <div class="pagination">
+        <span class="page-info" id="pageText">第 1 / 1 页</span>
+
+        <select id="page_size" class="page-size" onchange="changePageSize()">
+          <option value="10">10 条/页</option>
+          <option value="20" selected>20 条/页</option>
+          <option value="50">50 条/页</option>
+          <option value="100">100 条/页</option>
+        </select>
+
+        <button class="page-btn" id="prevBtn" onclick="prevPage()">上一页</button>
+        <div class="page-numbers" id="pageNumbers"></div>
+        <button class="page-btn" id="nextBtn" onclick="nextPage()">下一页</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 锁定订单列表接口
+    const API_URL = '/api/finance/orderLockRecords.php';
+
+    // 锁定/取消锁定接口，注意：不要替换上面的列表接口
+    const TOGGLE_LOCK_API_URL = '/api/finance/toggleOrderLock.php';
+
+    // 补偿能量页面用的场地下拉框接口
+    const VENUE_API_URL = '/api/operat/EnergyGift.php';
+
+    let currentPage = 1;
+    let pageSize = 20;
+    let totalCount = 0;
+    let totalPage = 1;
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) {
+        return '';
+      }
+
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function buildQuery(params) {
+      const searchParams = new URLSearchParams();
+
+      Object.keys(params).forEach(function (key) {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          searchParams.append(key, params[key]);
+        }
+      });
+
+      return searchParams.toString();
+    }
+
+    function formatMoney(value) {
+      const num = Number(value || 0);
+      return '¥ ' + num.toFixed(2);
+    }
+
+    function getStatusText(status, statusText) {
+      if (statusText) {
+        return statusText;
+      }
+
+      status = Number(status);
+
+      if (status === 1) {
+        return '锁定';
+      }
+
+      if (status === 2) {
+        return '已解锁';
+      }
+
+      return '未知';
+    }
+
+    function getStatusClass(status) {
+      status = Number(status);
+
+      if (status === 1) {
+        return 'badge badge-lock';
+      }
+
+      if (status === 2) {
+        return 'badge badge-unlock';
+      }
+
+      return 'badge badge-gray';
+    }
+
+    function renderLockButton(item) {
+      const orderId = item.order_id || item.order_number || '';
+      const status = Number(item.status || 0);
+
+      if (!orderId || orderId === '-') {
+        return '';
+      }
+
+      if (status === 1) {
+        return '<button type="button" class="lock-action-btn danger" data-order="'
+          + escapeHtml(orderId)
+          + '" data-status="1" onclick="toggleOrderLockFromBtn(this)">取消锁定</button>';
+      }
+
+      if (status === 2) {
+        return '<button type="button" class="lock-action-btn" data-order="'
+          + escapeHtml(orderId)
+          + '" data-status="2" onclick="toggleOrderLockFromBtn(this)">重新锁定</button>';
+      }
+
+      return '<button type="button" class="lock-action-btn" data-order="'
+        + escapeHtml(orderId)
+        + '" data-status="0" onclick="toggleOrderLockFromBtn(this)">锁定订单</button>';
+    }
+
+    function toggleOrderLockFromBtn(btn) {
+      const orderId = (btn.getAttribute('data-order') || '').trim();
+      const status = Number(btn.getAttribute('data-status') || 0);
+      const actionText = status === 1 ? '取消锁定' : '锁定';
+
+      if (!orderId) {
+        alert('缺少订单号，不能操作');
+        return;
+      }
+
+      if (!confirm('确认' + actionText + '该订单吗？\n订单号：' + orderId)) {
+        return;
+      }
+
+      const oldText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = '处理中...';
+
+      fetch(TOGGLE_LOCK_API_URL, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          order_id: orderId
+        })
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (Number(res.code) === 0) {
+            alert(res.msg || '操作成功');
+            loadList();
+            return;
+          }
+
+          alert(res.msg || '操作失败');
+        })
+        .catch(function (err) {
+          console.error(actionText + '失败：', err);
+          alert('网络错误，操作失败');
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.innerText = oldText;
+        });
+    }
+
+    function getVenueListFromResponse(response) {
+      const candidates = [
+        response,
+        response && response.data,
+        response && response.data && response.data.data,
+        response && response.data && response.data.list,
+        response && response.data && response.data.venues,
+        response && response.list,
+        response && response.venues
+      ];
+
+      for (let i = 0; i < candidates.length; i++) {
+        const item = candidates[i];
+
+        if (Array.isArray(item)) {
+          return item;
+        }
+
+        if (item && typeof item === 'object') {
+          const values = Object.values(item);
+          if (values.length && typeof values[0] === 'object') {
+            return values;
+          }
+        }
+      }
+
+      return [];
+    }
+
+    function getVenueId(item) {
+      return item.id
+        || item.venue_id
+        || item.site_id
+        || item.bind_site
+        || item.value
+        || '';
+    }
+
+    function getVenueName(item) {
+      return item.venue_name
+        || item.name
+        || item.site_name
+        || item.title
+        || item.label
+        || '';
+    }
+
+    function loadVenues() {
+      const venueSelect = document.getElementById('venue_id');
+
+      venueSelect.innerHTML = '<option value="">全部场地</option>';
+
+      const xhr = new XMLHttpRequest();
+
+      xhr.open('POST', VENUE_API_URL, true);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) {
+          return;
+        }
+
+        if (xhr.status !== 200) {
+          console.error('场地接口 HTTP 错误：', xhr.status, xhr.responseText);
+          return;
+        }
+
+        let response;
+
+        try {
+          response = JSON.parse(xhr.responseText);
+        } catch (e) {
+          console.error('场地接口返回不是 JSON：', xhr.responseText);
+          return;
+        }
+
+        if (response.code !== undefined && Number(response.code) !== 0) {
+          console.error('场地接口业务错误：', response);
+          return;
+        }
+
+        const venues = getVenueListFromResponse(response);
+
+        if (!venues.length) {
+          console.warn('场地接口没有返回场地数组：', response);
+          return;
+        }
+
+        let html = '<option value="">全部场地</option>';
+
+        venues.forEach(function (item) {
+          const id = getVenueId(item);
+          const name = getVenueName(item);
+
+          if (!id) {
+            return;
+          }
+
+          html += '<option value="' + escapeHtml(id) + '">'
+            + escapeHtml(id + ' - ' + (name || ('场地ID：' + id)))
+            + '</option>';
+        });
+
+        venueSelect.innerHTML = html;
+      };
+
+      xhr.send('action=get_venues');
+    }
+
+    function loadList() {
+      const list = document.getElementById('list');
+
+      list.innerHTML = '<div class="loading">加载中...</div>';
+
+      const orderId = document.getElementById('order_id').value.trim();
+      const venueId = document.getElementById('venue_id').value;
+
+      fetch(API_URL + '?' + buildQuery({
+        action: 'list',
+        page: currentPage,
+        limit: pageSize,
+        page_size: pageSize,
+        order_id: orderId,
+        venue_id: venueId
+      }), {
+        credentials: 'include'
+      })
+        .then(function (res) {
+          return res.json();
+        })
+        .then(function (res) {
+          if (Number(res.code) !== 0) {
+            list.innerHTML = '<div class="empty">' + escapeHtml(res.msg || '加载失败') + '</div>';
+            totalCount = 0;
+            totalPage = 1;
+            renderPagination();
+            return;
+          }
+
+          totalCount = Number(res.count || 0);
+          totalPage = Math.max(1, Math.ceil(totalCount / pageSize));
+
+          const data = res.data || [];
+
+          if (!data.length) {
+            list.innerHTML = '<div class="empty">暂无锁定订单记录</div>';
+            renderPagination();
+            return;
+          }
+
+          let html = '';
+
+          data.forEach(function (item) {
+            const orderIdText = item.order_id || item.order_number || '-';
+            const venueName = item.venue_name || ('场地ID：' + (item.venue_id || '-'));
+            const statusText = getStatusText(item.status, item.status_text);
+            const createTime = item.create_at || item.created_at || '-';
+            const updateTime = item.update_at || item.updated_at || '-';
+            const operator = item.operator_uid && Number(item.operator_uid) > 0 ? item.operator_uid : '-';
+
+            html += ''
+              + '<div class="venue-card">'
+              + '  <div class="venue-card-head">'
+              + '    <div class="venue-title">'
+              + '      <div class="venue-name">' + escapeHtml(venueName) + '</div>'
+              + '      <div class="order-id">订单号：' + escapeHtml(orderIdText) + '</div>'
+              + '    </div>'
+              + '    <div style="text-align:right;">'
+              + '      <div class="money">' + escapeHtml(formatMoney(item.lock_amount || item.amount)) + '</div>'
+              + '      <div style="margin-top:6px;"><span class="' + getStatusClass(item.status) + '">' + escapeHtml(statusText) + '</span></div>'
+              + '      <div class="card-actions">'
+              + renderLockButton(item)
+              + '      </div>'
+              + '    </div>'
+              + '  </div>'
+              + '  <div class="venue-info">'
+              + '    <div class="info-item"><span class="info-label">记录ID</span><span class="info-value">' + escapeHtml(item.id || '-') + '</span></div>'
+              + '    <div class="info-item"><span class="info-label">场地ID</span><span class="info-value">' + escapeHtml(item.venue_id || '-') + '</span></div>'
+              + '    <div class="info-item"><span class="info-label">操作人</span><span class="info-value">' + escapeHtml(operator) + '</span></div>'
+              + '    <div class="info-item"><span class="info-label">锁定金额</span><span class="info-value">' + escapeHtml(formatMoney(item.lock_amount || item.amount)) + '</span></div>'
+              + '    <div class="info-item"><span class="info-label">创建时间</span><span class="info-value">' + escapeHtml(createTime) + '</span></div>'
+              + '    <div class="info-item"><span class="info-label">更新时间</span><span class="info-value">' + escapeHtml(updateTime) + '</span></div>'
+              + '  </div>'
+              + '</div>';
+          });
+
+          list.innerHTML = html;
+          renderPagination();
+        })
+        .catch(function (err) {
+          console.error('锁定订单加载失败：', err);
+          list.innerHTML = '<div class="empty">网络错误，加载失败</div>';
+          totalCount = 0;
+          totalPage = 1;
+          renderPagination();
+        });
+    }
+
+    function renderPagination() {
+      if (currentPage > totalPage) {
+        currentPage = totalPage;
+      }
+
+      document.getElementById('totalText').innerText = '共 ' + totalCount + ' 条';
+      document.getElementById('pageText').innerText = '第 ' + currentPage + ' / ' + totalPage + ' 页';
+
+      document.getElementById('prevBtn').disabled = currentPage <= 1;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPage;
+
+      const pageNumbers = document.getElementById('pageNumbers');
+
+      let start = Math.max(1, currentPage - 2);
+      let end = Math.min(totalPage, start + 4);
+
+      if (end - start < 4) {
+        start = Math.max(1, end - 4);
+      }
+
+      let html = '';
+
+      for (let i = start; i <= end; i++) {
+        html += '<button class="page-btn ' + (i === currentPage ? 'active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+      }
+
+      pageNumbers.innerHTML = html;
+    }
+
+    function searchList() {
+      currentPage = 1;
+      loadList();
+    }
+
+    function resetSearch() {
+      document.getElementById('order_id').value = '';
+      document.getElementById('venue_id').value = '';
+      currentPage = 1;
+      loadList();
+    }
+
+    function changePageSize() {
+      pageSize = Number(document.getElementById('page_size').value || 20);
+      currentPage = 1;
+      loadList();
+    }
+
+    function goPage(page) {
+      page = Number(page);
+
+      if (page < 1) {
+        page = 1;
+      }
+
+      if (page > totalPage) {
+        page = totalPage;
+      }
+
+      currentPage = page;
+      loadList();
+    }
+
+    function prevPage() {
+      if (currentPage <= 1) {
+        return;
+      }
+
+      currentPage--;
+      loadList();
+    }
+
+    function nextPage() {
+      if (currentPage >= totalPage) {
+        return;
+      }
+
+      currentPage++;
+      loadList();
+    }
+
+    document.getElementById('order_id').addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        searchList();
+      }
+    });
+
+    loadVenues();
+    loadList();
+  </script>
+</body>
+</html>

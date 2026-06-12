@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>专区详情</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start), var(--background-gradient-end));
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 20px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      text-align: left;
+    }
+
+    .venue-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      display: flex;
+      gap: 15px;
+      transition: var(--transition);
+    }
+
+    .venue-img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .venue-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    .venue-info .venue-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .venue-actions {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .edit-btn {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    .edit-btn:hover {
+      background-color: #4a77e4;
+    }
+
+    .edit-input {
+      display: none;
+      width: 60px;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      color: var(--primary);
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title" id="zoneTitle">专区详情</div>
+      <div id="venueList">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const zoneId = params.get("zone_id");
+    document.getElementById("zoneTitle").innerText = `专区 ${zoneId} 详情`;
+
+    async function loadVenues() {
+      const res = await fetch(`https://open.rcwulian.cn/api/zone/get_venues_by_zone.php?zone_id=${zoneId}`);
+      const result = await res.json();
+      const venueList = document.getElementById("venueList");
+      venueList.innerHTML = "";
+
+      if (result.code !== 0 || !result.data.length) {
+        venueList.innerHTML = '<div class="loading">无场地数据</div>';
+        return;
+      }
+
+      result.data.forEach(venue => {
+        const div = document.createElement("div");
+        div.className = "venue-card";
+        div.innerHTML = `
+          <img class="venue-img" src="${venue.image_url || 'https://via.placeholder.com/100'}" alt="场地图" />
+          <div class="venue-info">
+            <div class="venue-name">${venue.venue_name}</div>
+            <span>开放时间：${venue.start_time}</span>
+            <span>排队人数：${venue.queue_length}</span>
+            <span>当前专区：<span id="current_zone_${venue.id}">${venue.zone_id}</span></span>
+            <div class="venue-actions">
+              <button class="edit-btn" id="edit_btn_${venue.id}" onclick="toggleEdit(${venue.id})">修改</button>
+              <input class="edit-input" type="number" id="zone_input_${venue.id}" value="${venue.zone_id}" />
+            </div>
+          </div>
+        `;
+        venueList.appendChild(div);
+      });
+    }
+
+    function toggleEdit(id) {
+      const input = document.getElementById(`zone_input_${id}`);
+      const btn = document.getElementById(`edit_btn_${id}`);
+
+      if (btn.innerText === '修改') {
+        input.style.display = 'inline-block';
+        btn.innerText = '保存';
+      } else {
+        updateVenueZone(id);
+      }
+    }
+
+    async function updateVenueZone(venueId) {
+      const newZoneId = document.getElementById(`zone_input_${venueId}`).value;
+      const form = new URLSearchParams({
+        venue_id: venueId,
+        zone_id: newZoneId
+      });
+
+      const res = await fetch("https://open.rcwulian.cn/api/zone/update_venue_zone.php", {
+        method: "POST",
+        body: form
+      });
+      const result = await res.json();
+
+      if (result.code === 0) {
+        alert("修改成功");
+        document.getElementById(`edit_btn_${venueId}`).innerText = '修改';
+        document.getElementById(`zone_input_${venueId}`).style.display = 'none';
+        document.getElementById(`current_zone_${venueId}`).innerText = newZoneId;
+        loadVenues();
+      } else {
+        alert("修改失败：" + result.msg);
+      }
+    }
+
+    loadVenues();
+  </script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提现申请处理</title>
+    <link rel="stylesheet" href="/res/fa/css/all.min.css"> 
+    <style>
+        /* 定义 CSS 变量 */
+        :root {
+            --primary: #5b8cff;
+            --secondary: #7f8fa4;
+            --background-gradient-start: #f8f9ff;
+            --background-gradient-end: #f0f3ff;
+            --card-bg: #ffffff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+            --transition: all 0.3s ease;
+            --hover-bg: #f9f9f9;
+            --highlight-bg: #eff4ff;
+        }
+
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", system-ui;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
+        }
+
+        .card-title {
+            font-size: 24px;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+        }
+
+        /* 提现记录列表 */
+        .record-list {
+            margin-top: 30px;
+        }
+
+        .record-item {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .record-item span {
+            display: block;
+        }
+
+        .record-item .record-title {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* 按钮样式 */
+        .action-button {
+            background-color: var(--primary);
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: 0.3s;
+        }
+
+        .action-button:hover {
+            background-color: #4a77e4;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .card {
+                padding: 16px;
+            }
+
+            .record-item {
+                font-size: 12px;
+            }
+
+            .action-button {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="card">
+           <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>提现申请处理</span>
+                <!-- 添加查询按钮 -->
+                <button class="action-button" onclick="window.location.href='query_withdrawal.html'" style="margin-left: 20px;">查询提现记录</button>
+            </div>
+            
+            <!-- 导出按钮 -->
+            <button class="action-button" onclick="exportToExcel()">导出到 Excel</button>
+            <!-- 提现记录列表 -->
+            <div id="withdrawal-records" class="record-list"></div>
+        </div>
+    </div>
+
+    <script src="/res/assets/js/xlsx.full.min.js"></script> 
+    <script>
+        // 获取提现记录
+        function loadWithdrawalRecords() {
+            const url = 'https://open.rcwulian.cn/api/pay/getpaylist.php'; 
+            fetch(url)
+               .then(response => response.json()) 
+               .then(data => {
+                    if (data.code  === 0 && data.data  && data.data.length  > 0) {
+                        displayWithdrawalRecords(data.data); 
+                    } else {
+                        document.getElementById('withdrawal-records').innerHTML  = '<p style="text-align:center;">暂无提现记录</p>';
+                    }
+                })
+               .catch(error => {
+                    console.error('   提现记录加载失败:', error);
+                });
+        }
+
+        // 显示提现记录列表
+        // function displayWithdrawalRecords(records) {
+        //     const container = document.getElementById('withdrawal-records'); 
+        //     container.innerHTML  = '';
+        //     records.forEach(record  => {
+        //         const item = document.createElement('div'); 
+        //         item.classList.add('record-item'); 
+        //         item.innerHTML  = `
+        //             <span class="record-title">提现编号：${record.id}</span> 
+        //             <span>账户姓名：${record.account_name}</span> 
+        //             <span>场地名称：${record.venue_name}(ID:${record.venue_id})</span> 
+        //             <span>账户类型：${record.account_type}</span> 
+        //             <span style="color: #007BFF; font-weight: 700; text-shadow: 0 0 2px rgba(0,123,255,0.3);">实际打款：${record.actual_amount}  元</span>
+        //             <span>提现账号 ：${record.withdrawal_account}</span> 
+        //             <span>提现金额：${record.withdrawal_amount}  元</span>
+        //             <span>技术服务费：${record.technical_service_fee}  元</span>
+        //             <span>提现手续费：${record.withdrawal_fee}  元</span>
+        //             <span>申请时间：${record.application_time}</span> 
+        //             <span>申请状态：${record.application_status  == 0 ? '待处理' : (record.application_status  == 1 ? '已处理' : (record.application_status  == 2 ? '已打款' : '拒绝'))}</span>
+        //             <span>打款状态：${record.payout_status  == 0 ? '未打款' : '已打款'}</span>
+        //             <button class="action-button" onclick="modifyApplicationStatus(${record.id},  ${record.application_status})">   修改申请状态</button>
+        //             <button class="action-button" onclick="modifyPayoutStatus(${record.id},  ${record.payout_status})">   修改打款状态</button>
+        //         `;
+        //         container.appendChild(item); 
+        //     });
+        // }
+// 显示提现记录列表
+function displayWithdrawalRecords(records) {
+    // 按账户姓名排序（升序）
+    records.sort((a, b) => {
+        const nameA = a.account_name || '';
+        const nameB = b.account_name || '';
+        return nameA.localeCompare(nameB, 'zh-Hans-CN'); // 支持中文拼音排序
+    });
+
+    const container = document.getElementById('withdrawal-records'); 
+    container.innerHTML = '';
+    records.forEach(record => {
+        const item = document.createElement('div'); 
+        item.classList.add('record-item'); 
+        item.innerHTML = `
+            <span class="record-title">提现编号：${record.id}</span> 
+            <span>账户姓名：${record.account_name}</span> 
+            <span>场地名称：${record.venue_name}(ID:${record.venue_id})</span> 
+            <span>账户类型：${record.account_type}</span> 
+            <span style="color: #007BFF; font-weight: 700; text-shadow: 0 0 2px rgba(0,123,255,0.3);">实际打款：${record.actual_amount} 元</span>
+            <span>提现账号 ：${record.withdrawal_account}</span> 
+            <span>提现金额：${record.withdrawal_amount} 元</span>
+            <span>技术服务费：${record.technical_service_fee} 元</span>
+            <span>提现手续费：${record.withdrawal_fee} 元</span>
+            <span>申请时间：${record.application_time}</span> 
+            <span>申请状态：${record.application_status == 0 ? '待处理' : (record.application_status == 1 ? '已处理' : (record.application_status == 2 ? '已打款' : '拒绝'))}</span>
+            <span>打款状态：${record.payout_status == 0 ? '未打款' : '已打款'}</span>
+            <button class="action-button" 
+                    onclick="modifyApplicationStatus(${record.id}, ${record.application_status}, '${encodeURIComponent(record.account_name)}')">
+                修改申请状态
+            </button>
+            
+            <button class="action-button" 
+                    onclick="modifyPayoutStatus(${record.id}, ${record.payout_status}, '${encodeURIComponent(record.account_name)}')">
+                修改打款状态
+            </button>
+
+        `;
+        container.appendChild(item); 
+    });
+}
+
+        // 修改申请状态
+        function modifyApplicationStatus(id, currentStatus,encodedName) {
+            const accountName = decodeURIComponent(encodedName); // 还原姓名
+            let newStatus;
+            if (currentStatus === 0) {
+                newStatus = 1; // 从待处理改为已处理
+            } else if (currentStatus === 1) {
+                newStatus = 2; // 从已处理改为已打款
+            } else {
+                newStatus = 0; // 其他状态重置为待处理
+            }
+            const url = 'https://open.rcwulian.cn/api/pay/modifyApplicationStatus.php';  // 假设的修改状态接口
+            const data = { id: id, status: newStatus };
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: new URLSearchParams(data).toString()
+            })
+               .then(response => response.json()) 
+               .then(data => {
+                    if (data.code  === 0) {
+                        alert(accountName + "的申请状态修改成功");
+                        loadWithdrawalRecords(); // 刷新提现记录
+                    } else {
+                        alert('申请状态修改失败，请稍后重试');
+                    }
+                })
+               .catch(error => {
+                    console.error('   申请状态修改失败:', error);
+                    alert('申请状态修改失败，请重试');
+                });
+        }
+
+        // 修改打款状态
+        function modifyPayoutStatus(id, currentStatus,encodedName) {
+            const accountName = decodeURIComponent(encodedName); // 还原姓名
+            let newStatus = currentStatus === 0 ? 1 : 0;
+            const url = 'https://open.rcwulian.cn/api/pay/modifyPayoutStatus.php';  // 假设的修改状态接口
+            const data = { id: id, status: newStatus };
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                },
+                body: new URLSearchParams(data).toString()
+            })
+               .then(response => response.json()) 
+               .then(data => {
+                    if (data.code  === 0) {
+                        alert(accountName + "的打款状态修改成功");
+                        loadWithdrawalRecords(); // 刷新提现记录
+                    } else {
+                        alert('打款状态修改失败，请稍后重试');
+                    }
+                })
+               .catch(error => {
+                    console.error('   打款状态修改失败:', error);
+                    alert('打款状态修改失败，请重试');
+                });
+        }
+
+        // 导出到 Excel
+        function exportToExcel() {
+            const url = 'https://open.rcwulian.cn/api/pay/getpaylist.php';  
+            fetch(url)
+              .then(response => response.json())  
+              .then(data => {
+                    if (data.code === 0 && data.data && data.data.length > 0) {
+                        const records = data.data;  
+                           // ✅ 按账户姓名排序（支持中文）
+                        records.sort((a, b) => {
+                            const nameA = a.account_name || '';
+                            const nameB = b.account_name || '';
+                            return nameA.localeCompare(nameB, 'zh-Hans-CN');
+                        });
+                        // 计算"实际打款"的总计值
+                        const totalActualAmount = records.reduce((sum, record) => sum + parseFloat(record.actual_amount), 0).toFixed(2);
+
+                        const wsData = records.map(record => ({
+                            '提现编号': record.id,  
+                            '账户姓名': record.account_name,  
+                            '场地名称': `${record.venue_name}(ID:${record.venue_id})`,  
+                            '账户类型': record.account_type,  
+                            '实际打款': `${record.actual_amount}`, 
+                            '提现账号': record.withdrawal_account,  
+                            '提现金额': `${record.withdrawal_amount}`, 
+                            '技术服务费': `${record.technical_service_fee}`, 
+                            '提现手续费': `${record.withdrawal_fee}`, 
+                            '申请时间': record.application_time,  
+                            '申请状态': record.application_status == 0 ? '待处理' : (record.application_status == 1 ? '已处理' : (record.application_status == 2 ? '已打款' : '拒绝')),
+                            '打款状态': record.payout_status == 0 ? '未打款' : '已打款'
+                        }));
+
+                        // 添加"实际打款"总计行
+                        wsData.push({
+                            '提现编号': '',
+                            '账户姓名': '',
+                            '场地名称': '',
+                            '账户类型': '',
+                            '实际打款': `${totalActualAmount}`,
+                            '提现账号': '',
+                            '提现金额': '',
+                            '技术服务费': '',
+                            '提现手续费': '',
+                            '申请时间': '',
+                            '申请状态': '',
+                            '打款状态': ''
+                        });
+
+                        const ws = XLSX.utils.json_to_sheet(wsData);
+                        const wb = XLSX.utils.book_new();  
+                        XLSX.utils.book_append_sheet(wb, ws, '提现记录');
+
+                        // 获取当前时间戳
+                        const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
+
+                        // 生成带有时间戳的文件名
+                        const fileName = `提现记录_${timestamp}.xlsx`;
+
+                        XLSX.writeFile(wb, fileName);
+                    } else {
+                        alert('暂无提现记录，无法导出');
+                    }
+                })
+              .catch(error => {
+                    console.error('  导出失败:', error);
+                    alert('导出失败，请重试');
+                });
+        }
+
+        // 页面加载时获取提现记录
+        loadWithdrawalRecords();
+    </script>
+
+</body>
+
+</html>

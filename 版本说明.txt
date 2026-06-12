@@ -1,0 +1,19 @@
+# 目录说明
+
+- iframe/          iframe 版主题模板，即采用 iframe 跳转模式，适用于传统开发方式。
+- single/          单页SPA（single page web application）版主题模板，即单页面跳转模式，更适用于前后端分离。
+
+实际使用时，两者二选一即可（两者具体区别见该主题官网主页说明）
+
+
+# 效果预览
+
+预览请建立本地站点访问，如您的本地站点访问地址为：http://127.0.0.1
+假设您解压后放在根目录，则：
+iframe版预览：http://127.0.0.1/iframe/views/
+single版预览：http://127.0.0.1/single/
+
+
+# 开发文档
+
+开发文档为 layuiAdmin 1.7.2版文档，说明大同小异。layui2.8.x 的新特性请参考官网: https://layui.dev

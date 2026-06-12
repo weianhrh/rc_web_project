@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>用户订单列表</title>
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #e6ebf5;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+      --success: #21a366;
+      --warning: #ff7a45;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 18px;
+      color: var(--text-color);
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+      transition: var(--transition);
+    }
+
+    .card-title {
+      font-size: 22px;
+      color: var(--text-color);
+      margin-bottom: 16px;
+      font-weight: 700;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .filter-item {
+      min-width: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .venue-filter-item {
+      min-width: 260px;
+      flex: 1;
+    }
+
+    .filter-item label {
+      font-size: 13px;
+      color: var(--secondary);
+      font-weight: 600;
+    }
+
+    .filter-item input,
+    .filter-item select {
+      height: 40px;
+      border: 1px solid #dfe5f2;
+      border-radius: 10px;
+      padding: 0 12px;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text-color);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .filter-item input:focus,
+    .filter-item select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.08);
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      height: 40px;
+      padding: 0 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #4a77e4;
+    }
+
+    .btn-light {
+      background: #eef3ff;
+      color: var(--primary);
+    }
+
+    .btn-light:hover {
+      background: #e3ebff;
+    }
+
+    .summary-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .summary-pill {
+      min-width: 140px;
+      background: #f7f9ff;
+      border: 1px solid #e7edff;
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .summary-pill span {
+      font-size: 12px;
+      color: var(--secondary);
+    }
+
+    .summary-pill strong {
+      font-size: 18px;
+      color: var(--text-color);
+      font-weight: 700;
+    }
+
+    .order-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 12px;
+    }
+
+    .order-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      transition: var(--transition);
+      border: 1px solid #eef2fb;
+    }
+
+    .order-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(91, 140, 255, 0.12);
+    }
+
+    .order-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .user-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .user-avatar,
+    .user-avatar-fallback {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .user-avatar {
+      object-fit: cover;
+      background: #f2f4f8;
+      border: 1px solid #edf1f7;
+    }
+
+    .user-avatar-fallback {
+      background: linear-gradient(135deg, #5b8cff 0%, #7aa6ff 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .user-meta {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    .user-wallet {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--secondary);
+    }
+
+    .amount-box {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .order-amount {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--warning);
+      line-height: 1;
+    }
+
+    .order-status {
+      margin-top: 6px;
+      display: inline-block;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef3ff;
+      color: var(--primary);
+    }
+
+    .order-status.done {
+      background: #edf9f0;
+      color: var(--success);
+    }
+
+    .order-status.running {
+      background: #eef3ff;
+      color: var(--primary);
+    }
+
+    .order-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+      margin-top: 10px;
+    }
+
+    .info-item {
+      background: #fafbff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 0;
+    }
+
+    .info-label {
+      font-size: 11px;
+      color: #8b97aa;
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      font-size: 13px;
+      color: var(--text-color);
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .order-bottom {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag-mini {
+      font-size: 12px;
+      color: #60708a;
+      background: #f4f7fc;
+      border-radius: 999px;
+      padding: 5px 10px;
+      border: 1px solid #ebf0f7;
+    }
+
+    .empty-box {
+      grid-column: 1 / -1;
+      text-align: center;
+      background: #fff;
+      border-radius: 14px;
+      padding: 34px 16px;
+      color: var(--secondary);
+      box-shadow: var(--shadow);
+    }
+
+    .loading-text {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      .order-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filter-item,
+      .venue-filter-item {
+        min-width: 100%;
+      }
+
+      .filter-actions {
+        width: 100%;
+      }
+
+      .filter-actions .btn {
+        flex: 1;
+      }
+
+      .order-info {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">用户订单列表</div>
+
+      <div class="filter-row">
+        <div class="filter-item">
+          <label for="start_date">开始日期</label>
+          <input type="date" id="start_date">
+        </div>
+
+        <div class="filter-item">
+          <label for="end_date">结束日期</label>
+          <input type="date" id="end_date">
+        </div>
+
+        <div class="filter-item venue-filter-item">
+          <label for="venue_id">场地筛选</label>
+          <select id="venue_id">
+            <option value="">全部场地</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn btn-primary" onclick="loadOrders()">查询</button>
+          <button class="btn btn-light" onclick="resetFilters()">重置</button>
+        </div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-pill">
+          <span>订单数</span>
+          <strong id="totalCount">0</strong>
+        </div>
+        <div class="summary-pill">
+          <span>总金额</span>
+          <strong id="totalAmount">¥0.00</strong>
+        </div>
+        <div class="summary-pill">
+          <span>时间范围</span>
+          <strong id="queryRange">今日</strong>
+        </div>
+      </div>
+    </div>
+
+    <div id="orderList" class="order-grid">
+      <div class="empty-box"><span class="loading-text">正在加载订单...</span></div>
+    </div>
+  </div>
+
+  <script>
+    // 改成你的真实接口地址
+    const ORDER_API = '/api/orders/get_user_orders.php';
+
+    // 你给的场地接口
+    const VENUE_API = '/api/operat/EnergyGift.php';
+
+    document.addEventListener('DOMContentLoaded', function () {
+      setDefaultToday();
+      loadVenueOptions();
+      loadOrders();
+    });
+
+    function setDefaultToday() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+
+      document.getElementById('start_date').value = todayStr;
+      document.getElementById('end_date').value = todayStr;
+    }
+
+    function resetFilters() {
+      setDefaultToday();
+      document.getElementById('venue_id').value = '';
+      loadOrders();
+    }
+
+    function loadVenueOptions() {
+      const venueSelect = document.getElementById('venue_id');
+      const xhr = new XMLHttpRequest();
+
+      xhr.open('POST', VENUE_API, true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+
+              if (String(response.code) === '0' && Array.isArray(response.data)) {
+                venueSelect.innerHTML = '<option value="">全部场地</option>';
+
+                response.data.forEach(venue => {
+                  const option = document.createElement('option');
+                  option.value = venue.id;
+                  option.textContent = `${venue.id} - ${venue.venue_name}`;
+                  venueSelect.appendChild(option);
+                });
+              }
+            } catch (e) {
+              console.error('场地解析失败:', e);
+            }
+          } else {
+            console.error('获取场地下拉失败');
+          }
+        }
+      };
+
+      xhr.send('action=get_venues');
+    }
+
+    function loadOrders() {
+      const startDate = document.getElementById('start_date').value.trim();
+      const endDate = document.getElementById('end_date').value.trim();
+      const venueId = document.getElementById('venue_id').value.trim();
+      const orderList = document.getElementById('orderList');
+
+      orderList.innerHTML = '<div class="empty-box"><span class="loading-text">正在加载订单...</span></div>';
+
+      const params = new URLSearchParams();
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+      if (venueId) params.append('reservation_id', venueId);
+
+      fetch(`${ORDER_API}?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'include'
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (String(res.code) !== '200') {
+          orderList.innerHTML = `<div class="empty-box">${escapeHtml(res.msg || '获取失败')}</div>`;
+          updateSummary(0, 0, startDate, endDate);
+          return;
+        }
+
+        const data = res.data || {};
+        const list = Array.isArray(data.list) ? data.list : [];
+        const total = Number(data.total || 0);
+        const totalAmount = Number(data.total_payment_amount || 0);
+
+        updateSummary(
+          total,
+          totalAmount,
+          data.query_start_date || startDate,
+          data.query_end_date || endDate
+        );
+
+        renderOrderList(list);
+      })
+      .catch(err => {
+        console.error('加载订单失败:', err);
+        orderList.innerHTML = '<div class="empty-box">请求失败，请稍后重试</div>';
+        updateSummary(0, 0, startDate, endDate);
+      });
+    }
+
+    function updateSummary(total, totalAmount, startDate, endDate) {
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('totalAmount').textContent = `¥${formatMoney(totalAmount)}`;
+
+      if (startDate && endDate) {
+        document.getElementById('queryRange').textContent = `${startDate} ~ ${endDate}`;
+      } else {
+        document.getElementById('queryRange').textContent = '今日';
+      }
+    }
+
+    function renderOrderList(list) {
+      const orderList = document.getElementById('orderList');
+
+      if (!list.length) {
+        orderList.innerHTML = '<div class="empty-box">暂无订单数据</div>';
+        return;
+      }
+
+      orderList.innerHTML = list.map(item => {
+        const statusClass = getStatusClass(item.status);
+        const nickname = item.nickname || ('用户' + (item.uid || ''));
+        const venueName = item.venue_name || ('场地ID ' + (item.reservation_id || '-'));
+        const showTime = item.end_time || item.start_time || '-';
+
+        return `
+          <div class="order-card">
+            <div class="order-top">
+              <div class="user-box">
+                ${getAvatarHtml(item.headimgurl, nickname)}
+                <div class="user-meta">
+                  <div class="user-name">${escapeHtml(nickname)}</div>
+                  <div class="user-wallet">钱包：¥${formatMoney(item.wallet || 0)}</div>
+                </div>
+              </div>
+
+              <div class="amount-box">
+                <div class="order-amount">¥${formatMoney(item.payment_amount || 0)}</div>
+                <div class="order-status ${statusClass}">${escapeHtml(item.status || '未知')}</div>
+              </div>
+            </div>
+
+            <div class="order-info">
+              <div class="info-item">
+                <div class="info-label">场地</div>
+                <div class="info-value">${escapeHtml(venueName)}</div>
+              </div>
+
+              <div class="info-item">
+                <div class="info-label">UID</div>
+                <div class="info-value">${escapeHtml(String(item.uid || '-'))}</div>
+              </div>
+
+              <div class="info-item">
+                <div class="info-label">结束时间</div>
+                <div class="info-value">${escapeHtml(showTime)}</div>
+              </div>
+
+              <div class="info-item">
+                <div class="info-label">设备序列号</div>
+                <div class="info-value">${escapeHtml(item.serial_number || '-')}</div>
+              </div>
+            </div>
+
+            <div class="order-bottom">
+              <span class="tag-mini">订单号：${escapeHtml(item.order_id || '-')}</span>
+              <span class="tag-mini">场地ID：${escapeHtml(String(item.reservation_id || '-'))}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getAvatarHtml(url, nickname) {
+      const firstChar = getFirstChar(nickname);
+
+      if (url) {
+        return `
+          <img
+            class="user-avatar"
+            src="${escapeAttr(url)}"
+            alt="avatar"
+            onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=&quot;user-avatar-fallback&quot;>${firstChar}</div>')"
+          >
+        `;
+      }
+
+      return `<div class="user-avatar-fallback">${firstChar}</div>`;
+    }
+
+    function getFirstChar(text) {
+      const str = String(text || 'U').trim();
+      return escapeHtml(str.charAt(0) || 'U');
+    }
+
+    function getStatusClass(status) {
+      const s = String(status || '');
+      if (s.includes('完成')) return 'done';
+      if (s.includes('驾驶') || s.includes('进行')) return 'running';
+      return '';
+    }
+
+    function formatMoney(value) {
+      return Number(value || 0).toFixed(2);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeAttr(str) {
+      return escapeHtml(str);
+    }
+  </script>
+</body>
+</html>

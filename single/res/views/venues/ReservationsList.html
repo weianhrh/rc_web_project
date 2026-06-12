@@ -1,0 +1,198 @@
+
+<title>预约订单列表</title>
+
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>场地</cite></a>
+    <a><cite>订单列表</cite></a>
+    
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="layadmin-reservation-formlist">
+      <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label">订单编号</label>
+          <div class="layui-input-block">
+            <input type="text" name="order_number" placeholder="请输入订单编号" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">预约日期</label>
+          <div class="layui-input-block">
+            <input type="text" name="reservation_date" id="reservation_date" placeholder="请选择日期" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">预约场地</label>
+          <div class="layui-input-block">
+            <input type="text" name="reservation_location" placeholder="请输入场地名称" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        
+        <div class="layui-inline">
+            <label class="layui-form-label">状态</label>
+            <div class="layui-input-inline">
+                <select name="status">
+                    <option value="">所有状态</option>
+                    <option value="等待驾驶">等待驾驶</option>
+                    <option value="正在驾驶">正在驾驶</option>
+                    <option value="已完成">已完成</option>
+                    <option value="已取消">已取消</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-reservation-front-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i> 搜索
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layui-card-body">
+      <table id="LAY-reservation-manage" lay-filter="LAY-reservation-manage"></table>
+     <script type="text/html" id="table-reservation-list">
+          <a class="layui-btn layui-btn-normal layui-btn-xs" lay-event="edit"><i class="layui-icon layui-icon-edit"></i> 短信通知</a>
+          <a class="layui-btn layui-btn-warm layui-btn-xs" lay-event="end"><i class="layui-icon layui-icon-check-circle"></i> 结束订单</a>
+          <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="cancel"><i class="layui-icon layui-icon-close-fill"></i> 取消预约</a>
+     
+        </script>
+
+    </div>
+  </div>
+</div>
+
+<script>
+layui.use(['admin','table', 'form', 'layer', 'laydate'], function(){
+  var table = layui.table,
+      admin = layui.admin,  // Ensure that admin module is loaded
+      form = layui.form,
+      layer = layui.layer,
+      laydate = layui.laydate;
+// 初始化日期选择器并设置默认值为当前日期
+  laydate.render({
+    elem: '#reservation_date', // 绑定元素
+    type: 'date', // 设置日期类型
+    value: new Date() // 设置默认值为当前日期
+  });
+ 
+
+  // 渲染预约订单表格
+  table.render({
+    elem: '#LAY-reservation-manage',
+    url: '/api/venue/getReservationsList.php', // 指向后端接口的路径
+    cols: [[
+      {type: 'checkbox', fixed: 'left'},
+      {field: 'id', width: 40, title: 'ID', sort: true},
+      {field: 'order_number', title: '订单编号', minWidth: 100},
+      //{field: 'reservation_type', title: '预约类型', minWidth: 100},
+      {field: 'reservation_location', title: '预约场地', minWidth: 120},
+      {field: 'reservation_time', title: '预约时间', minWidth: 170, sort: true},
+      {field: 'user_id', title: '用户ID', width: 80},
+      {field: 'nickname', title: '用户昵称', width: 80},
+      
+      {field: 'order_status', title: '状态', width: 110},
+     
+      {field: 'driving_duration', title: '时长', width: 40},
+      {field: 'pay_type', title: '支付', width: 60},
+      {field: 'pay_money', title: '支付金额', width: 80, templet: function(d) {
+        return '¥ ' + (d.pay_money ? parseFloat(d.pay_money).toFixed(2) : '0.00');
+      }},
+      {field: 'notification_status', title: '通知', width: 80},
+       {field: 'driving_start_time', title: '驾驶开始时间', minWidth: 160},
+      {field: 'driving_end_time', title: '驾驶结束时间', minWidth: 160},
+      {title: '操作', width: 300, align: 'center', fixed: 'right', toolbar: '#table-reservation-list'}
+    ]],
+    page: true,
+    limit: 20,
+    height: 'full-220',
+    text: '对不起，加载出现异常！'
+  });
+
+ // 监听工具条
+// 监听工具条
+table.on('tool(LAY-reservation-manage)', function(obj) {
+    var data = obj.data;
+    if(obj.event === 'edit'){
+      // Trigger SMS notification
+        layer.confirm('是否短信通知 ' + data.order_number + ' 吗？', function(index){
+        
+          // Trigger SMS notification
+          $.ajax({
+            url: 'https://rcwulian.cn/app/code/send-Reservations.php',
+            type: 'GET',
+            data: { order_number: data.order_number },
+            success: function(response) {
+              layer.msg('短信已发送: ' + response.msg);
+            },
+            error: function(xhr) {
+              layer.msg('短信发送失败: ' + response.msg);
+            }
+          });
+    
+        });
+    } else if (obj.event === 'end') {
+        // End order operation
+        layer.confirm('确定要结束订单 ' + data.order_number + ' 吗？', function(index){
+            admin.req({
+                url: '/api/orders/CompleteOrder.php',
+                data: { order_id: data.order_number },
+                method: 'get',
+                done: function(res){
+                    layer.msg('订单已结束');
+                    table.reload('LAY-reservation-manage');
+                },
+                fail: function(res){
+                    layer.msg('结束订单失败: ' + (res.message || '未知错误'));
+                }
+            });
+            layer.close(index);
+        });
+    } else if (obj.event === 'cancel') {
+        // Cancel reservation operation
+        layer.confirm('确定要取消预约 ' + data.order_number + ' 吗？', function(index){
+            admin.req({
+                url: '/api/venue/CancelReservation.php',
+                data: { order_number: data.order_number },
+                method: 'get',
+                done: function(res){
+                    console.log('Response:', res); // 日志记录响应数据
+                    if (res.code === 200) { // 确保检查正确的响应码
+                        layer.msg('预约已取消：' + res.msg); // 显示成功消息
+                        table.reload('LAY-reservation-manage');
+                    } else {
+                        layer.msg('操作未成功：' + res.msg); // 显示错误或其他状态消息
+                    }
+                },
+                fail: function(res){
+                    console.error('Failed response:', res); // 错误日志记录
+                    layer.msg('取消预约失败: ' + (res.responseJSON && res.responseJSON.message ? res.responseJSON.message : '未知错误'));
+                }
+            });
+            layer.close(index);
+        });
+    }
+  });
+
+
+
+  // 搜索功能
+  form.on('submit(LAY-reservation-front-search)', function(data){
+    var field = data.field;
+
+    // 执行重载
+    table.reload('LAY-reservation-manage', {
+      where: field
+    });
+  });
+  // 重新渲染表单
+  form.render();
+});
+</script>

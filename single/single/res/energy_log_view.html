@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>用户分配能量记录</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", system-ui;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start), var(--background-gradient-end));
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .container {
+      max-width: 1000px;
+      width: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 20px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      text-align: left;
+    }
+
+    .venue-card {
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      transition: var(--transition);
+    }
+
+    .venue-card:hover {
+      background-color: var(--hover-bg);
+    }
+
+    .venue-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 14px;
+      color: var(--text-color);
+    }
+
+    .venue-info .highlight {
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      color: var(--primary);
+      padding: 20px;
+    }
+
+    .profit-info {
+      float: right;
+      margin-top: -4px;
+    }
+
+    .profit-button {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+    }
+
+    .profit-button:hover {
+      background-color: #4a79e5;
+    }
+
+  #venue-selector {
+  display: block;
+  width: 100% !important;
+}
+
+#venue_id {
+  display: block;
+  width: 100% !important;      /* ✅ 占满整行 */
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">
+        用户分配能量记录
+        <span class="profit-info">
+          <!--<button class="profit-button" onclick="location.href='profit_record.html'">收益记录</button>-->
+          <button class="profit-button" onclick="goToProfit()">收益记录</button>
+
+        </span>
+      </div>
+
+      <div id="venue-selector" style="display: none;">
+        <!--<label for="venue_id"></label>-->
+        <select id="venue_id"></select>
+      </div>
+
+      <div id="energy-list"></div>
+    </div>
+  </div>
+
+  <script>
+    let roleId = 0;
+    let currentVenueId = null;
+
+    // 获取当前登录用户信息
+    fetch('/api/operat/get_current_user.php')
+      .then(res => res.json())
+      .then(data => {
+        roleId = data.data.role_id;;
+        currentVenueId = data.data.venue_id;
+
+        if (roleId == 1) {
+          document.getElementById('venue-selector').style.display = 'block';
+
+          // 拉取场地下拉框数据
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/api/operat/EnergyGift.php', true);
+          xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+              const response = JSON.parse(xhr.responseText);
+              if (response.code === 0) {
+                const select = document.getElementById('venue_id');
+                response.data.forEach(venue => {
+                  const option = document.createElement('option');
+                  option.value = venue.id;
+                  option.textContent = `${venue.id} - ${venue.venue_name}`;
+                  select.appendChild(option);
+                });
+                // 默认加载第一个场地数据
+                if (select.options.length > 0) {
+                  select.selectedIndex = 6;
+                  loadEnergyList(currentVenueId);
+                }
+
+                select.addEventListener('change', () => {
+                  loadEnergyList(select.value);
+                });
+              }
+            }
+          };
+          xhr.send('action=get_venues');
+        } else {
+          // 普通用户，直接加载自己场地
+          loadEnergyList(currentVenueId);
+        }
+      });
+
+    function loadEnergyList(venueId) {
+      fetch(`/api/operat/energy_log_data.php?venue_id=${venueId}`)
+        .then(response => response.json())
+        .then(result => {
+          const container = document.getElementById('energy-list');
+          if (result.error) {
+            container.innerHTML = `<div class="loading">${result.error}</div>`;
+            return;
+          }
+
+          const data = result.data;
+          if (!data || data.length === 0) {
+            container.innerHTML = `<div class="loading">暂无用户给该场地分配能量</div>`;
+            return;
+          }
+
+          let html = '';
+          data.forEach(item => {
+            html += `
+              <div class="venue-card">
+                <div class="venue-info">
+                  <span><span class="highlight">${item.user_uid}</span> 用户分配 <span class="highlight">${item.energy_change}</span> 点能量到该场地</span>
+                  <span>加盟商收益：<span class="highlight">${item.franchisee_income ?? '0.00'}</span></span>
+                  ${roleId == 1 ? `<span>平台收益：<span class="highlight">${item.platform_income ?? '0.00'}</span></span>` : ''}
+                  <span>原因：${item.reason}</span>
+                  <span>分配时间：${item.created_at}</span>
+                </div>
+              </div>`;
+          });
+
+          container.innerHTML = html;
+        })
+        .catch(err => {
+          document.getElementById('energy-list').innerHTML = `<div class="loading">加载失败，请稍后再试</div>`;
+          console.error('加载错误', err);
+        });
+    }
+    function goToProfit() {
+      let targetVenueId = currentVenueId;
+      if (roleId == 1) {
+        const select = document.getElementById('venue_id');
+        targetVenueId = select.value;
+      }
+      location.href = `profit_record.html?venue_id=${targetVenueId}`;
+    }
+
+  </script>
+</body>
+</html>

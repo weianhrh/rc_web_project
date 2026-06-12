@@ -1,0 +1,1192 @@
+<!DOCTYPE html> 
+<html lang="zh-CN"> 
+ 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>设备管理</title> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">  
+    <style> 
+        :root { 
+            --primary: #5b8cff; 
+            --secondary: #7f8fa4; 
+            --background-gradient-start: #f8f9ff; 
+            --background-gradient-end: #f0f3ff; 
+            --card-bg: #ffffff; 
+            --border-color: #ddd; 
+            --text-color: #333; 
+            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08); 
+            --transition: all 0.3s ease; 
+            --hover-bg: #f9f9f9; 
+        } 
+ 
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: "PingFang SC", system-ui; 
+        } 
+ 
+        body { 
+            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%); 
+            min-height: 100vh; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start; 
+        } 
+ 
+        .container { 
+            max-width: 1200px; 
+            width: 100%; 
+        } 
+ 
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+            transition: var(--transition); 
+        } 
+ 
+        .card-title-container { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            margin-bottom: 20px; 
+        } 
+ 
+        .card-title { 
+            font-size: 24px; 
+            color: var(--text-color); 
+            font-weight: 600; 
+            padding-bottom: 10px; 
+            text-align: left; 
+        } 
+ 
+        #venue_id { 
+            margin-right: 10px; 
+            padding: 8px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            outline: none; 
+        } 
+            
+        /* 新增搜索框样式 */ 
+        #search-transmitter { 
+            margin-right: 10px; 
+            padding: 8px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            outline: none; 
+        } 
+        #search-box{
+            margin-right: 10px; 
+            padding: 8px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            outline: none;}
+        /* 设备卡片样式 */ 
+        .device-card { 
+            background: #fff; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            align-items: flex-start; 
+            gap: 15px; 
+        } 
+ 
+        .device-img { 
+            width: 100px; 
+            height: 100px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            flex-shrink: 0; 
+        } 
+ 
+        .device-info { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            font-size: 14px; 
+            color: var(--text-color); 
+        } 
+ 
+        .device-info .device-name { 
+            font-size: 16px; 
+            font-weight: 600; 
+            color: var(--primary); 
+        } 
+ 
+        /*.device-info span { */
+        /*    display: block; */
+        /*} */
+ 
+        /* 按钮组样式 */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex-shrink: 0;
+            width: 120px; /* 固定按钮组宽度 */
+        }
+
+        /* 统一所有按钮样式 */
+        .modify-btn,
+        .violation-notice-btn,
+        .modify-site-btn,
+        .modify-uid-btn,
+        .modify-config-btn,
+        .modify-info-btn {
+            width: 100%; /* 让所有按钮填满按钮组宽度 */
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: var(--transition);
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        /* 各按钮的颜色样式 */
+        .modify-btn {
+            background-color: var(--primary);
+            color: #fff;
+        }
+
+        .violation-notice-btn {
+            background-color: #ff5b5b;
+            color: #fff;
+        }
+
+        .modify-site-btn,
+        .modify-uid-btn {
+            background-color: #28a745;
+            color: #fff;
+        }
+
+        .modify-config-btn,
+        .modify-info-btn {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        /* 悬停效果 */
+        .modify-btn:hover {
+            background-color: #4a77e4;
+        }
+
+        .violation-notice-btn:hover {
+            background-color: #e44a4a;
+        }
+
+        .modify-site-btn:hover,
+        .modify-uid-btn:hover {
+            background-color: #218838;
+        }
+
+        .modify-config-btn:hover,
+        .modify-info-btn:hover {
+            background-color: #e0a800;
+        }
+
+        /* 加载提示 */ 
+        .loading { 
+            text-align: center; 
+            font-size: 16px; 
+            color: var(--primary); 
+            padding: 20px; 
+        } 
+ 
+        @media (max-width: 768px) { 
+            .device-card { 
+                flex-direction: column; 
+                align-items: center; 
+            } 
+ 
+            .button-group { 
+                width: 100%; 
+            } 
+ 
+            .button-group button { 
+                width: 100%; 
+            } 
+        } 
+
+        /* 添加或修改模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input[readonly] {
+            background-color: #f5f5f5;
+        }
+
+        .modify-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .add-device-btn {
+            background-color: var(--primary);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        
+        .add-device-btn:hover {
+            background-color: #4a77e4;
+        }
+        .search-input {
+            margin-right: 10px;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            outline: none;
+        }
+        
+@media (max-width: 480px) {
+    .device-card {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+    }
+
+    .button-group {
+        width: 100%;
+        flex-direction: row; /* 小屏幕下按钮横排更紧凑 */
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .button-group button {
+        flex: 1 1 45%;
+        margin: 4px;
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    .device-info {
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .device-img {
+        width: 80px;
+        height: 80px;
+    }
+}
+/* 默认：网页端横排，跟随前面按钮 */
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 888px) {
+  .card-title-container > div {
+    display: flex;
+    /*flex-direction: column;*/
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  #venue_id,
+  #global-search,
+  .add-device-btn {
+    display: block;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .add-device-btn {
+    text-align: center;
+  }
+   .filter-checkbox {
+    justify-content: center;
+    width: 100%;
+    margin-top: 10px;
+  }
+}
+
+
+
+    </style> 
+</head> 
+ 
+<body> 
+    <div class="container"> 
+        <div class="card"> 
+       <div class="card-title-container"> 
+  <div class="card-title">设备管理</div> 
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+  <select id="venue_id"> 
+    <option value="">请选择场地</option> 
+  </select> 
+  <input type="text" id="global-search" class="search-input" placeholder="全局搜索设备"> 
+  <a href="addDev.html" class="add-device-btn">添加设备</a> 
+
+  <!-- ✅ 新增：批量绑定按钮 -->
+  <a href="vehicles_manage.html" class="add-device-btn">批量绑定管理地</a>
+
+  <!-- 勾选框靠右 -->
+  <div class="filter-checkbox">
+    <input type="checkbox" id="filter-online" />
+    <label for="filter-online">仅显示在线设备</label>
+  </div>
+</div>
+
+</div>
+
+
+            <div id="device-list"> 
+                <!-- 设备信息将动态加载 --> 
+            </div> 
+            <div id="loading" class="loading" style="display: none;">正在加载...</div> 
+        </div> 
+    </div> 
+ 
+    <!-- 添加模态框 -->
+    <div id="banModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>设备封禁</h2>
+            <form id="banForm">
+                <input type="hidden" id="banSerialNumber">
+                <div class="form-group" style="display: none;">
+                    <label for="serialNumber">设备序列号</label>
+                    <input type="text" id="displaySerialNumber" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="banDuration">封禁时长</label>
+                    <select id="banDuration" required>
+                    <option value="0.1667">10分钟</option>
+                    <option value="0.3333">20分钟</option>
+                        <option value="0.5">30分钟</option>
+                        <option value="1">一小时</option>
+                        <option value="12">半天</option>
+                        <option value="24">一天</option>
+                        <option value="72">三天</option>
+                        <option value="168">一周</option>
+                        <option value="720">一月</option>  <!-- 新增 -->
+                        <option value="8760">一年</option> <!-- 新增 -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="banReason">封禁原因</label>
+                    <textarea id="banReason" rows="4"></textarea>
+                </div>
+                <div class="form-group" style="display: none;">
+                    <label for="venueId">场地ID</label>
+                    <input type="text" id="venueId" required>
+                </div>
+                <div class="form-group" style="display: none;">
+                    <label for="imageDeviceSerial">图传设备序列号</label>
+                    <input type="text" id="imageDeviceSerial">
+                </div>
+                <div class="form-group">
+                    <label for="operatorUid" style="display: none;">操作人ID</label>
+                    <input type="text" id="operatorUid" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="banType">封禁类型</label>
+                    <select id="banType" required>
+                        <option value="device">封禁设备</option>
+                        <option value="venue">封禁场地</option>
+
+                    </select>
+                </div>
+                <button type="submit" class="modify-btn">确认封禁</button>
+            </form>
+        </div>
+    </div>
+ <script src="canvas-nest-colorful.js"></script>
+    <script> 
+        let currentPage = 1; 
+        const limit = 10; 
+        const accessToken = 'df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4'; 
+        // 定义一个全局变量来保存当前选中的场地 ID 
+        let selectedVenueId = ''; 
+        let allDevices = []; // 用于存储所有设备数据 
+ 
+        // 监听场地选择事件 
+        document.getElementById('venue_id').addEventListener('change',  function () { 
+            const venueId = this.value;  
+            selectedVenueId = venueId; // 保存选中的场地 ID 
+            currentPage = 1; 
+            document.getElementById('device-list').innerHTML  = ''; 
+            loadDeviceData(currentPage, venueId); 
+        }); 
+        // 监听勾选框状态改变事件 
+        document.getElementById('filter-online').addEventListener('change',  function () { 
+            const isChecked = this.checked;  
+            if (isChecked) { 
+                const onlineDevices = allDevices.filter(device  => device.status  === '在线' || device.status === '占有'); 
+                displayDevices(onlineDevices); 
+            } else { 
+                displayDevices(allDevices); 
+            } 
+        }); 
+        // 监听搜索框输入事件 
+    //     document.getElementById('search-transmitter').addEventListener('input',  function () { 
+    //         SearchimgNum(); 
+    //     }); 
+    //     document.getElementById('search-serial').addEventListener('input', function () {
+    //         SearchBySerialNumber();
+    //     });
+    //     document.getElementById('search-serial').addEventListener('input', function () {
+    // document.getElementById('search-transmitter').value = '';
+    //     SearchBySerialNumber();
+    // });
+    
+    // document.getElementById('search-transmitter').addEventListener('input', function () {
+    //     document.getElementById('search-serial').value = '';
+    //     SearchimgNum();
+    // });
+
+    document.getElementById('global-search').addEventListener('input', function () {
+        const keyword = this.value.trim();
+        if (keyword === '') {
+            loadDeviceData(currentPage, selectedVenueId); // 恢复当前场地数据
+        } else {
+            globalSearch(keyword);
+        }
+    });
+
+    function globalSearch(keyword) {
+        const url = `https://open.rcwulian.cn/api/devMgr/devMgtV2.php?get_vehicles=1&global_search=${encodeURIComponent(keyword)}`;
+        document.getElementById('loading').style.display = 'block';
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0 && data.data.vehicles.length > 0) {
+                    allDevices = data.data.vehicles;
+                    displayDevices(allDevices);
+
+                    // console.log("8C4F00AC4258",allDevices);
+                } else {
+                    document.getElementById('device-list').innerHTML = '<div class="loading">未找到匹配设备</div>';
+                }
+                document.getElementById('loading').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('全局搜索失败:', error);
+                document.getElementById('loading').textContent = '搜索失败';
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                }, 2000);
+            });
+    }
+    
+    // 监听设备名称搜索框输入事件
+    // document.getElementById('search-device-name').addEventListener('input', function () {
+    //     searchByDeviceName();
+    // });
+        // 获取场地列表 
+        function loadVenues() {
+    const url = `https://open.rcwulian.cn/api/devMgr/devMgtV2.php?get_venues`;  
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.code === 0 && data.data.venues.length > 0) {
+                const venueSelect = document.getElementById('venue_id');
+                data.data.venues.forEach(venue => {
+                    const option = document.createElement('option');
+                    option.value = venue.id;
+                    option.textContent = `${venue.id}-${venue.venue_name}`;
+                    venueSelect.appendChild(option);
+                });
+
+                // ✅ 在场地列表加载完成后再恢复状态或默认设置
+                const savedVenueId = sessionStorage.getItem('selectedVenueId');
+                if (savedVenueId && venueSelect.querySelector(`option[value="${savedVenueId}"]`)) {
+                    venueSelect.value = savedVenueId;
+                    selectedVenueId = savedVenueId;
+                } else {
+                    // sessionStorage.removeItem('selectedVenueId');
+                    venueSelect.value = '10';
+                    selectedVenueId = '10';
+                }
+                sessionStorage.removeItem('selectedVenueId');
+                currentPage = 1;
+                loadDeviceData(currentPage, selectedVenueId);
+                 
+                // 滚动恢复
+                const scrollY = sessionStorage.getItem('scrollY');
+                if (scrollY) {
+                    setTimeout(() => {
+                        window.scrollTo(0, parseInt(scrollY));
+                    }, 300);
+                    sessionStorage.removeItem('scrollY');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取场地列表失败:', error);
+        });
+}
+
+ 
+        // 获取设备数据 
+        function loadDeviceData(page, venueId = selectedVenueId, search = '') { 
+            if (!venueId) return; // 确保 venueId 存在，防止请求错误 
+            const url = `https://open.rcwulian.cn/api/devMgr/devMgtV2.php?get_vehicles=1&page=${page}&limit=${limit}&access_token=${accessToken}&venue_id=${venueId}&search=${search}`;  
+            // console.log("  请求 URL:", url); // 打印 URL 以调试 
+ 
+            document.getElementById('loading').style.display  = 'block'; 
+ 
+            fetch(url) 
+              .then(response => response.json())  
+              .then(data => { 
+                    if (data.code  === 0 && data.data.vehicles.length  > 0) { 
+                        allDevices = data.data.vehicles;  // 保存所有设备数据 
+                        displayDevices(allDevices, venueId); 
+                        currentPage++; 
+                    } else { 
+                        document.getElementById('loading').textContent  = '没有更多数据了'; 
+                    } 
+                    document.getElementById('loading').style.display  = 'none'; 
+                }) 
+              .catch(error => { 
+                    console.error('  数据加载失败:', error); 
+                    document.getElementById('loading').textContent  = '加载失败，请重试'; 
+                    setTimeout(() => { 
+                        document.getElementById('loading').style.display  = 'none'; 
+                    }, 2000); 
+                }); 
+        } 
+        /*预留一个已经封禁通知的api url接口，告诉他你已被封禁。这个写个模板，后期直接对接APIUrl了*/
+        // 显示设备信息 
+        function displayDevices(devices) {
+
+            const deviceList = document.getElementById('device-list');  
+            deviceList.innerHTML  = ''; // 清空之前的设备列表 
+            devices.forEach(device  => { 
+                const card = document.createElement('div');  
+                card.classList.add('device-card');  
+                card.setAttribute('data-device',  JSON.stringify(device));  
+                card.innerHTML  = ` 
+                    <img class="device-img" src="${device.photo_url}"  alt="设备图片"> 
+                    <div class="device-info"> 
+                        <span class="device-name">${device.name}</span>  
+                        <span class="device-serial">序列号: ${device.serial_number}</span>  
+                        <span class="device-status">
+    状态: <b class="device-status-color" style="color: ${device.status === '在线' ? 'green' : (device.status === '离线' ? 'red' : (device.status === '占有' ? 'orange' : 'black'))};">${device.status}</b>
+</span>
+
+
+ 
+                        <span class="device-ban-status">封禁状态: ${device.is_banned ? '已封禁' : '未封禁'}</span>
+                        <span class="ban-end-time" data-serial="${device.serial_number}">
+                            ${device.is_banned ? '正在获取封禁结束时间...' : ''}
+                        </span> 
+                        <span class="device-sharing-status">共享状态: ${device.sharing_status}</span>  
+                        <span class="device-image-serial">前图传: ${device.image_device_serial}</span>  
+                        ${device.bk_image_device_serial ? `<span class="device-bk-image-serial">后图传: ${device.bk_image_device_serial}</span>` : ''} 
+                        <span class="device-venue-id">场地 ID: ${device.bind_site}</span>
+
+                        <span class="device-uid">绑定用户: ${device.uid || '未绑定'}</span>
+                    </div> 
+                    <div class="button-group"> 
+                        <button class="modify-btn" data-serial="${device.serial_number}"  data-banned="${device.is_banned  ? 1 : 0}"> 
+                            ${device.is_banned  ? '解封' : '封禁'} 
+                        </button> 
+                        <!-- 新增违规通知按钮 --> 
+                        <button class="violation-notice-btn" data-serial="${device.serial_number}">  
+                            违规通知 
+                        </button>
+                        <!-- 修改场地ID按钮 -->
+                        <button class="modify-site-btn" data-serial="${device.serial_number}" data-bind-site="${device.bind_site || ''}">
+                            修改场地ID
+                        </button>
+                        <!-- 修改用户ID按钮 -->
+                        <button class="modify-uid-btn" data-serial="${device.serial_number}" data-uid="${device.uid || ''}">
+                            修改用户ID
+                        </button>
+                        <!-- 修改配置按钮 - 直接跳转 -->
+                        <button class="modify-config-btn" onclick="goToConfig(this)" data-device='${JSON.stringify(device)}'>
+                            修改配置
+                        </button>
+
+                         <button class="modify-info-btn" onclick="goToModify(this)" data-device='${JSON.stringify(device)}'>
+                          修改信息
+                        </button>
+
+                    </div> 
+                `; 
+                
+                deviceList.appendChild(card);  
+ 
+                // Attach click event listener to the ban/unban button 
+                card.querySelector('.modify-btn').addEventListener('click',  function () { 
+                    banDevice(this); 
+                }); 
+ 
+                // 新增违规通知按钮点击事件 
+                card.querySelector('.violation-notice-btn').addEventListener('click',  function () { 
+                    sendViolationNotice(this.dataset.serial);  
+                });
+
+                // 修改场地ID按钮点击事件
+                card.querySelector('.modify-site-btn').addEventListener('click', function() {
+                    updateBindSite(this);
+                });
+
+                // 修改用户ID按钮点击事件
+                card.querySelector('.modify-uid-btn').addEventListener('click', function() {
+                    updateUid(this);
+                });
+
+                // 修改配置按钮点击事件
+                card.querySelector('.modify-config-btn').addEventListener('click', function() {
+                    updateConfig(this);
+                });
+
+                if (device.is_banned) {
+                    getBanEndTime(device.serial_number);
+                }
+            }); 
+        } 
+ 
+    //     // 搜索图传 
+    //     function SearchimgNum() { 
+    //         const searchValue = document.getElementById('search-transmitter').value.trim();  
+    //         console.log('搜索值:', searchValue); // 调试信息
+    //         console.log('所有设备:', allDevices); // 调试信息
+        
+    //         if (searchValue === '') { 
+    //             displayDevices(allDevices, selectedVenueId); 
+    //         } else { 
+    //             const filteredDevices = allDevices.filter(device => { 
+    //                 // 确保 image_device_serial 和 bk_image_device_serial 不是 null
+    //                 const imageSerial = device.image_device_serial || '';
+    //                 const bkImageSerial = device.bk_image_device_serial || '';
+    //                 return imageSerial.includes(searchValue) || bkImageSerial.includes(searchValue);  
+    //             }); 
+    //             console.log('过滤后的设备:', filteredDevices); // 调试信息
+    //             displayDevices(filteredDevices, selectedVenueId); 
+    //         } 
+    //     }
+    //  function SearchBySerialNumber() {
+    //     const searchValue = document.getElementById('search-serial').value.trim().toLowerCase();
+    
+    //     if (searchValue === '') {
+    //         displayDevices(allDevices, selectedVenueId); // 还原全部
+    //         return;
+    //     }
+    
+    //     const filtered = allDevices.filter(device =>
+    //         device.serial_number && device.serial_number.toLowerCase().includes(searchValue)
+    //     );
+    
+    //     displayDevices(filtered, selectedVenueId);
+    // }
+
+    // // 搜索设备名称
+    // function searchByDeviceName() {
+    //     const searchValue = document.getElementById('search-device-name').value.trim().toLowerCase();
+
+    //     if (searchValue === '') {
+    //         displayDevices(allDevices, selectedVenueId); // 还原全部
+    //         return;
+    //     }
+
+    //     const filtered = allDevices.filter(device =>
+    //         device.name && device.name.toLowerCase().includes(searchValue)
+    //     );
+
+    //     displayDevices(filtered, selectedVenueId);
+    // }
+function goToModify(btn) {
+  const device = JSON.parse(btn.dataset.device);
+     // 校验并保存 selectedVenueId
+  if (/^\d+$/.test(selectedVenueId)) {
+    sessionStorage.setItem('selectedVenueId', selectedVenueId);
+  } else {
+    sessionStorage.removeItem('selectedVenueId');
+  }
+  sessionStorage.setItem('scrollY', window.scrollY);
+
+  const url = `modify-device.html?serial_number=${device.serial_number}&name=${encodeURIComponent(device.name)}&share_name=${device.share_name}&image_device_serial=${device.image_device_serial}&bk_image_device_serial=${device.bk_image_device_serial}&sharing_status=${encodeURIComponent(device.sharing_status)}`;
+  window.location.href = url;
+}
+function goToConfig(btn) {
+    const device = JSON.parse(btn.dataset.device);
+      // 校验并保存 selectedVenueId
+  if (/^\d+$/.test(selectedVenueId)) {
+    sessionStorage.setItem('selectedVenueId', selectedVenueId);
+  } else {
+    sessionStorage.removeItem('selectedVenueId');
+  }
+    sessionStorage.setItem('scrollY', window.scrollY);
+
+    const url = `modify-deviceCfgTest.html?serial_number=${device.serial_number}&name=${encodeURIComponent(device.name)}&image_device_serial=${device.image_device_serial}&bk_image_device_serial=${device.bk_image_device_serial}&sharing_status=${encodeURIComponent(device.sharing_status)}`;
+    window.location.href = url;
+}
+
+        // 修改处理封禁/解封操作
+        function banDevice(button) {
+            const serialNumber = button.dataset.serial;
+            const currentBanStatus = parseInt(button.dataset.banned);
+            
+            if (currentBanStatus === 1) {
+                // 如果当前是封禁状态，则直接执行解封操作
+                submitBanAction(serialNumber, 0); // 0 表示解封
+            } else {
+                // 如果当前是未封禁状态，则显示封禁表单
+                showBanModal(serialNumber);
+            }
+        }
+
+        // 显示封禁模态框
+        function showBanModal(serialNumber) {
+            const modal = document.getElementById('banModal');
+            const deviceCard = document.querySelector(`.device-card button[data-serial="${serialNumber}"]`).closest('.device-card');
+            
+            // 获取设备信息
+            const deviceInfo = JSON.parse(deviceCard.getAttribute('data-device'));
+            
+            // 设置表单值
+            document.getElementById('banSerialNumber').value = serialNumber;
+            document.getElementById('displaySerialNumber').value = serialNumber;
+            document.getElementById('venueId').value = selectedVenueId;
+            document.getElementById('imageDeviceSerial').value = deviceInfo.image_device_serial || '';
+            document.getElementById('operatorUid').value = deviceInfo.uid || ''; // 这里可能需要根据实际情况调整
+            
+            // 清空可编辑字段
+            document.getElementById('banReason').value = '';
+            document.getElementById('banDuration').selectedIndex = 0;
+            
+            modal.style.display = 'block';
+        }
+
+        // 关闭模态框
+        document.querySelector('.modal-close').onclick = function() {
+            document.getElementById('banModal').style.display = 'none';
+        };
+
+        // 处理封禁表单提交
+        document.getElementById('banForm').onsubmit = function(e) {
+            e.preventDefault();
+            
+            const serialNumber = document.getElementById('banSerialNumber').value;
+            const duration = document.getElementById('banDuration').value;
+            console.log("duration",duration);
+            const reason = document.getElementById('banReason').value;
+            const venueId = document.getElementById('venueId').value;
+            const imageDeviceSerial = document.getElementById('imageDeviceSerial').value;
+            const banType = document.getElementById('banType').value; // 获取封禁类型
+
+            // if (!reason.trim()) {
+            //     alert('请填写封禁原因');
+            //     return;
+            // }
+
+            if (!venueId.trim() && banType === 'device_and_venue') {
+                alert('请填写场地ID');
+                return;
+            }
+            if (banType == 'device') {
+                submitBanAction(serialNumber, 1, {
+                    ban_duration: duration,
+                    ban_reason: reason,
+                    venue_id: venueId, 
+                    image_device_serial: imageDeviceSerial,
+                    banType: 'device'  // 🔥 一定要加上这个字段
+                });
+
+            } else {
+                submitBanAction(serialNumber, 1, {
+                    ban_duration: duration,
+                    ban_reason: reason,
+                    venue_id: venueId, 
+                    image_device_serial: imageDeviceSerial,
+                    banType: 'venue'
+                });
+            }
+            // 关闭模态框
+            document.getElementById('banModal').style.display = 'none';
+        };
+
+        // 提交封禁/解封操作
+        function submitBanAction(serialNumber, banStatus, additionalData = {}) {
+            const requestBody = {
+                ban: true,
+                serial_number: serialNumber,
+                id: banStatus,
+                ...additionalData
+            };
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.code === 0) {
+                                alert(banStatus === 1 ? '封禁成功' : '解封成功');
+                                
+                                // 获取设备卡片的引用
+                                const deviceCard = document.querySelector(`.device-card button[data-serial="${serialNumber}"]`).closest('.device-card');
+                                
+                                // 更新设备状态和按钮
+                                requestAnimationFrame(() => {
+                                    updateDeviceStatus(serialNumber, banStatus, deviceCard);
+                                    // 新增：刷新设备列表
+                                    loadDeviceData(currentPage, selectedVenueId);
+                                });
+                            } else {
+                                alert('操作失败: ' + response.msg);
+                            }
+                        } catch (error) {
+                            console.error('JSON解析失败:', error);
+                            alert('找不到对应按钮或设备，可能是列表被刷新或过滤了。跳过本地更新。');
+                        }
+                    }
+                }
+            };
+
+            const data = {
+                ban: true,
+                serial_number: serialNumber,
+                id: banStatus,
+                ...additionalData
+            };
+            xhr.send(JSON.stringify(data));
+        }
+
+        function updateDeviceStatus(serialNumber, banStatus, deviceCard) {
+            const banButton = deviceCard.querySelector('.modify-btn');
+            const banStatusElement = deviceCard.querySelector('.device-info span:nth-child(4)');
+            const sharingStatusElement = deviceCard.querySelector('.device-info span:nth-child(6)');
+            const banEndTimeElement = deviceCard.querySelector(`.ban-end-time[data-serial="${serialNumber}"]`);
+
+            // 更新按钮文本和状态
+            banButton.textContent = banStatus === 1 ? '解封' : '封禁';
+            banButton.dataset.banned = banStatus;
+
+            // 更新状态显示
+            banStatusElement.textContent = `封禁状态: ${banStatus === 1 ? '已封禁' : '未封禁'}`;
+            sharingStatusElement.textContent = `共享状态: ${banStatus === 1 ? '未共享' : '正在共享'}`;
+
+            // 更新封禁时间显示
+            if (banEndTimeElement) {
+                banEndTimeElement.textContent = banStatus === 1 ? '正在获取封禁结束时间...' : '';
+            }
+
+            // 更新设备信息
+            const deviceInfo = JSON.parse(deviceCard.getAttribute('data-device'));
+            deviceInfo.is_banned = banStatus === 1;
+            deviceInfo.sharing_status = banStatus === 1 ? '未共享' : '正在共享';
+            deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
+
+            // 如果是封禁操作，获取并显示封禁结束时间
+            if (banStatus === 1) {
+                getBanEndTime(serialNumber);
+                // 刷新场地列表以更新场地状态
+                loadVenues();
+            }
+        }
+
+        // 发送违规通知 
+        function sendViolationNotice(serialNumber) { 
+            const url = `https://rcwulian.cn/app/code/send-Reports.php?serial_number=${serialNumber}`;  
+            fetch(url) 
+              .then(response => response.json())  
+              .then(data => { 
+                    if (data.code  === 0) { 
+                        alert('违规通知发送成功'); 
+                    } else { 
+                        alert('违规通知发送失败: ' + data.msg);  
+                    } 
+                }) 
+              .catch(error => { 
+                    console.error('  请求失败:', error); 
+                    alert('请求失败，请稍后再试'); 
+                }); 
+        } 
+
+        // 修改 updateBindSite 函数
+        function updateBindSite(button) {
+            const serialNumber = button.dataset.serial;
+            const currentBindSite = button.dataset.bindSite;
+            
+            const newBindSite = prompt('请输入新的场地ID:', currentBindSite);
+            if (newBindSite === null) return;
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.code === 0) {
+                            // 更新按钮的数据属性
+                            button.dataset.bindSite = newBindSite;
+                            
+                            // 使用class选择器更新场地ID显示
+                            const deviceCard = button.closest('.device-card');
+                            const venueIdSpan = deviceCard.querySelector('.device-venue-id');
+                            if (venueIdSpan) {
+                                venueIdSpan.textContent = `场地 ID: ${newBindSite}`;
+                            }
+                            
+                            // 更新allDevices数组中的数据
+                            const deviceIndex = allDevices.findIndex(device => device.serial_number === serialNumber);
+                            if (deviceIndex !== -1) {
+                                allDevices[deviceIndex].bind_site = newBindSite;
+                            }
+
+                            alert('场地ID更新成功');
+                        } else {
+                            alert('更新失败: ' + response.msg);
+                        }
+                    } catch (error) {
+                        console.error('更新失败:', error);
+                        alert('更新失败，请稍后重试');
+                    }
+                }
+            };
+
+            const data = JSON.stringify({
+                update_bind: true,
+                serial_number: serialNumber,
+                bind_site: newBindSite
+            });
+            xhr.send(data);
+        }
+
+        // 添加修改用户ID的函数
+        function updateUid(button) {
+            const serialNumber = button.dataset.serial;
+            const currentUid = button.dataset.uid;
+            
+            const newUid = prompt('请输入新的用户ID:', currentUid);
+            if (newUid === null) return; // 用户取消输入
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    // 更新按钮的数据属性
+                    button.dataset.uid = newUid;
+                    
+                    // 更新设备卡片上的用户ID显示
+                    const deviceCard = button.closest('.device-card');
+                    const uidElement = deviceCard.querySelector('.device-info span:last-child');
+                    uidElement.textContent = `绑定用户: ${newUid || '未绑定'}`;
+                    
+                    // 更新allDevices数组中的数据
+                    const deviceIndex = allDevices.findIndex(device => device.serial_number === serialNumber);
+                    if (deviceIndex !== -1) {
+                        allDevices[deviceIndex].uid = newUid;
+                    }
+                }
+            };
+
+            const data = JSON.stringify({
+                update_bind: true,
+                serial_number: serialNumber,
+                uid: newUid
+            });
+            xhr.send(data);
+        }
+
+        // 添加获取封禁结束时间的函数
+        // 添加获取封禁结束时间的函数（含自动解封和封禁时长匹配）
+        function getBanEndTime(serialNumber) {
+    fetch(`https://open.rcwulian.cn/api/devMgr/devMgtV2.php?get_ban_info=${serialNumber}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("getBanInfo 返回值：", data);
+
+            if (data.code === 0 && data.data.ban_end_time) {
+                const endTimeElement = document.querySelector(`.ban-end-time[data-serial="${serialNumber}"]`);
+                const endTime = new Date(data.data.ban_end_time);
+                const now = new Date();
+                console.log("now:", now, "endTime", endTime, "endTimeElement", endTimeElement);
+
+                if (now >= endTime) {
+                    submitBanAction(serialNumber, 0); // 自动解封
+                } else {
+                    const timeDiffMs = endTime - now;
+                    const remainingHours = timeDiffMs / (1000 * 60 * 60);
+
+                    let humanReadable = '';
+                    if (remainingHours <= 0.1) {
+                        humanReadable = '5分钟';
+                    } else if (remainingHours <= 0.2) {
+                        humanReadable = '10分钟';
+                    }else if (remainingHours <= 0.6) {
+                        humanReadable = '半小时';
+                    } else if (remainingHours <= 1.5) {
+                        humanReadable = '一小时';
+                    } else if (remainingHours <= 13) {
+                        humanReadable = '半天';
+                    } else if (remainingHours <= 25) {
+                        humanReadable = '一天';
+                    } else if (remainingHours <= 73) {
+                        humanReadable = '三天';
+                    } else if (remainingHours <= 170) {
+                        humanReadable = '一周';
+                    } else {
+                        humanReadable = `约${Math.ceil(remainingHours)}小时`;
+                    }
+
+                    if (endTimeElement) {
+                        endTimeElement.textContent = `封禁结束时间: ${data.data.ban_end_time} (剩余${humanReadable})`;
+                    }
+
+                    // 设置定时器，到点自动检查封禁状态
+                    setTimeout(() => {
+                        checkBanStatus(serialNumber, data.data.ban_end_time);
+                    }, timeDiffMs);
+                }
+
+                // 自动设置模态框中封禁时长下拉框
+                if (data.data.ban_duration_hours) {
+                    const durationValue = data.data.ban_duration_hours.toString();
+                    const banDurationSelect = document.getElementById("banDuration");
+
+                    if (banDurationSelect) {
+                        for (let option of banDurationSelect.options) {
+                            if (option.value === durationValue) {
+                                option.selected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取封禁结束时间失败:', error);
+        });
+}
+
+
+
+        // 添加检查封禁状态的函数
+        function checkBanStatus(serialNumber, banEndTime) {
+            const now = new Date();
+            const endTime = new Date(banEndTime);
+            
+            if (now >= endTime) {
+                // 封禁时间已到，调用解封接口
+                submitBanAction(serialNumber, 0);
+            }
+        }
+
+        // 页面加载时获取场地列表和第一页数据 
+        window.onload = function () {
+          loadVenues();
+        
+        //   // === 状态恢复 ===
+        //   const savedVenueId = sessionStorage.getItem('selectedVenueId');
+        //   if (savedVenueId) {
+        //     document.getElementById('venue_id').value = savedVenueId;
+        //     selectedVenueId = savedVenueId;
+        //   } else {
+        //     document.getElementById('venue_id').value = '10';
+        //     selectedVenueId = '10';
+        //   }
+        
+          currentPage = 1;
+          loadDeviceData(currentPage, selectedVenueId);
+        
+          // 滚动恢复
+          const scrollY = sessionStorage.getItem('scrollY');
+          if (scrollY) {
+            setTimeout(() => {
+              window.scrollTo(0, parseInt(scrollY));
+            }, 300);
+            sessionStorage.removeItem('scrollY');
+          }
+        };
+
+
+        // 在页面加载时添加定期检查机制
+        function startPeriodicCheck() {
+            setInterval(() => {
+                const bannedDevices = allDevices.filter(device => device.is_banned);
+                bannedDevices.forEach(device => {
+                    getBanEndTime(device.serial_number);
+                });
+            }, 60000); // 每分钟检查一次
+        }
+
+        // 在页面加载完成后启动定期检查
+        window.addEventListener('load', () => {
+            startPeriodicCheck();
+        });
+
+        function updateConfig(button) {
+            const serialNumber = button.dataset.serial;
+            // 在这里添加您需要的逻辑，例如打开一个模态框或发送请求
+            // alert(`修改配置的设备序列号: ${serialNumber}`);
+        }
+    </script> 
+</body> 
+ 
+</html> 

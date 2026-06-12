@@ -1,0 +1,115 @@
+<title>交易记录</title>
+
+<div class="layui-card layadmin-header">
+  <div class="layui-breadcrumb" lay-filter="breadcrumb">
+    <a lay-href="">主页</a>
+    <a><cite>交易记录</cite></a>
+    <a><cite>所有交易</cite></a>
+  </div>
+</div>
+
+<div class="layui-fluid">
+  <div class="layui-card">
+    <div class="layui-form layui-card-header layuiadmin-card-header-auto" lay-filter="app-content-list">
+      <div class="layui-form-item">
+        <div class="layui-inline">
+          <label class="layui-form-label">订单编号</label>
+          <div class="layui-input-inline">
+            <input type="text" name="order_number" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">支付用户</label>
+          <div class="layui-input-inline">
+            <input type="text" name="uid" placeholder="请输入" autocomplete="off" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">支付状态</label>
+          <div class="layui-input-inline">
+            <select name="status" lay-verify="">
+              <option value="">请选择状态</option>
+              <option value="支付成功">支付成功</option>
+              <option value="待支付">待支付</option>
+            </select>
+          </div>
+        </div>
+       
+        <div class="layui-inline">
+          <label class="layui-form-label">开始时间</label>
+          <div class="layui-input-inline">
+            <input type="date" name="start_date" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <label class="layui-form-label">结束时间</label>
+          <div class="layui-input-inline">
+            <input type="date" name="end_date" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline">
+          <button class="layui-btn layuiadmin-btn-list" lay-submit lay-filter="LAY-app-contlist-search">
+            <i class="layui-icon layui-icon-search layuiadmin-button-btn"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layui-card-body">
+      <table id="LAY-app-content-list" lay-filter="LAY-app-content-list"></table> 
+    </div>
+  </div>
+</div>
+
+<script>
+layui.use(['table', 'form'], function(){
+  var $ = layui.$
+    ,table = layui.table
+    ,form = layui.form;
+
+  // 渲染表格
+  table.render({
+    elem: '#LAY-app-content-list',
+    url: '/api/pay/getRechargeOrders.php', // 实际接口地址
+    cols: [[
+      {type: 'checkbox', fixed: 'left'}
+      ,{field: 'id', width: 50, title: '订单ID', sort: true}
+      ,{field: 'uid', width: 100, title: '用户ID'}
+      ,{field: 'order_number', title: '订单编号', minWidth: 150}
+      ,{field: 'product_name', title: '商品名称'}
+      ,{field: 'shop_id', title: '商品ID'}
+      ,{field: 'shop_type', title: '订单类型'}
+      ,{field: 'value', title: '订单价值'}
+      ,{field: 'extra_value', title: '附送价值'}
+      ,{field: 'payer_total', title: '实际支付'}
+      ,{field: 'status', title: '订单状态'}
+      ,{field: 'created_at', title: '创建时间', sort: true}
+      ,{field: 'paid_at', title: '付款时间'}
+      ,{field: 'reservation_id', title: '预约ID'}
+    ]],
+    page: true,
+    limit: 10,
+    text: '对不起，加载出现异常！'
+  });
+
+  // 初始化表单的渲染，确保下拉选择等样式生效
+  form.render();
+
+  // 搜索事件
+  form.on('submit(LAY-app-contlist-search)', function(data){
+    var field = data.field;
+    
+    // 重载表格并传递用户输入的字段，包括开始和结束时间
+    table.reload('LAY-app-content-list', {
+      where: {
+        order_number: field.order_number || '', 
+        uid: field.uid || '',                   
+        status: field.status || '',             
+        start_date: field.start_date || '',      
+        end_date: field.end_date || ''          
+      },
+      page: { curr: 1 }  
+    });
+  });
+});
+</script>
