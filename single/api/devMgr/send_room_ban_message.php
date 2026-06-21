@@ -227,7 +227,7 @@ if ($roomId === '') {
 }
 
 // 客户端最终收到这个
-$message = 'ROOM_BAN#' . $banReason;
+$message = 'ROOM_BAN#1#' . $banReason;
 
 if (strlen($message) > 1024) {
     jsonOut(400, '消息过长，ROOM_BAN消息最大1024字节', [

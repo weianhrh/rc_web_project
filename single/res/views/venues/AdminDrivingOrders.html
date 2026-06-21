@@ -540,6 +540,197 @@ body {
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
 }
+/* ==========================
+   订单卡片字体精细化覆盖
+   放在 style 前面
+========================== */
+
+html,
+body {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Microsoft YaHei UI",
+    "Microsoft YaHei",
+    "PingFang SC",
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 标题别太黑 */
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+/* 卡片更轻一点 */
+.order-card {
+  padding: 15px 16px;
+  border-radius: 16px;
+  border-color: #e8eef8;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .035);
+}
+
+.order-card:hover {
+  border-color: #d6e2ff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .065);
+}
+
+/* 顶部区域更干净 */
+.order-head {
+  gap: 12px;
+  padding-bottom: 11px;
+  margin-bottom: 12px;
+}
+
+/* 所有 label 降低字重，变精致 */
+.form-label,
+.order-no-label,
+.order-money-label,
+.field-label,
+.item-label {
+  color: #7a879a;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .15px;
+}
+
+/* 普通值不要用大黑体 */
+.field-value,
+.item-value {
+  display: block;
+  min-width: 0;
+  color: #253247;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 订单编号可以保留等宽，但不要太粗 */
+.order-no-value {
+  color: #172033;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .1px;
+}
+
+/* 设备号和时间别太黑 */
+.field-value.mono {
+  color: #1f2937;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 金额突出即可，不要 900 那么硬 */
+.order-money-value {
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.2px;
+}
+
+.field-value.money {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 状态胶囊降低字重 */
+.status-badge,
+.lock-status-badge {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 按钮字体也别太重 */
+.form-button,
+.order-actions .form-button {
+  font-weight: 600;
+  letter-spacing: .1px;
+}
+
+/* 你这里锁定状态用了 order-item / item-label / item-value，也补上统一样式 */
+.order-item {
+  min-width: 0;
+}
+
+.item-label {
+  display: block;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.item-value {
+  line-height: 1.45;
+}
+
+/* 手机端保持原来的两列布局，防止覆盖后错位 */
+@media (max-width: 768px) {
+  .order-card {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .order-head {
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding-bottom: 10px;
+  }
+
+  .order-no {
+    grid-column: 1 / -1;
+  }
+
+  .order-money {
+    grid-column: 1 / 2;
+  }
+
+  .order-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .order-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .field-value,
+  .item-value {
+    font-size: 14px;
+  }
+
+  .field-value.mono,
+  .order-no-value {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 420px) {
+  .order-body {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field-value,
+  .item-value {
+    white-space: normal;
+    word-break: break-all;
+  }
+}
 </style>
 </head>
 

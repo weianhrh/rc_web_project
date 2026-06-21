@@ -75,7 +75,7 @@ body{
   align-items:flex-end;
   gap:12px;
   flex:0 0 100%;
-  flex-wrap:nowrap;
+  flex-wrap:wrap;
 }
 
 .form-item{width:190px;max-width:100%;}
@@ -446,6 +446,13 @@ body{
     font-size:13px;
   }
 }
+.venue-filter-item{
+  width:220px;
+}
+
+#streamer_venue_filter{
+  cursor:pointer;
+}
   </style>
 </head>
 
@@ -471,6 +478,23 @@ body{
         <div class="form-item">
           <label class="form-label">邀请码</label>
           <input type="text" name="invitation_code" placeholder="请输入邀请码" autocomplete="off" class="form-input">
+        </div>
+        <div class="form-item venue-filter-item">
+          <label class="form-label">场地搜索</label>
+          <input type="text"
+                 id="venue_search_filter"
+                 placeholder="输入场地ID/名称"
+                 autocomplete="off"
+                 class="form-input">
+        </div>
+        
+        <div class="form-item venue-filter-item">
+          <label class="form-label">场地</label>
+          <select id="streamer_venue_filter"
+                  name="streamer_venue"
+                  class="form-input">
+            <option value="">全部场地</option>
+          </select>
         </div>
       </div>
 
@@ -510,6 +534,10 @@ body{
   const pageInfo = document.getElementById('page-info');
   const loading = document.getElementById('loading');
   const filterStreamerBtn = document.getElementById('filter-streamer-btn');
+const venueSearchFilter = document.getElementById('venue_search_filter');
+const streamerVenueFilter = document.getElementById('streamer_venue_filter');
+
+let venueFilterEventsBound = false;
 
     let streamerFilterType = 0; 
     // 0 = 全部用户
@@ -542,14 +570,22 @@ function goDriveRecord(uid){
   }
 function collectSearchParams() {
   const params = {};
+
   searchInputs.forEach(input => {
+    const name = input.getAttribute('name');
     const v = (input.value || '').trim();
-    if (v) params[input.name] = v;
+
+    // 没有 name 的输入框，例如场地搜索框，不直接传给接口
+    if (name && v) {
+      params[name] = v;
+    }
   });
 
-if (streamerFilterType === 1 || streamerFilterType === 2) {
-  params.is_streamer = String(streamerFilterType);
-}
+  // 原来的主播/管理员筛选
+  // 1 = 主播，2 = 管理员
+  if (streamerFilterType === 1 || streamerFilterType === 2) {
+    params.is_streamer = String(streamerFilterType);
+  }
 
   return params;
 }
@@ -569,6 +605,8 @@ function updateStreamerFilterButton() {
 }
 function fetchVenueList() {
   if (venueList.length > 0) {
+    renderVenueFilterOptions(venueSearchFilter ? venueSearchFilter.value : '');
+    bindTopVenueFilterEvents();
     return Promise.resolve(venueList);
   }
 
@@ -582,13 +620,20 @@ function fetchVenueList() {
         try {
           if (xhr.status === 200) {
             const response = JSON.parse(xhr.responseText || '{}');
+
             if (response.code === 0 && Array.isArray(response.data)) {
               venueList = response.data;
+
+              venueList.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+
+              renderVenueFilterOptions('');
+              bindTopVenueFilterEvents();
             }
           }
         } catch (e) {
           console.error('场地列表解析失败:', e);
         }
+
         resolve(venueList);
       }
     };
@@ -600,6 +645,70 @@ function fetchVenueList() {
 
     xhr.send('action=get_venues');
   });
+}
+function renderVenueFilterOptions(keyword = '') {
+  if (!streamerVenueFilter) return;
+
+  const oldValue = streamerVenueFilter.value || '';
+  const key = String(keyword || '').trim().toLowerCase();
+
+  streamerVenueFilter.innerHTML = '<option value="">全部场地</option>';
+
+  const matchedVenues = venueList.filter(venue => {
+    const text = `${venue.id} - ${venue.venue_name || ''}`.toLowerCase();
+    return key === '' || text.includes(key);
+  });
+
+  matchedVenues.forEach(venue => {
+    const option = document.createElement('option');
+    option.value = String(venue.id);
+    option.textContent = `${venue.id} - ${venue.venue_name}`;
+    streamerVenueFilter.appendChild(option);
+  });
+
+  // 如果原来选中的场地还在搜索结果里，保留选中
+  if (oldValue && matchedVenues.some(v => String(v.id) === String(oldValue))) {
+    streamerVenueFilter.value = oldValue;
+    return;
+  }
+
+  // 输入搜索时，自动选中第一个匹配场地
+  if (key && matchedVenues.length > 0) {
+    streamerVenueFilter.value = String(matchedVenues[0].id);
+  }
+}
+
+function bindTopVenueFilterEvents() {
+  if (venueFilterEventsBound) return;
+  venueFilterEventsBound = true;
+
+  // 下拉框变化后，自动刷新列表
+  if (streamerVenueFilter) {
+    streamerVenueFilter.addEventListener('change', function () {
+      currentPage = 1;
+      const params = collectSearchParams();
+      lastParams = params;
+      loadTableData(params);
+    });
+  }
+
+  // 输入场地名称/ID，只过滤下拉框，不立刻请求接口
+  if (venueSearchFilter) {
+    venueSearchFilter.addEventListener('input', function () {
+      renderVenueFilterOptions(this.value);
+    });
+
+    // 输入后按回车，直接搜索
+    venueSearchFilter.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        currentPage = 1;
+        const params = collectSearchParams();
+        lastParams = params;
+        loadTableData(params);
+      }
+    });
+  }
 }
 
 function buildVenueOptions(selectedId = '') {
@@ -836,7 +945,7 @@ async function loadTableData(params = {}) {
   </button>
 </div>
 
-<!-- 暂时隐藏禁言、取消禁言按钮
+<!-- 暂时隐藏禁言、取消禁言按钮-->
 <div class="action-row action-row-full">
   <button class="action-btn ${Number(item.is_mute) === 1 ? 'btn-unmute' : 'btn-mute'}"
           onclick="toggleUserMute(${item.id}, ${Number(item.is_mute)})">
@@ -844,7 +953,7 @@ async function loadTableData(params = {}) {
     ${Number(item.is_mute) === 1 ? '取消禁言' : '禁言'}
   </button>
 </div>
--->
+
               </div>
             `;
             userList.insertAdjacentHTML('beforeend', userHTML);

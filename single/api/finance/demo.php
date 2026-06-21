@@ -185,12 +185,44 @@ try {
         $userGoldBalanceAmounts[$uidKey] = floatval($row['gold_balance'] ?? 0) / 10;
     }
     
-    $walletStmt->close();
+$walletStmt->close();
 
-    $results = [];
-    while ($row = $summaryResult->fetch_assoc()) {
-        $uid = $row['uid'];
-        $paidTotal = floatval($row['paid_total'] ?? 0);
+
+// 查询苹果内购金币来源：gold_balance_changes 里的 iap_order
+// 按当前页面口径：金币 / 10 折算金额
+$iapGoldSql = "SELECT 
+    uid,
+    SUM(IFNULL(change_amount, 0)) / 10 AS iap_gold_amount
+FROM gold_balance_changes
+WHERE uid IN ({$placeholders})
+  AND change_type = 'recharge'
+  AND biz_type = 'iap_order'
+GROUP BY uid";
+
+$iapGoldStmt = $database->prepare($iapGoldSql);
+$iapGoldStmt->bind_param($types, ...$todayUsers);
+$iapGoldStmt->execute();
+$iapGoldResult = $iapGoldStmt->get_result();
+
+$userIapGoldAmounts = [];
+while ($row = $iapGoldResult->fetch_assoc()) {
+    $userIapGoldAmounts[$row['uid']] = floatval($row['iap_gold_amount'] ?? 0);
+}
+$iapGoldStmt->close();
+
+
+$results = [];
+while ($row = $summaryResult->fetch_assoc()) {
+$uid = $row['uid'];
+
+// RechargeOrders 支付成功金额
+$rechargeOrderPaidTotal = floatval($row['paid_total'] ?? 0);
+
+// 苹果内购金币折算金额，来自 gold_balance_changes
+$iapGoldAmount = $userIapGoldAmounts[$uid] ?? 0;
+
+// 核对用充值来源 = RechargeOrders支付成功 + 苹果内购金币折算
+$paidTotal = $rechargeOrderPaidTotal + $iapGoldAmount;
         // 普通订单消费
         $orderConsumption = $userConsumptions[$uid] ?? 0;
         
@@ -221,7 +253,9 @@ try {
             $results[] = [
                 'uid' => $uid,
                 'paid_total' => $paidTotal,
-            
+                // 单独返回明细，方便前端显示
+                'recharge_order_paid_total' => $rechargeOrderPaidTotal,
+                'iap_gold_amount' => $iapGoldAmount,
                 // 总消费 = 普通订单消费 + 礼物消费
                 'total_consumption' => $consumption,
             

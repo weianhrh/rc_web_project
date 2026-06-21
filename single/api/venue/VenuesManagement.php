@@ -395,7 +395,8 @@ if ($method === 'POST') {
  
         // 关闭数据库连接 
         $database->close(); 
-        }elseif ($action === 'unban_venue') {
+        }
+elseif ($action === 'unban_venue') {
 
     $venue_id = $_POST['venue_id'] ?? null;
     $unban_reason = trim($_POST['unban_reason'] ?? '');
@@ -469,7 +470,8 @@ if ($method === 'POST') {
 
     exit;
     
-}elseif ($action === 'set_venue_status') {
+}
+elseif ($action === 'set_venue_status') {
 
     $venue_id = intval($_POST['venue_id'] ?? 0);
     $venue_status = trim($_POST['venue_status'] ?? '');
@@ -517,7 +519,8 @@ if ($method === 'POST') {
 
     exit;
 
-}elseif ($action === 'set_live_stream_flag') {
+}
+elseif ($action === 'set_live_stream_flag') {
 
     $venue_id = intval($_POST['venue_id'] ?? 0);
     $is_live = intval($_POST['show_live_stream'] ?? 0); // 前端先不改参数名，兼容旧调用
@@ -596,6 +599,48 @@ elseif ($action === 'set_venue_sound_disabled') {
         ], JSON_UNESCAPED_UNICODE);
     } else {
         echo json_encode(['code' => 3, 'msg' => '更新失败'], JSON_UNESCAPED_UNICODE);
+    }
+
+    exit;
+}
+elseif ($action === 'set_user_mic_enabled') {
+
+    $venue_id = intval($_POST['venue_id'] ?? 0);
+    $is_user_mic_enabled = intval($_POST['is_user_mic_enabled'] ?? 0);
+
+    if ($venue_id <= 0) {
+        echo json_encode(['code' => 1, 'msg' => '场地ID无效'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if (!in_array($is_user_mic_enabled, [0, 1], true)) {
+        echo json_encode(['code' => 2, 'msg' => '用户上麦参数错误'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $sql = "UPDATE venues
+            SET is_user_mic_enabled = ?
+            WHERE id = ?
+            LIMIT 1";
+
+    $ok = $database->query($sql, [$is_user_mic_enabled, $venue_id], true);
+
+    if ($ok) {
+        // 清用户端场地列表缓存，避免 App 侧仍看到旧状态
+        if (function_exists('removeVenueFromUserVenueListCaches')) {
+            removeVenueFromUserVenueListCaches($venue_id);
+        }
+
+        echo json_encode([
+            'code' => 0,
+            'msg'  => $is_user_mic_enabled === 1 ? '已开启用户上麦' : '已关闭用户上麦',
+            'data' => [
+                'venue_id' => $venue_id,
+                'is_user_mic_enabled' => $is_user_mic_enabled
+            ]
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode(['code' => 3, 'msg' => '用户上麦状态修改失败'], JSON_UNESCAPED_UNICODE);
     }
 
     exit;

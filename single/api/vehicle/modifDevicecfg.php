@@ -103,6 +103,7 @@ function fetchVehicleControlSettings($database, $device_id) {
     $query = "
         SELECT 
             audio_source_type,
+            is_show_achievements,
             is_display,
             cooldown,
             bullet_channel,
@@ -284,7 +285,7 @@ if (!$data) {
 $device_id = $data['device_id']; 
 //  var_dump($data);
 // 查询默认的挡位,方向和油门值 
-$query = "SELECT audio_source_type,is_display,cooldown,bullet_channel,ch1,ch2,ch3,ch4,ch5,ch6, car_type, direction_mid,throttle_mid, driver_type, throttle_max,  throttle_min, direction, throttle
+$query = "SELECT audio_source_type,is_show_achievements,is_display,cooldown,bullet_channel,ch1,ch2,ch3,ch4,ch5,ch6, car_type, direction_mid,throttle_mid, driver_type, throttle_max,  throttle_min, direction, throttle
           FROM vehicle_control_settings 
           WHERE serial_number = ?";
 $stmt = $database->getConnection()->prepare($query); 
@@ -322,6 +323,7 @@ $response = [
         'ch6' => $settings['ch6'],
         
         'is_display' => $settings['is_display'],
+        'is_show_achievements' => $settings['is_show_achievements'] === null ? 0 : (int)$settings['is_show_achievements'],
         'cooldown' => $settings['cooldown'],
         'bullet_channel' => $settings['bullet_channel'],
         'audio_source_type' => $settings['audio_source_type'] === null ? 0 : (int)$settings['audio_source_type']
@@ -460,6 +462,24 @@ if (isset($data['audio_source_type'])) {
             'reason' => '无权限修改音频来源'
         ];
         unset($allowedPayload['audio_source_type']);
+    }
+}
+if (isset($data['is_show_achievements'])) {
+    if (in_array((int)$role_id, [1, 2], true)) {
+        $is_show_achievements = ((int)$data['is_show_achievements'] === 1) ? 1 : 0;
+
+        $query = "UPDATE vehicle_control_settings 
+                  SET is_show_achievements = ? 
+                  WHERE serial_number = ?";
+        $stmt = $database->getConnection()->prepare($query);
+        $stmt->bind_param("is", $is_show_achievements, $device_id);
+        $stmt->execute();
+    } else {
+        $deniedPayload['is_show_achievements'] = [
+            'value' => $data['is_show_achievements'],
+            'reason' => '无权限修改驾驶页成绩展示'
+        ];
+        unset($allowedPayload['is_show_achievements']);
     }
 }
 /*

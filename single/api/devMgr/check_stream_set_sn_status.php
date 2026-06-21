@@ -2,19 +2,22 @@
 /**
  * /api/devMgr/check_stream_set_sn_status.php
  *
- * 简单单次版：
- * 传入 sn + playing_stream_id
+ * 检测即构流状态 + bind_site=60 时设置 Redis 永久在线
  *
- * 流在线：
- *   1. Redis DB4 写入 key = sn
- *   2. vehicles.status = 在线
- *   3. vehicles.sharing_status = 正在共享
+ * 传入：
+ *   sn / serial_number
+ *   playing_stream_id / stream_id
  *
- * 流离线：
- *   1. Redis DB4 删除 key = sn
- *   2. vehicles.status = 离线
- *   3. 不修改 vehicles.sharing_status
+ * 逻辑：
+ *   1. SELECT bind_site FROM vehicles WHERE serial_number = ?
+ *   2. 查询即构流状态
+ *   3. 如果流在线 && bind_site == 60：
+ *        Redis DB4 写入 key = sn，TTL = 0，永久在线
+ *   4. 其他情况：
+ *        pass，不写 Redis，不删 Redis，不改车辆状态
  */
+
+declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 date_default_timezone_set('Asia/Shanghai');
@@ -24,10 +27,12 @@ require_once __DIR__ . '/../RedisHelper.php';
 
 /**
  * 即构配置
- * ServerSecret 不要写错，填你原来 stream_state.php 或巡检脚本里同一个。
  */
 $ZEGO_APP_ID = 141962251;
-$ZEGO_SERVER_SECRET = '5bfaa3399946c98cc6792dd19f9a08ec';
+
+// 建议正式环境用环境变量；临时用可以把下面这行改成你原来那串 ServerSecret
+$ZEGO_SERVER_SECRET = getenv('ZEGO_SERVER_SECRET') ?: '5bfaa3399946c98cc6792dd19f9a08ec';
+
 $ZEGO_IS_TEST = false;
 
 /**
@@ -37,40 +42,49 @@ $REDIS_HOST = '127.0.0.1';
 $REDIS_PORT = 6379;
 $REDIS_DB   = 4;
 
-function jsonOut($arr)
+/**
+ * 只有这个 bind_site 才设置 Redis 永久在线
+ */
+$SPECIAL_BIND_SITE = 60;
+
+/**
+ * Redis 永久在线 TTL
+ * 0 = 不过期
+ */
+$REDIS_FOREVER_TTL = 0;
+
+function jsonOut(array $arr): void
 {
     echo json_encode($arr, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
 /**
- * 接收参数
+ * 获取请求参数
  */
-$sn = trim((string)($_POST['sn'] ?? $_POST['serial_number'] ?? $_GET['sn'] ?? $_GET['serial_number'] ?? ''));
-$playingStreamId = trim((string)($_POST['playing_stream_id'] ?? $_GET['playing_stream_id'] ?? ''));
+function getRequestValue(array $keys): string
+{
+    foreach ($keys as $key) {
+        if (isset($_POST[$key])) {
+            return trim((string)$_POST[$key]);
+        }
 
-if ($sn === '') {
-    jsonOut([
-        'code' => 400,
-        'msg'  => '缺少 sn 参数',
-    ]);
-}
+        if (isset($_GET[$key])) {
+            return trim((string)$_GET[$key]);
+        }
+    }
 
-if ($playingStreamId === '') {
-    jsonOut([
-        'code' => 400,
-        'msg'  => '缺少 playing_stream_id 参数',
-    ]);
+    return '';
 }
 
 /**
  * 构建即构查询流状态 URL
  */
-function buildZegoStreamStateUrl($streamId)
+function buildZegoStreamStateUrl(string $streamId): string
 {
     global $ZEGO_APP_ID, $ZEGO_SERVER_SECRET, $ZEGO_IS_TEST;
 
-    $streamId = trim((string)$streamId);
+    $streamId = trim($streamId);
 
     if ($ZEGO_IS_TEST) {
         $prefix = "zegotest-{$ZEGO_APP_ID}-";
@@ -83,6 +97,10 @@ function buildZegoStreamStateUrl($streamId)
     $signatureNonce = bin2hex(random_bytes(8));
     $sequence = (string)round(microtime(true) * 1000);
 
+    /**
+     * 即构签名：
+     * md5(AppId + SignatureNonce + ServerSecret + Timestamp)
+     */
     $signature = md5($ZEGO_APP_ID . $signatureNonce . $ZEGO_SERVER_SECRET . $timestamp);
 
     $params = [
@@ -112,24 +130,41 @@ function buildZegoStreamStateUrl($streamId)
  *   'active' => true/false,
  *   'zego_code' => 0,
  *   'message' => '',
+ *   'http' => 200,
  *   'raw' => []
  * ]
  */
-function queryZegoStreamOnline($streamId)
+function queryZegoStreamOnline(string $streamId): array
 {
+    if (!function_exists('curl_init')) {
+        return [
+            'ok'        => false,
+            'active'    => false,
+            'zego_code' => -1,
+            'message'   => '服务器未安装或未启用 cURL',
+            'http'      => 0,
+            'raw'       => null,
+        ];
+    }
+
     $url = buildZegoStreamStateUrl($streamId);
 
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 6,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
 
     $resp = curl_exec($ch);
     $errNo = curl_errno($ch);
     $err = curl_error($ch);
-    $http = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
     curl_close($ch);
 
     if ($errNo) {
@@ -154,7 +189,7 @@ function queryZegoStreamOnline($streamId)
         ];
     }
 
-    $zego = json_decode($resp, true);
+    $zego = json_decode((string)$resp, true);
 
     if (!is_array($zego)) {
         return [
@@ -167,11 +202,11 @@ function queryZegoStreamOnline($streamId)
         ];
     }
 
-    $zegoCode = intval($zego['Code'] ?? -1);
+    $zegoCode = (int)($zego['Code'] ?? -1);
     $zegoMsg  = (string)($zego['Message'] ?? 'unknown');
 
     /**
-     * 和你之前巡检脚本保持一致：
+     * 按你之前巡检脚本逻辑：
      * Code === 0 认为流在线
      */
     $active = ($zegoCode === 0);
@@ -187,9 +222,9 @@ function queryZegoStreamOnline($streamId)
 }
 
 /**
- * 在线时写入 Redis DB4 的 value
+ * Redis value
  */
-function buildRedisValue($sn)
+function buildRedisValue(string $sn): array
 {
     return [
         'serial_number' => $sn,
@@ -204,101 +239,179 @@ $database = null;
 $redis = null;
 
 try {
+    $sn = getRequestValue(['sn', 'serial_number']);
+    $playingStreamId = getRequestValue(['playing_stream_id', 'stream_id']);
+
+    if ($sn === '') {
+        jsonOut([
+            'code' => 400,
+            'msg'  => '缺少 sn 参数',
+            'time' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    if ($playingStreamId === '') {
+        jsonOut([
+            'code' => 400,
+            'msg'  => '缺少 playing_stream_id 参数',
+            'sn'   => $sn,
+            'time' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    // if ($ZEGO_SERVER_SECRET === '' || $ZEGO_SERVER_SECRET === '请填你原来的ZEGO_SERVER_SECRET') {
+    //     jsonOut([
+    //         'code' => 500,
+    //         'msg'  => 'ZEGO_SERVER_SECRET 未配置',
+    //         'sn'   => $sn,
+    //         'time' => date('Y-m-d H:i:s'),
+    //     ]);
+    // }
+
     $database = new Database();
 
-    $redis = new RedisHelper();
-    $redis->connect($REDIS_HOST, $REDIS_PORT, 0);
-    $redis->selectDb($REDIS_DB);
+    /**
+     * 先查询车辆 bind_site
+     * 按你最新版 Database.php：
+     * SELECT 时 query() 返回二维数组
+     */
+    $vehicleRows = $database->query(
+        "SELECT bind_site FROM vehicles WHERE serial_number = ? LIMIT 1",
+        [$sn]
+    );
+
+    if ($vehicleRows === false) {
+        jsonOut([
+            'code'              => 500,
+            'msg'               => '查询车辆 bind_site 失败',
+            'sn'                => $sn,
+            'playing_stream_id' => $playingStreamId,
+            'time'              => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    if (empty($vehicleRows)) {
+        jsonOut([
+            'code'              => 404,
+            'msg'               => '未找到对应车辆',
+            'sn'                => $sn,
+            'playing_stream_id' => $playingStreamId,
+            'time'              => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    $bindSiteRaw = $vehicleRows[0]['bind_site'] ?? null;
+    $bindSite = is_null($bindSiteRaw) ? null : (int)$bindSiteRaw;
+    $isSpecialBindSite = ((int)$bindSite === (int)$SPECIAL_BIND_SITE);
 
     /**
-     * 先查询流状态
+     * 查询即构流状态
      */
     $state = queryZegoStreamOnline($playingStreamId);
 
     /**
-     * 查询失败不要误删 Redis，不改数据库
+     * 查询失败：不写 Redis，不改数据库
      */
     if (!$state['ok']) {
         jsonOut([
             'code'              => 502,
-            'msg'               => '查询即构流状态失败，本次不修改车辆状态，避免误判',
+            'msg'               => '查询即构流状态失败，本次不操作 Redis',
             'sn'                => $sn,
             'playing_stream_id' => $playingStreamId,
+            'bind_site'         => $bindSite,
+            'is_special_site'   => $isSpecialBindSite ? 1 : 0,
+            'active'            => false,
+            'stream_status'     => 'unknown',
+            'redis_action'      => 'pass',
             'redis_db'          => $REDIS_DB,
+            'redis_key'         => $sn,
+            'redis_written'     => 0,
+            'zego_code'         => $state['zego_code'],
             'zego_message'      => $state['message'],
             'http'              => $state['http'],
+            'time'              => date('Y-m-d H:i:s'),
         ]);
     }
 
     /**
-     * 在线：写 DB4 + 设置车辆 在线/正在共享
+     * 流在线 && bind_site == 60
+     * 设置 Redis DB4 永久在线
      */
-    if ($state['active']) {
+    if ($state['active'] && $isSpecialBindSite) {
         $redisValue = buildRedisValue($sn);
+        $redisValueJson = json_encode($redisValue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        $redis->save(
-            $sn,
-            json_encode($redisValue, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            0
-        );
+        $redis = new RedisHelper();
+        $redis->connect($REDIS_HOST, $REDIS_PORT, 0);
+        $redis->selectDb($REDIS_DB);
 
-        $affected = $database->query(
-            "UPDATE vehicles 
-             SET status = ?, sharing_status = ? 
-             WHERE serial_number = ? 
-             LIMIT 1",
-            ['在线', '正在共享', $sn],
-            true
-        );
+        /**
+         * 第三个参数 0 = 永久不过期
+         */
+        $redis->save($sn, $redisValueJson, $REDIS_FOREVER_TTL);
 
         jsonOut([
-            'code'                => 200,
-            'msg'                 => '流在线，已设置 Redis DB4 在线，并设置车辆为在线',
-            'sn'                  => $sn,
-            'playing_stream_id'   => $playingStreamId,
-            'redis_db'            => $REDIS_DB,
-            'redis_key'           => $sn,
-            'redis_value'         => $redisValue,
-            'vehicle_status'      => '在线',
-            'vehicle_share_status'=> '正在共享',
-            'db_affected'         => intval($affected),
-            'zego_code'           => $state['zego_code'],
-            'zego_message'        => $state['message'],
-            'time'                => date('Y-m-d H:i:s'),
+            'code'              => 200,
+            'msg'               => '流在线，bind_site=60，已设置 Redis DB4 永久在线',
+            'sn'                => $sn,
+            'playing_stream_id' => $playingStreamId,
+            'bind_site'         => $bindSite,
+            'is_special_site'   => 1,
+            'active'            => true,
+            'stream_status'     => 'online',
+            'redis_action'      => 'set_forever',
+            'redis_db'          => $REDIS_DB,
+            'redis_key'         => $sn,
+            'redis_ttl'         => $REDIS_FOREVER_TTL,
+            'redis_written'     => 1,
+            'redis_value'       => $redisValue,
+            'zego_code'         => $state['zego_code'],
+            'zego_message'      => $state['message'],
+            'http'              => $state['http'],
+            'time'              => date('Y-m-d H:i:s'),
         ]);
     }
 
-/**
- * 离线：只删除 Redis DB4，只更新车辆 status=离线
- * 不再更新 sharing_status=未共享
- */
-$delResult = $redis->delete($sn);
+    /**
+     * 其他情况全部 pass
+     * 包括：
+     *   1. 流在线，但 bind_site != 60
+     *   2. 流离线
+     *
+     * 注意：
+     *   不删除 Redis
+     *   不修改 vehicles.status
+     *   不修改 vehicles.sharing_status
+     */
+    $msg = '';
 
-$affected = $database->query(
-    "UPDATE vehicles 
-     SET status = ? 
-     WHERE serial_number = ? 
-     LIMIT 1",
-    ['离线', $sn],
-    true
-);
+    if ($state['active']) {
+        $msg = '流在线';
+    } else {
+        $msg = '流离线';
+    }
 
-jsonOut([
-    'code'              => 200,
-    'msg'               => '流离线，已删除 Redis DB4，并设置车辆为离线',
-    'sn'                => $sn,
-    'playing_stream_id' => $playingStreamId,
-    'redis_db'          => $REDIS_DB,
-    'redis_key'         => $sn,
-    'redis_deleted'     => $delResult > 0 ? 1 : 0,
-    'vehicle_status'    => '离线',
-    'db_affected'       => intval($affected),
-    'zego_code'         => $state['zego_code'],
-    'zego_message'      => $state['message'],
-    'time'              => date('Y-m-d H:i:s'),
-]);
+    jsonOut([
+        'code'              => 200,
+        'msg'               => $msg,
+        'sn'                => $sn,
+        'playing_stream_id' => $playingStreamId,
+        'bind_site'         => $bindSite,
+        'is_special_site'   => $isSpecialBindSite ? 1 : 0,
+        'active'            => $state['active'] ? true : false,
+        'stream_status'     => $state['active'] ? 'online' : 'offline',
+        'redis_action'      => 'pass',
+        'redis_db'          => $REDIS_DB,
+        'redis_key'         => $sn,
+        'redis_written'     => 0,
+        'redis_ttl'         => null,
+        'zego_code'         => $state['zego_code'],
+        'zego_message'      => $state['message'],
+        'http'              => $state['http'],
+        'time'              => date('Y-m-d H:i:s'),
+    ]);
 
-} catch (Exception $e) {
+} catch (Throwable $e) {
     jsonOut([
         'code' => 500,
         'msg'  => '执行异常：' . $e->getMessage(),
@@ -309,14 +422,14 @@ jsonOut([
     if ($redis) {
         try {
             $redis->close();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
         }
     }
 
     if ($database) {
         try {
             $database->close();
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
         }
     }
 }

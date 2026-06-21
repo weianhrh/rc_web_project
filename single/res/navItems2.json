@@ -118,8 +118,8 @@
         "id": "item_1759560084210",
         "label": "金额退款",
         "title": "金额退款",
-        "href": "refund_records.html",
-        "page": "refund_records.html",
+        "href": "refund_records_fi.html",
+        "page": "refund_records_fi.html",
         "icon": "fas fa-memory"
     },
     {

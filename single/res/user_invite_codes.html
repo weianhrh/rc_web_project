@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>用户邀请码管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --danger: #f44336;
+      --success: #22a06b;
+      --warning: #ff9800;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #333;
+      --muted: #777;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .card h3 {
+      font-size: 18px;
+      margin-bottom: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .form-item label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--primary);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 70px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      resize: vertical;
+      font-size: 14px;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      height: 38px;
+      border: none;
+      border-radius: 8px;
+      padding: 0 14px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #fff;
+      background: var(--primary);
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+    }
+
+    .btn-success {
+      background: var(--success);
+    }
+
+    .msg {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      display: none;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .msg.ok {
+      display: block;
+      background: #e9f8f1;
+      color: #137a4b;
+      border: 1px solid #bcebd6;
+    }
+
+    .msg.err {
+      display: block;
+      background: #fff0f0;
+      color: #c62828;
+      border: 1px solid #ffcaca;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8f9fc;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    .badge.active {
+      background: #e9f8f1;
+      color: #137a4b;
+    }
+
+    .badge.disabled {
+      background: #f3f4f6;
+      color: #777;
+    }
+
+    .badge.invalid {
+      background: #fff0f0;
+      color: #c62828;
+    }
+
+    .badge.risk_pending {
+      background: #fff7e6;
+      color: #b26a00;
+    }
+
+    .invite-code {
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 1px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    .toolbar .form-item {
+      width: 180px;
+    }
+
+    .pager {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .pager span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar .form-item {
+        width: 100%;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .pager {
+        justify-content: flex-start;
+      }
+    }
+    .card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-title-row h3 {
+  margin-bottom: 0;
+}
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-box {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.modal-header h3 {
+  margin-bottom: 0;
+}
+
+.modal-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: #6b7280;
+  font-size: 18px;
+  line-height: 34px;
+}
+
+.modal-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .card-title-row {
+    align-items: flex-start;
+  }
+
+  .modal-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
+.modal-wide {
+  width: min(520px, 100%);
+}
+
+.rules-table-wrap {
+  overflow-x: auto;
+}
+
+.rules-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.rules-table th,
+.rules-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 8px;
+  font-size: 14px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.rules-table th {
+  background: #f8f9fc;
+  color: #555;
+}
+
+.rules-desc {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.rules-card-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.rule-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.rule-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rule-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.rule-card-level {
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.rule-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.rule-info-item {
+  background: #f8f9fc;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.rule-info-label {
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+.rule-info-value {
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.rule-remark {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8f9fc;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .rules-card-list {
+    grid-template-columns: 1fr;
+  }
+
+  .rule-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+  </style>
+</head>
+
+<body>
+<div class="page">
+  <div class="title">用户邀请码管理</div>
+
+  <div class="card">
+    <h3>生成邀请码</h3>
+
+    <form onsubmit="createCode(); return false;">
+      <div class="form-grid">
+        <div class="form-item">
+          <label>邀请人UID</label>
+          <input type="number" id="user_uid" placeholder="请输入邀请人 users.uid">
+        </div>
+
+        <div class="form-item">
+          <label>邀请码，可不填</label>
+          <input type="text" id="invite_code" maxlength="6" placeholder="不填则自动生成">
+        </div>
+
+        <div class="form-item">
+          <label>来源渠道</label>
+          <input type="text" id="source_channel" value="后端" placeholder="后端">
+        </div>
+
+        <div class="form-item">
+          <label>操作</label>
+          <div class="btn-row">
+            <button type="button" class="btn-secondary" onclick="checkUser()">检查邀请人</button>
+            <button type="submit">生成邀请码</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <textarea id="remark" placeholder="备注，可不填"></textarea>
+      </div>
+
+      <div id="create-msg" class="msg"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>邀请码列表</h3>
+
+    <div class="toolbar">
+      <div class="form-item">
+        <label>筛选邀请人UID</label>
+        <input type="number" id="filter_uid" placeholder="不填查全部">
+      </div>
+
+      <div class="form-item">
+        <label>状态</label>
+        <select id="filter_status">
+          <option value="">全部</option>
+          <option value="active">启用</option>
+          <option value="disabled">停用</option>
+        </select>
+      </div>
+
+      <button onclick="listCodes(1)">查询</button>
+      <button class="btn-secondary" onclick="resetFilter()">重置</button>
+      <button class="btn-secondary" onclick="showRewardRules()">等级说明</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>邀请人UID</th>
+          <th>邀请人昵称</th>
+          <th>邀请码</th>
+          <th>状态</th>
+          <th>等级</th>
+          <th>来源渠道</th>
+          <th>创建时间</th>
+          <th>更新时间</th>
+          <th>停用时间</th>
+          <th>备注</th>
+          <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="code-tbody">
+        <tr>
+          <td colspan="12" style="text-align:center;color:#777;">加载中...</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      <button class="btn-secondary" onclick="prevPage()">上一页</button>
+      <span id="page-info">第 1 页</span>
+      <button class="btn-secondary" onclick="nextPage()">下一页</button>
+    </div>
+  </div>
+<!--  <div class="card">-->
+<!--  <h3>新增绑定邀请关系</h3>-->
+
+<!--  <form onsubmit="createRelation(); return false;">-->
+<!--    <div class="form-grid">-->
+<!--      <div class="form-item">-->
+<!--        <label>邀请人UID</label>-->
+<!--        <input type="number" id="bind_inviter_uid" placeholder="谁邀请的">-->
+<!--      </div>-->
+
+<!--      <div class="form-item">-->
+<!--        <label>被邀请人UID</label>-->
+<!--        <input type="number" id="bind_invitee_uid" placeholder="被谁邀请">-->
+<!--      </div>-->
+
+<!--      <div class="form-item">-->
+<!--        <label>邀请码，可不填</label>-->
+<!--        <input type="text" id="bind_invite_code" maxlength="6" placeholder="不填自动取邀请人邀请码">-->
+<!--      </div>-->
+
+<!--      <div class="form-item">-->
+<!--        <label>来源渠道</label>-->
+<!--        <input type="text" id="bind_source_channel" value="后端" placeholder="后端">-->
+<!--      </div>-->
+<!--    </div>-->
+
+<!--    <div style="margin-top:12px;">-->
+<!--      <textarea id="bind_remark" placeholder="备注，可不填"></textarea>-->
+<!--    </div>-->
+
+<!--    <div style="margin-top:12px;">-->
+<!--      <button type="submit">绑定邀请关系</button>-->
+<!--    </div>-->
+
+<!--    <div id="bind-msg" class="msg"></div>-->
+<!--  </form>-->
+<!--</div>-->
+  <div class="card">
+<div class="card-title-row">
+  <h3>邀请对应关系列表</h3>
+  <button type="button" onclick="openRelationModal()">添加绑定邀请关系</button>
+</div>
+
+    <div class="toolbar">
+      <div class="form-item">
+        <label>邀请人UID</label>
+        <input type="number" id="rel_inviter_uid" placeholder="邀请人UID">
+      </div>
+
+      <div class="form-item">
+        <label>被邀请人UID</label>
+        <input type="number" id="rel_invitee_uid" placeholder="被邀请人UID">
+      </div>
+
+      <div class="form-item">
+        <label>邀请码</label>
+        <input type="text" id="rel_invite_code" maxlength="6" placeholder="邀请码">
+      </div>
+
+      <div class="form-item">
+        <label>关系状态</label>
+        <select id="rel_status">
+          <option value="">全部</option>
+          <option value="active">有效</option>
+          <option value="invalid">无效</option>
+          <option value="disabled">停用</option>
+          <option value="risk_pending">风控待定</option>
+        </select>
+      </div>
+
+      <button onclick="listRelations(1)">查询</button>
+      <button class="btn-secondary" onclick="resetRelationFilter()">重置</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>邀请人UID</th>
+          <th>邀请人昵称</th>
+          <th>被邀请人UID</th>
+          <th>被邀请人昵称</th>
+          <th>邀请码</th>
+          <th>状态</th>
+          <th>来源渠道</th>
+          <th>绑定时间</th>
+          <th>失效时间</th>
+          <th>创建时间</th>
+          <th>更新时间</th>
+          <th>备注</th>
+        </tr>
+        </thead>
+        <tbody id="relation-tbody">
+        <tr>
+          <td colspan="13" style="text-align:center;color:#777;">加载中...</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      <button class="btn-secondary" onclick="prevRelationPage()">上一页</button>
+      <span id="relation-page-info">第 1 页</span>
+      <button class="btn-secondary" onclick="nextRelationPage()">下一页</button>
+    </div>
+  </div>
+</div>
+<div id="relation-modal" class="modal-mask">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>新增绑定邀请关系</h3>
+      <button type="button" class="modal-close" onclick="closeRelationModal()">×</button>
+    </div>
+
+    <form onsubmit="createRelation(); return false;">
+      <div class="form-grid">
+        <div class="form-item">
+          <label>邀请人UID</label>
+          <input type="number" id="bind_inviter_uid" placeholder="谁邀请的">
+        </div>
+
+        <div class="form-item">
+          <label>被邀请人UID</label>
+          <input type="number" id="bind_invitee_uid" placeholder="被谁邀请">
+        </div>
+
+        <div class="form-item">
+          <label>邀请码，可不填</label>
+          <input type="text" id="bind_invite_code" maxlength="6" placeholder="不填自动取邀请人邀请码">
+        </div>
+
+        <div class="form-item">
+          <label>来源渠道</label>
+          <input type="text" id="bind_source_channel" value="后端" placeholder="后端">
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <textarea id="bind_remark" placeholder="备注，可不填"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeRelationModal()">取消</button>
+        <button type="submit">绑定邀请关系</button>
+      </div>
+
+      <div id="bind-msg" class="msg"></div>
+    </form>
+  </div>
+</div>
+<div id="reward-rules-modal" class="modal-mask">
+  <div class="modal-box modal-wide">
+    <div class="modal-header">
+      <h3>等级奖励规则说明</h3>
+      <button type="button" class="modal-close" onclick="closeRewardRulesModal()">×</button>
+    </div>
+
+    <!--<div class="rules-desc">-->
+    <!--  这里展示 invite_reward_rules 表中的奖励规则，奖励比例 5% 表示订单金额的 5%。-->
+    <!--</div>-->
+
+    <div id="reward-rules-body">
+      <div style="color:#777;">加载中...</div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" onclick="closeRewardRulesModal()">关闭</button>
+    </div>
+  </div>
+</div>
+<script>
+  const API_URL = 'https://open.rcwulian.cn/api/operat/user_invite_codes.php';
+
+  let currentPage = 1;
+  let pageSize = 20;
+  let totalCount = 0;
+
+  let relationCurrentPage = 1;
+  let relationPageSize = 20;
+  let relationTotalCount = 0;
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  function esc(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function statusText(status) {
+    if (status === 'active') return '启用';
+    if (status === 'disabled') return '停用';
+    return status || '';
+  }
+
+  function relationStatusText(status) {
+    if (status === 'active') return '有效';
+    if (status === 'invalid') return '无效';
+    if (status === 'disabled') return '停用';
+    if (status === 'risk_pending') return '风控待定';
+    return status || '';
+  }
+
+  function levelText(level) {
+    if (!level || level === 'DEFAULT') return '默认等级';
+    return level;
+  }
+
+  function formatRate(rate) {
+    const n = parseFloat(rate || 0);
+    return (n * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
+  }
+
+  function showMsg(id, text, ok) {
+    const el = $(id);
+    el.className = ok ? 'msg ok' : 'msg err';
+    el.innerHTML = text;
+  }
+
+  function apiPost(action, data = {}) {
+    const params = new URLSearchParams();
+    params.append('action', action);
+
+    Object.keys(data).forEach(key => {
+      params.append(key, data[key] === undefined || data[key] === null ? '' : data[key]);
+    });
+
+    return fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+      },
+      credentials: 'include',
+      body: params.toString()
+    }).then(res => res.json());
+  }
+
+  async function checkUser() {
+    const uid = $('user_uid').value.trim();
+
+    if (!uid) {
+      showMsg('create-msg', '请先输入邀请人UID', false);
+      return;
+    }
+
+    try {
+      const data = await apiPost('check_user', {
+        user_uid: uid
+      });
+
+      if (data.code !== 0) {
+        showMsg('create-msg', esc(data.msg || '检查失败'), false);
+        return;
+      }
+
+      const user = data.data.user;
+      const invite = data.data.invite;
+
+      let html = `邀请人存在：UID=${esc(user.uid)}，昵称=${esc(user.nickname || '')}`;
+
+      if (invite) {
+        html += `<br>该邀请人已有邀请码：<span class="invite-code">${esc(invite.invite_code)}</span>，状态：${esc(statusText(invite.status))}，等级：${esc(levelText(invite.promotion_level))}`;
+      } else {
+        html += `<br>该邀请人还没有邀请码，可以创建。`;
+      }
+
+      showMsg('create-msg', html, true);
+    } catch (e) {
+      showMsg('create-msg', '请求失败：' + esc(e.message), false);
+    }
+  }
+
+  async function createCode() {
+    const uid = $('user_uid').value.trim();
+    const inviteCode = $('invite_code').value.trim();
+    const sourceChannel = $('source_channel').value.trim() || '后端';
+    const remark = $('remark').value.trim();
+
+    if (!uid) {
+      showMsg('create-msg', '请输入邀请人UID', false);
+      return;
+    }
+
+    try {
+      const data = await apiPost('create', {
+        user_uid: uid,
+        invite_code: inviteCode,
+        source_channel: sourceChannel,
+        remark: remark
+      });
+
+      if (data.code !== 0) {
+        showMsg('create-msg', esc(data.msg || '创建失败'), false);
+        return;
+      }
+
+      const invite = data.data.invite;
+      const user = data.data.user;
+
+      showMsg(
+        'create-msg',
+        `创建成功：邀请人 ${esc(user.nickname || '')}，邀请码 <span class="invite-code">${esc(invite.invite_code)}</span>`,
+        true
+      );
+
+      $('invite_code').value = '';
+      $('remark').value = '';
+
+      listCodes(1);
+    } catch (e) {
+      showMsg('create-msg', '请求失败：' + esc(e.message), false);
+    }
+  }
+
+  async function listCodes(page = 1) {
+    currentPage = page;
+
+    const filterUid = $('filter_uid').value.trim();
+    const filterStatus = $('filter_status').value;
+
+    const tbody = $('code-tbody');
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#777;">加载中...</td></tr>';
+
+    try {
+      const data = await apiPost('list', {
+        user_uid: filterUid,
+        status: filterStatus,
+        page: currentPage,
+        page_size: pageSize
+      });
+
+      if (data.code !== 0) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#f44336;">${esc(data.msg || '加载失败')}</td></tr>`;
+        return;
+      }
+
+      totalCount = parseInt(data.data.total || 0, 10);
+      renderTable(data.data.list || []);
+      renderPageInfo();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#f44336;">请求失败：${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderTable(list) {
+    const tbody = $('code-tbody');
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#777;">暂无数据</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(item => {
+      const isDisabled = item.status === 'disabled';
+
+      const actionBtn = isDisabled
+        ? `<button class="btn-success" onclick="toggleStatus(${item.id}, 'enable')">启用</button>`
+        : `<button class="btn-danger" onclick="toggleStatus(${item.id}, 'disable')">停用</button>`;
+
+      return `
+        <tr>
+          <td>${esc(item.id)}</td>
+          <td>${esc(item.uid)}</td>
+          <td>${esc(item.nickname || '')}</td>
+          <td><span class="invite-code">${esc(item.invite_code)}</span></td>
+          <td><span class="badge ${esc(item.status)}">${esc(statusText(item.status))}</span></td>
+          <td>${esc(levelText(item.promotion_level))}</td>
+          <td>${esc(item.source_channel || '')}</td>
+          <td>${esc(item.created_at || '')}</td>
+          <td>${esc(item.updated_at || '')}</td>
+          <td>${esc(item.disabled_at || '')}</td>
+          <td>${esc(item.remark || '')}</td>
+          <td>${actionBtn}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+function openRewardRulesModal() {
+  const modal = $('reward-rules-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeRewardRulesModal() {
+  const modal = $('reward-rules-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+async function showRewardRules() {
+  const body = $('reward-rules-body');
+
+  openRewardRulesModal();
+
+  if (body) {
+    body.innerHTML = '<div style="color:#777;">加载中...</div>';
+  }
+
+  try {
+    const data = await apiPost('reward_rules', {});
+
+    if (data.code !== 0) {
+      body.innerHTML = `<div style="color:#f44336;">${esc(data.msg || '加载等级规则失败')}</div>`;
+      return;
+    }
+
+    const list = data.data.list || [];
+
+    if (!list.length) {
+      body.innerHTML = '<div style="color:#777;">暂无等级奖励规则</div>';
+      return;
+    }
+
+body.innerHTML = `
+  <div class="rules-card-list">
+    ${list.map(item => `
+      <div class="rule-card">
+        <div class="rule-card-header">
+          <div>
+            <div class="rule-card-title">${esc(item.rule_name || '')}</div>
+            <div class="rule-card-level">等级：${esc(levelText(item.level_code))}</div>
+          </div>
+          <span class="badge ${esc(item.status)}">${esc(statusText(item.status))}</span>
+        </div>
+
+        <div class="rule-info-grid">
+          <div class="rule-info-item">
+            <div class="rule-info-label">奖励比例</div>
+            <div class="rule-info-value">${esc(formatRate(item.reward_rate))}</div>
+          </div>
+
+          <div class="rule-info-item">
+            <div class="rule-info-label">最低订单金额</div>
+            <div class="rule-info-value">${esc(item.min_order_amount || '')}</div>
+          </div>
+
+          <div class="rule-info-item">
+            <div class="rule-info-label">单笔最大奖励</div>
+            <div class="rule-info-value">${esc(item.max_reward_per_order || '不限制')}</div>
+          </div>
+
+          <div class="rule-info-item">
+            <div class="rule-info-label">单个被邀请人奖励上限</div>
+            <div class="rule-info-value">${esc(item.max_reward_per_invitee || '不限制')}</div>
+          </div>
+
+          <div class="rule-info-item">
+            <div class="rule-info-label">结算天数</div>
+            <div class="rule-info-value">${esc(item.settle_days || 0)} 天</div>
+          </div>
+
+          <div class="rule-info-item">
+            <div class="rule-info-label">结束时间</div>
+            <div class="rule-info-value">${esc(item.end_time || '不限制')}</div>
+          </div>
+        </div>
+
+        <div class="rule-remark">
+          <strong>备注：</strong>${esc(item.remark || '无')}
+        </div>
+      </div>
+    `).join('')}
+  </div>
+`;
+  } catch (e) {
+    body.innerHTML = `<div style="color:#f44336;">请求失败：${esc(e.message)}</div>`;
+  }
+}
+
+  async function toggleStatus(id, action) {
+    const text = action === 'disable' ? '确定停用这个邀请码吗？' : '确定启用这个邀请码吗？';
+
+    if (!confirm(text)) {
+      return;
+    }
+
+    try {
+      const data = await apiPost(action, { id });
+
+      if (data.code !== 0) {
+        alert(data.msg || '操作失败');
+        return;
+      }
+
+      alert(data.msg || '操作成功');
+      listCodes(currentPage);
+    } catch (e) {
+      alert('请求失败：' + e.message);
+    }
+  }
+
+  function renderPageInfo() {
+    const totalPage = Math.max(1, Math.ceil(totalCount / pageSize));
+    $('page-info').textContent = `第 ${currentPage} 页 / 共 ${totalPage} 页，共 ${totalCount} 条`;
+  }
+
+  function prevPage() {
+    if (currentPage <= 1) return;
+    listCodes(currentPage - 1);
+  }
+
+  function nextPage() {
+    const totalPage = Math.max(1, Math.ceil(totalCount / pageSize));
+    if (currentPage >= totalPage) return;
+    listCodes(currentPage + 1);
+  }
+
+  function resetFilter() {
+    $('filter_uid').value = '';
+    $('filter_status').value = '';
+    listCodes(1);
+  }
+  function openRelationModal() {
+  const modal = $('relation-modal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+}
+
+function closeRelationModal() {
+  const modal = $('relation-modal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function resetBindForm() {
+  $('bind_inviter_uid').value = '';
+  $('bind_invitee_uid').value = '';
+  $('bind_invite_code').value = '';
+  $('bind_source_channel').value = '后端';
+  $('bind_remark').value = '';
+
+  const msg = $('bind-msg');
+  msg.className = 'msg';
+  msg.innerHTML = '';
+}
+  async function createRelation() {
+  const inviterUid = $('bind_inviter_uid').value.trim();
+  const inviteeUid = $('bind_invitee_uid').value.trim();
+  const inviteCode = $('bind_invite_code').value.trim();
+  const sourceChannel = $('bind_source_channel').value.trim() || '后端';
+  const remark = $('bind_remark').value.trim();
+
+  if (!inviterUid) {
+    showMsg('bind-msg', '请输入邀请人UID', false);
+    return;
+  }
+
+  if (!inviteeUid) {
+    showMsg('bind-msg', '请输入被邀请人UID', false);
+    return;
+  }
+
+  if (inviterUid === inviteeUid) {
+    showMsg('bind-msg', '邀请人和被邀请人不能是同一个用户', false);
+    return;
+  }
+
+  if (!confirm(`确定绑定邀请关系吗？\n邀请人UID：${inviterUid}\n被邀请人UID：${inviteeUid}`)) {
+    return;
+  }
+
+  try {
+    const data = await apiPost('create_relation', {
+      inviter_uid: inviterUid,
+      invitee_uid: inviteeUid,
+      invite_code: inviteCode,
+      relation_source_channel: sourceChannel,
+      relation_remark: remark
+    });
+
+    if (data.code !== 0) {
+      showMsg('bind-msg', esc(data.msg || '绑定失败'), false);
+      return;
+    }
+
+    const relation = data.data.relation || {};
+
+    showMsg(
+      'bind-msg',
+      `绑定成功：邀请人 ${esc(relation.inviter_nickname || '')}(${esc(relation.inviter_uid)}) 
+       → 被邀请人 ${esc(relation.invitee_nickname || '')}(${esc(relation.invitee_uid)})，
+       邀请码 <span class="invite-code">${esc(relation.invite_code)}</span>`,
+      true
+    );
+
+    if (typeof listRelations === 'function') {
+      listRelations(1);
+    }
+    
+    setTimeout(function () {
+      closeRelationModal();
+      resetBindForm();
+    }, 600);
+  } catch (e) {
+    showMsg('bind-msg', '请求失败：' + esc(e.message), false);
+  }
+}
+  async function listRelations(page = 1) {
+    relationCurrentPage = page;
+
+    const inviterUid = $('rel_inviter_uid').value.trim();
+    const inviteeUid = $('rel_invitee_uid').value.trim();
+    const inviteCode = $('rel_invite_code').value.trim();
+    const relationStatus = $('rel_status').value;
+
+    const tbody = $('relation-tbody');
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#777;">加载中...</td></tr>';
+
+    try {
+      const data = await apiPost('relation_list', {
+        inviter_uid: inviterUid,
+        invitee_uid: inviteeUid,
+        invite_code: inviteCode,
+        relation_status: relationStatus,
+        page: relationCurrentPage,
+        page_size: relationPageSize
+      });
+
+      if (data.code !== 0) {
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#f44336;">${esc(data.msg || '加载失败')}</td></tr>`;
+        return;
+      }
+
+      relationTotalCount = parseInt(data.data.total || 0, 10);
+      renderRelationTable(data.data.list || []);
+      renderRelationPageInfo();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:#f44336;">请求失败：${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  function renderRelationTable(list) {
+    const tbody = $('relation-tbody');
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:#777;">暂无邀请对应关系</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(item => {
+      return `
+        <tr>
+          <td>${esc(item.id)}</td>
+          <td>${esc(item.inviter_uid)}</td>
+          <td>${esc(item.inviter_nickname || '')}</td>
+          <td>${esc(item.invitee_uid)}</td>
+          <td>${esc(item.invitee_nickname || '')}</td>
+          <td><span class="invite-code">${esc(item.invite_code)}</span></td>
+          <td><span class="badge ${esc(item.status)}">${esc(relationStatusText(item.status))}</span></td>
+          <td>${esc(item.source_channel || '')}</td>
+          <td>${esc(item.bind_time || '')}</td>
+          <td>${esc(item.invalid_at || '')}</td>
+          <td>${esc(item.created_at || '')}</td>
+          <td>${esc(item.updated_at || '')}</td>
+          <td>${esc(item.remark || '')}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderRelationPageInfo() {
+    const totalPage = Math.max(1, Math.ceil(relationTotalCount / relationPageSize));
+    $('relation-page-info').textContent = `第 ${relationCurrentPage} 页 / 共 ${totalPage} 页，共 ${relationTotalCount} 条`;
+  }
+
+  function prevRelationPage() {
+    if (relationCurrentPage <= 1) return;
+    listRelations(relationCurrentPage - 1);
+  }
+
+  function nextRelationPage() {
+    const totalPage = Math.max(1, Math.ceil(relationTotalCount / relationPageSize));
+    if (relationCurrentPage >= totalPage) return;
+    listRelations(relationCurrentPage + 1);
+  }
+
+  function resetRelationFilter() {
+    $('rel_inviter_uid').value = '';
+    $('rel_invitee_uid').value = '';
+    $('rel_invite_code').value = '';
+    $('rel_status').value = '';
+    listRelations(1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    listCodes(1);
+    listRelations(1);
+  });
+</script>
+</body>
+</html>

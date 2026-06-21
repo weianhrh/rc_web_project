@@ -28,20 +28,44 @@ if (!$user || empty($user['role_id'])) {
 $role_id = (int)$user['role_id'];
 $venue_id = $role_id != 1 ? ($user['venue_id'] ?? null) : null;
 
-// ===== 日期处理：支持 today / yesterday / YYYY-MM-DD =====
-$dateParam = $_GET['date'] ?? date('Y-m-d');
-
-if ($dateParam === 'yesterday') {
-    $date = date('Y-m-d', strtotime('-1 day'));
-} elseif ($dateParam === 'today') {
-    $date = date('Y-m-d');
-} elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateParam)) {
-    $date = $dateParam;
-} else {
-    $date = date('Y-m-d');
+// ===== 日期处理：支持单日，也支持 start_date / end_date 区间 =====
+function is_valid_date_str($date) {
+    return is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date);
 }
 
-$dateEnd = date('Y-m-d', strtotime($date . ' +1 day'));
+$period = $_GET['period'] ?? 'day';
+if (!in_array($period, ['day', 'week', 'month'], true)) {
+    $period = 'day';
+}
+
+$startParam = $_GET['start_date'] ?? '';
+$endParam = $_GET['end_date'] ?? '';
+
+if (
+    is_valid_date_str($startParam)
+    && is_valid_date_str($endParam)
+    && strtotime($endParam) > strtotime($startParam)
+) {
+    // 周/月/天卡片跳转过来的范围
+    $date = $startParam;
+    $dateEnd = $endParam;
+} else {
+    // 兼容旧的 ?date=today / yesterday / YYYY-MM-DD
+    $dateParam = $_GET['date'] ?? date('Y-m-d');
+
+    if ($dateParam === 'yesterday') {
+        $date = date('Y-m-d', strtotime('-1 day'));
+    } elseif ($dateParam === 'today') {
+        $date = date('Y-m-d');
+    } elseif (is_valid_date_str($dateParam)) {
+        $date = $dateParam;
+    } else {
+        $date = date('Y-m-d');
+    }
+
+    $dateEnd = date('Y-m-d', strtotime($date . ' +1 day'));
+    $period = 'day';
+}
 
 // ===== 排行方式：total 总收入 / drive 驾驶收入 / gift 礼物收入 =====
 $rankType = $_GET['rank_type'] ?? 'total';
@@ -215,6 +239,9 @@ echo json_encode([
     'code' => 0,
     'msg' => '',
     'date' => $date,
+    'period' => $period,
+    'startDate' => $date,
+    'endDate' => $dateEnd,
     'rankType' => $rankType,
     'rankField' => $rankField,
 

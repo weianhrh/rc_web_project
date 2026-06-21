@@ -230,8 +230,8 @@
     <div class="card">
       <div class="card-title">
         <span>
-          当日场地业绩排行榜
-          <span id="total-income" style="margin-left: 12px; font-size: 16px;">总收入: 0.00 元</span>
+<span id="ranking-title">当日场地业绩排行榜</span>
+<span id="total-income" style="margin-left: 12px; font-size: 16px;">总收入: 0.00 元</span>
         </span>
 
         <div class="controls">
@@ -283,7 +283,10 @@
     // ====== 全局状态 ======
     let allData = [];              // 当前日期的完整数据（数组）
     let selectedVenueId = 'all';   // 当前筛选的 venue_id（字符串 or 'all'）
-    let currentDateKey = 'today';  // 'today' | 'yesterday'
+let currentPeriod = 'day';     // 'day' | 'week' | 'month'
+let currentDateKey = 'today';  // today | yesterday | YYYY-MM-DD，单日用
+let currentStartDate = '';     // 区间开始日期
+let currentEndDate = '';       // 区间结束日期，开区间，不包含当天
     let currentRankType = 'total'; // 'total' | 'drive' | 'gift'
 
     const rankTypeConfig = {
@@ -320,6 +323,74 @@
       return Number.isFinite(n) ? n : 0;
     }
 
+function isDateStr(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
+}
+
+function normalizeDateKey(value) {
+  const v = String(value || '').trim();
+
+  if (v === 'today' || v === 'yesterday') return v;
+  if (isDateStr(v)) return v;
+
+  return 'today';
+}
+
+function normalizePeriod(value) {
+  return ['day', 'week', 'month'].includes(value) ? value : 'day';
+}
+
+function addDays(dateStr, days) {
+  const parts = String(dateStr).split('-').map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  d.setDate(d.getDate() + days);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
+  return `${y}-${m}-${day}`;
+}
+
+function setSingleDate(dateKey) {
+  currentPeriod = 'day';
+  currentDateKey = normalizeDateKey(dateKey);
+  currentStartDate = '';
+  currentEndDate = '';
+}
+
+function setRange(period, startDate, endDate) {
+  currentPeriod = normalizePeriod(period);
+  currentDateKey = '';
+  currentStartDate = startDate;
+  currentEndDate = endDate;
+}
+
+function getDateTitle() {
+  if (currentStartDate && currentEndDate) {
+    const showEnd = addDays(currentEndDate, -1);
+
+    if (currentPeriod === 'week') {
+      return `${currentStartDate} ~ ${showEnd} 场地业绩排行榜`;
+    }
+
+    if (currentPeriod === 'month') {
+      return `${currentStartDate.slice(0, 7)} 场地业绩排行榜`;
+    }
+
+    return `${currentStartDate} 场地业绩排行榜`;
+  }
+
+  if (currentDateKey === 'today') return '当日场地业绩排行榜';
+  if (currentDateKey === 'yesterday') return '昨日场地业绩排行榜';
+
+  return `${currentDateKey} 场地业绩排行榜`;
+}
+
+function updateDateTitle() {
+  const titleEl = document.getElementById('ranking-title');
+  if (titleEl) titleEl.textContent = getDateTitle();
+}
     function normalizeVenueRow(v) {
       const driveIncome = toNumber(v.driveIncome);
       const giftIncome = toNumber(v.giftIncome);
@@ -354,71 +425,111 @@
       });
     }
 
-    function updateURLState() {
-      const u = new URL(location.href);
+function updateURLState() {
+  const u = new URL(location.href);
 
-      if (selectedVenueId === 'all') {
-        u.searchParams.delete('venue_id');
-      } else {
-        u.searchParams.set('venue_id', selectedVenueId);
+  if (selectedVenueId === 'all') {
+    u.searchParams.delete('venue_id');
+  } else {
+    u.searchParams.set('venue_id', selectedVenueId);
+  }
+
+  if (currentRankType === 'total') {
+    u.searchParams.delete('rank_type');
+  } else {
+    u.searchParams.set('rank_type', currentRankType);
+  }
+
+  if (currentStartDate && currentEndDate) {
+    u.searchParams.set('period', currentPeriod);
+    u.searchParams.set('start_date', currentStartDate);
+    u.searchParams.set('end_date', currentEndDate);
+    u.searchParams.delete('date');
+  } else {
+    u.searchParams.delete('period');
+    u.searchParams.delete('start_date');
+    u.searchParams.delete('end_date');
+
+    if (currentDateKey === 'today') {
+      u.searchParams.delete('date');
+    } else {
+      u.searchParams.set('date', currentDateKey);
+    }
+  }
+
+  history.replaceState({}, '', u.toString());
+}
+
+// URL 预选逻辑（支持 ?date=YYYY-MM-DD&venue_id=xxx&rank_type=drive|gift|total）
+(function presetFromURL() {
+  const params = new URLSearchParams(location.search);
+  const vid = params.get('venue_id');
+  const rt = params.get('rank_type');
+  const dt = params.get('date');
+
+  const period = normalizePeriod(params.get('period') || 'day');
+  const startDate = params.get('start_date') || '';
+  const endDate = params.get('end_date') || '';
+
+  if (vid) selectedVenueId = String(vid);
+  currentRankType = normalizeRankType(rt || 'total');
+
+  if (isDateStr(startDate) && isDateStr(endDate) && endDate > startDate) {
+    setRange(period, startDate, endDate);
+  } else {
+    setSingleDate(dt || 'today');
+  }
+
+  const rankSelect = document.getElementById('rank-type');
+  if (rankSelect) rankSelect.value = currentRankType;
+
+  updateDateTitle();
+})();
+
+// ====== 加载数据 ======
+function loadRankingData(dateKey) {
+  // 点击今天/昨天按钮时，切回单日模式
+  if (dateKey) {
+    setSingleDate(dateKey);
+  }
+
+  updateDateTitle();
+  updateURLState();
+
+  const params = new URLSearchParams();
+  params.set('rank_type', currentRankType);
+
+  if (currentStartDate && currentEndDate) {
+    params.set('period', currentPeriod);
+    params.set('start_date', currentStartDate);
+    params.set('end_date', currentEndDate);
+  } else {
+    params.set('date', currentDateKey);
+  }
+
+  const url = `https://open.rcwulian.cn/api/operat/topv2.php?${params.toString()}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (data.code !== 0 || !Array.isArray(data.data)) {
+        alert(data.msg || '未找到业绩数据');
+        allData = [];
+        populateVenueDropdown([]);
+        applyFilterAndRender();
+        return;
       }
 
-      if (currentRankType === 'total') {
-        u.searchParams.delete('rank_type');
-      } else {
-        u.searchParams.set('rank_type', currentRankType);
-      }
+      allData = data.data.map(normalizeVenueRow);
 
-      history.replaceState({}, '', u.toString());
-    }
-
-    // URL 预选逻辑（支持 ?venue_id=xxx&rank_type=drive|gift|total）
-    (function presetFromURL() {
-      const params = new URLSearchParams(location.search);
-      const vid = params.get('venue_id');
-      const rt = params.get('rank_type');
-
-      if (vid) selectedVenueId = String(vid);
-      currentRankType = normalizeRankType(rt || 'total');
-
-      const rankSelect = document.getElementById('rank-type');
-      if (rankSelect) rankSelect.value = currentRankType;
-    })();
-
-    // ====== 加载数据 ======
-    function loadRankingData(dateKey) {
-      currentDateKey = dateKey;
-
-      const params = new URLSearchParams();
-      params.set('rank_type', currentRankType);
-      if (dateKey === 'yesterday') params.set('date', 'yesterday');
-
-      const url = `https://open.rcwulian.cn/api/operat/topv2.php?${params.toString()}`;
-
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
-          if (data.code !== 0 || !Array.isArray(data.data)) {
-            alert(data.msg || '未找到业绩数据');
-            allData = [];
-            populateVenueDropdown([]);
-            applyFilterAndRender();
-            return;
-          }
-
-          allData = data.data.map(normalizeVenueRow);
-
-          // 先渲染下拉（保持选择）
-          populateVenueDropdown(allData);
-
-          // 再应用筛选、排行方式与展示
-          applyFilterAndRender();
-        })
-        .catch(err => {
-          console.error('数据加载失败:', err);
-          alert('数据加载失败，请稍后重试');
-        });
-    }
+      populateVenueDropdown(allData);
+      applyFilterAndRender();
+    })
+    .catch(err => {
+      console.error('数据加载失败:', err);
+      alert('数据加载失败，请稍后重试');
+    });
+}
 
     // ====== 填充场地下拉 ======
     function populateVenueDropdown(data) {
@@ -649,8 +760,8 @@
         .replace(/'/g, '&#39;');
     }
 
-    // 初次加载默认“今天”
-    loadRankingData('today');
+// 初次加载：优先使用 URL 里的 date，没有就今天
+loadRankingData();
   </script>
 </body>
 </html>

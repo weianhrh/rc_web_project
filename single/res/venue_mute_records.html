@@ -1,0 +1,722 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户禁言记录</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+    .page { max-width: 1180px; margin: 0 auto; }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .title { font-size: 22px; font-weight: 700; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .tip { color: #6b7280; font-size: 13px; }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .toolbar {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 220px 220px auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+.page-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.page-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.page-tabs a:hover {
+  border-color: #5b8cff;
+  color: #5b8cff;
+  background: rgba(91, 140, 255, 0.08);
+}
+
+.page-tabs a.active {
+  background: #5b8cff;
+  border-color: #5b8cff;
+  color: #ffffff;
+}
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: #374151;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    select, input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 14px;
+      background: #fff;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: #5b8cff; }
+    .btn {
+      height: 38px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #5b8cff;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .btn:hover { opacity: .92; }
+    .btn.secondary { background: #eef2ff; color: #3451b2; }
+    .btn.danger { background: #ef4444; }
+    .btn:disabled { background: #d1d5db; color: #6b7280; cursor: not-allowed; }
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, .45);
+    }
+    .modal-box {
+      width: min(460px, 100%);
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, .22);
+      padding: 18px;
+    }
+    .modal-title {
+      margin-bottom: 14px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .modal-box .field { margin-bottom: 12px; }
+    .modal-help {
+      margin: 4px 0 14px;
+      color: #6b7280;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .summary {
+      padding: 10px 14px;
+      border-top: 1px solid #eef2f7;
+      color: #6b7280;
+      font-size: 13px;
+    }
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+    th, td {
+      padding: 12px 10px;
+      border-top: 1px solid #eef2f7;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    th { background: #f9fafb; color: #374151; font-weight: 700; }
+    .muted { color: #6b7280; font-size: 12px; }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #f3f4f6;
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .tag.active { background: #dcfce7; color: #15803d; }
+    .tag.ended { background: #fee2e2; color: #b91c1c; }
+    .empty, .loading {
+      padding: 26px;
+      text-align: center;
+      color: #6b7280;
+    }
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-top: 1px solid #eef2f7;
+    }
+    #pageInfo { color: #6b7280; font-size: 13px; }
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      .header { align-items: flex-start; flex-direction: column; }
+      .header-actions { width: 100%; }
+      .toolbar { grid-template-columns: 1fr; }
+      .btn { width: 100%; }
+      .modal-actions { flex-direction: column-reverse; }
+      .pagination { justify-content: center; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="title">用户禁言记录</div>
+      <div class="page-tabs">
+          <a href="black_user_gmt.html">拉黑用户</a>
+          <a href="venue_mute_records.html" class="active">禁言用户</a>
+        </div>
+<div class="tip" id="tipText">默认展示全部场地，可按被禁言 UID 和场地筛选；解除禁言会把 end_time 改为当前时间。</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="addMuteBtn" style="display:none;">添加禁言</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+<div class="field" id="venueField" style="display:none;">
+  <label for="venue_id">场地筛选</label>
+  <select id="venue_id">
+    <option value="">全部场地</option>
+  </select>
+</div>
+      <div class="field">
+        <label for="banned_uid">被禁言 UID</label>
+        <input type="text" id="banned_uid" placeholder="输入 UID 搜索" inputmode="numeric" autocomplete="off">
+      </div>
+      <button class="btn" id="searchBtn">查询</button>
+      <button class="btn secondary" id="resetBtn">重置</button>
+    </div>
+    <div class="summary" id="summary">正在加载...</div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>场地</th>
+          <th>被禁言用户</th>
+          <th>封禁原因</th>
+          <th>状态</th>
+          <th>开始时间</th>
+          <th>结束时间</th>
+          <th>操作人</th>
+          <th>更新时间</th>
+          <th>操作</th>
+        </tr>
+        </thead>
+        <tbody id="tableBody">
+        <tr><td colspan="10" class="loading">正在加载...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button class="btn secondary" id="prevBtn">上一页</button>
+      <span id="pageInfo">第 1 / 1 页</span>
+      <button class="btn secondary" id="nextBtn">下一页</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="addMuteModal">
+  <div class="modal-box">
+    <div class="modal-title">添加禁言</div>
+
+    <div class="field" id="addVenueField" style="display:none;">
+      <label for="add_venue_id">封禁场地</label>
+      <select id="add_venue_id">
+        <option value="">请选择场地</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="add_banned_uid">被封禁人 UID</label>
+      <input type="text" id="add_banned_uid" placeholder="请输入被封禁人的 UID" inputmode="numeric" autocomplete="off">
+    </div>
+
+    <div class="modal-help" id="addMuteHelp">封禁人默认使用当前登录账号 UID。</div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="cancelAddMuteBtn" type="button">取消</button>
+      <button class="btn" id="saveAddMuteBtn" type="button">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const VENUE_API = '/api/operat/EnergyGift.php';
+  const LIST_API  = '/api/operat/venue_mute_records_api.php';
+
+  const venueSelect = document.getElementById('venue_id');
+  const uidInput    = document.getElementById('banned_uid');
+  const searchBtn   = document.getElementById('searchBtn');
+  const resetBtn    = document.getElementById('resetBtn');
+  const tableBody   = document.getElementById('tableBody');
+  const summaryEl   = document.getElementById('summary');
+  const prevBtn     = document.getElementById('prevBtn');
+  const nextBtn     = document.getElementById('nextBtn');
+  const pageInfo    = document.getElementById('pageInfo');
+
+  const addMuteBtn       = document.getElementById('addMuteBtn');
+  const addMuteModal     = document.getElementById('addMuteModal');
+  const addVenueField    = document.getElementById('addVenueField');
+  const addVenueSelect   = document.getElementById('add_venue_id');
+  const addBannedUidInput = document.getElementById('add_banned_uid');
+  const addMuteHelp      = document.getElementById('addMuteHelp');
+  const cancelAddMuteBtn = document.getElementById('cancelAddMuteBtn');
+  const saveAddMuteBtn   = document.getElementById('saveAddMuteBtn');
+
+let currentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+let total = 0;
+let venueMap = {};
+
+let isAdminUser = false;
+let loginRoleId = 0;
+let loginVenueId = 0;
+let loginUid = 0;
+let canAddMute = false;
+let venueLoaded = false;
+
+  document.addEventListener('DOMContentLoaded', function () {
+    bindEvents();
+    // loadVenues();
+    loadList(1);
+  });
+
+  function bindEvents() {
+    addMuteBtn.addEventListener('click', openAddMuteModal);
+    cancelAddMuteBtn.addEventListener('click', closeAddMuteModal);
+    saveAddMuteBtn.addEventListener('click', submitAddMute);
+
+    addBannedUidInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        submitAddMute();
+      }
+    });
+
+    addMuteModal.addEventListener('click', function (e) {
+      if (e.target === addMuteModal) {
+        closeAddMuteModal();
+      }
+    });
+
+    searchBtn.addEventListener('click', function () {
+      loadList(1);
+    });
+
+resetBtn.addEventListener('click', function () {
+  if (isAdminUser) {
+    venueSelect.value = '';
+  }
+  uidInput.value = '';
+  loadList(1);
+});
+
+    venueSelect.addEventListener('change', function () {
+      loadList(1);
+    });
+
+    uidInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        loadList(1);
+      }
+    });
+
+    prevBtn.addEventListener('click', function () {
+      if (currentPage > 1) {
+        loadList(currentPage - 1);
+      }
+    });
+
+    nextBtn.addEventListener('click', function () {
+      if (currentPage < totalPages) {
+        loadList(currentPage + 1);
+      }
+    });
+  }
+
+  // 场地下拉：复用补偿能量 EnergyGift.php 的 action=get_venues
+  function loadVenues() {
+    venueSelect.innerHTML = '<option value="">全部场地</option>';
+    addVenueSelect.innerHTML = '<option value="">请选择场地</option>';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', VENUE_API, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.withCredentials = true;
+
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+
+      if (xhr.status !== 200) {
+        console.error('场地下拉加载失败', xhr.status, xhr.responseText);
+        return;
+      }
+
+      try {
+        const response = JSON.parse(xhr.responseText || '{}');
+        if (response.code === 0 && Array.isArray(response.data)) {
+          const data = response.data.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+
+          data.forEach(venue => {
+            const option = document.createElement('option');
+            option.value = String(venue.id);
+            option.textContent = `${venue.id} - ${venue.venue_name}`;
+            venueSelect.appendChild(option);
+
+            const addOption = document.createElement('option');
+            addOption.value = String(venue.id);
+            addOption.textContent = `${venue.id} - ${venue.venue_name}`;
+            addVenueSelect.appendChild(addOption);
+
+            venueMap[String(venue.id)] = venue.venue_name || '';
+          });
+        }
+      } catch (e) {
+        console.error('场地下拉解析失败', e);
+      }
+    };
+
+    xhr.send('action=get_venues');
+  }
+
+  function loadList(page) {
+    currentPage = page || 1;
+    tableBody.innerHTML = '<tr><td colspan="10" class="loading">正在加载...</td></tr>';
+
+    const params = new URLSearchParams();
+    params.set('action', 'list');
+    params.set('page', String(currentPage));
+    params.set('page_size', String(pageSize));
+
+    const venueId = venueSelect.value || '';
+    const uid = uidInput.value.trim();
+
+    if (isAdminUser && venueId) {
+      params.set('venue_id', venueId);
+    }
+
+    if (uid) {
+      params.set('banned_uid', uid);
+    }
+
+    fetch(`${LIST_API}?${params.toString()}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (Number(res.code) === 1001) {
+          tableBody.innerHTML = '<tr><td colspan="10" class="empty">用户未登录或会话已过期</td></tr>';
+          summaryEl.textContent = res.msg || '用户未登录或会话已过期';
+          return;
+        }
+
+        if (Number(res.code) !== 0) {
+          tableBody.innerHTML = `<tr><td colspan="10" class="empty">${escapeHtml(res.msg || '加载失败')}</td></tr>`;
+          summaryEl.textContent = res.msg || '加载失败';
+          return;
+        }
+
+        const data = res.data || {};
+        applyRoleUi(data);
+        
+        const rows = data.rows || [];
+        total = Number(data.total || 0);
+        currentPage = Number(data.page || 1);
+        totalPages = Number(data.total_pages || 1);
+        
+        renderRows(rows);
+        renderPageInfo();
+      })
+      .catch(err => {
+        console.error(err);
+        tableBody.innerHTML = '<tr><td colspan="10" class="empty">网络异常，加载失败</td></tr>';
+        summaryEl.textContent = '网络异常，加载失败';
+      });
+  }
+
+  function renderRows(rows) {
+    if (!rows || rows.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="10" class="empty">暂无禁言记录</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = rows.map(row => {
+      const active = Number(row.is_active || 0) === 1;
+      const venueText = getVenueText(row);
+      const userText = `${escapeHtml(row.banned_uid || '')}${row.banned_nickname ? '<div class="muted">' + escapeHtml(row.banned_nickname) + '</div>' : ''}`;
+      const adminText = `${escapeHtml(row.admin_uid || '')}${row.admin_nickname ? '<div class="muted">' + escapeHtml(row.admin_nickname) + '</div>' : ''}`;
+      const statusText = active
+        ? '<span class="tag active">禁言中</span>'
+        : '<span class="tag ended">已结束</span>';
+      const endTime = row.end_time || '<span class="muted">永久 / 未设置</span>';
+      const actionBtn = active
+        ? `<button class="btn danger" onclick="unmuteRecord(${Number(row.id)}, ${Number(row.venue_id)}, ${Number(row.banned_uid)})">解除禁言</button>`
+        : '<button class="btn" disabled>已解除</button>';
+
+      return `
+        <tr>
+          <td>${escapeHtml(row.id || '')}</td>
+          <td>${venueText}</td>
+          <td>${userText}</td>
+          <td>${escapeHtml(row.reason || '-')}</td>
+          <td>${statusText}</td>
+          <td>${escapeHtml(row.start_time || '-')}</td>
+          <td>${typeof endTime === 'string' && endTime.indexOf('<span') === 0 ? endTime : escapeHtml(endTime)}</td>
+          <td>${adminText}</td>
+          <td>${escapeHtml(row.updated_at || '-')}</td>
+          <td>${actionBtn}</td>
+        </tr>`;
+    }).join('');
+  }
+  function applyRoleUi(data) {
+  loginRoleId = Number(data.role_id || 0);
+  loginVenueId = Number(data.login_venue_id || 0);
+  loginUid = Number(data.login_uid || 0);
+  isAdminUser = Number(data.is_admin || 0) === 1;
+  canAddMute = Number(data.can_add_mute || 0) === 1;
+
+  const venueField = document.getElementById('venueField');
+  const tipText = document.getElementById('tipText');
+
+  addMuteBtn.style.display = canAddMute ? '' : 'none';
+  addVenueField.style.display = loginRoleId === 1 ? '' : 'none';
+
+  if (loginRoleId === 1) {
+    addMuteHelp.textContent = ``;
+  } else if (loginRoleId === 3) {
+    addMuteHelp.textContent = ``;
+  } else {
+    addMuteHelp.textContent = '当前角色不可添加禁言。';
+  }
+
+  if (isAdminUser) {
+    if (venueField) {
+      venueField.style.display = '';
+    }
+
+    if (tipText) {
+      tipText.textContent = '默认展示全部场地，可按被禁言 UID 和场地筛选；解除禁言会把 end_time 改为当前时间。';
+    }
+
+    if (!venueLoaded) {
+      venueLoaded = true;
+      loadVenues();
+    }
+  } else {
+    if (venueField) {
+      venueField.style.display = 'none';
+    }
+
+    venueSelect.value = '';
+
+    if (tipText) {
+      tipText.textContent = '当前账号仅展示自己场地的禁言记录，可按被禁言 UID 搜索；解除禁言会把 end_time 改为当前时间。';
+    }
+  }
+}
+  function renderPageInfo() {
+  let venueText = '';
+
+  if (isAdminUser) {
+    venueText = venueSelect.value ? `场地 ${venueSelect.value}` : '全部场地';
+  } else {
+    venueText = loginVenueId > 0 ? `当前场地 ${loginVenueId}` : '当前场地';
+  }
+
+  const uidText = uidInput.value.trim() ? `，UID包含 ${uidInput.value.trim()}` : '';
+
+  summaryEl.textContent = `当前筛选：${venueText}${uidText}，共 ${total} 条`;
+  pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
+}
+  function getVenueText(row) {
+    const id = String(row.venue_id || '');
+    const name = row.venue_name || venueMap[id] || '';
+    if (!id) return '-';
+    return escapeHtml(name ? `${id} - ${name}` : `场地ID:${id}`);
+  }
+
+  function openAddMuteModal() {
+    if (!canAddMute) {
+      alert('当前角色无权添加禁言');
+      return;
+    }
+
+    addBannedUidInput.value = '';
+
+    if (loginRoleId === 1) {
+      addVenueField.style.display = '';
+      addVenueSelect.value = venueSelect.value || '';
+      if (!venueLoaded) {
+        venueLoaded = true;
+        loadVenues();
+      }
+    } else {
+      addVenueField.style.display = 'none';
+      addVenueSelect.value = '';
+    }
+
+    addMuteModal.style.display = 'flex';
+    setTimeout(() => addBannedUidInput.focus(), 50);
+  }
+
+  function closeAddMuteModal() {
+    addMuteModal.style.display = 'none';
+    saveAddMuteBtn.disabled = false;
+  }
+
+  function submitAddMute() {
+    if (!canAddMute) {
+      alert('当前角色无权添加禁言');
+      return;
+    }
+
+    const bannedUid = addBannedUidInput.value.trim();
+    if (!/^\d+$/.test(bannedUid)) {
+      alert('请输入正确的被封禁人 UID');
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('action', 'mute');
+    params.set('banned_uid', bannedUid);
+
+    if (loginRoleId === 1) {
+      const venueId = addVenueSelect.value || '';
+      if (!venueId) {
+        alert('请选择封禁场地');
+        return;
+      }
+      params.set('venue_id', venueId);
+    }
+
+    saveAddMuteBtn.disabled = true;
+
+    fetch(LIST_API, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params.toString()
+    })
+      .then(res => res.json())
+      .then(res => {
+        alert(res.msg || '操作完成');
+        if (Number(res.code) === 0) {
+          closeAddMuteModal();
+          loadList(1);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('添加禁言失败，请稍后重试');
+      })
+      .finally(() => {
+        saveAddMuteBtn.disabled = false;
+      });
+  }
+
+  function unmuteRecord(id, venueId, bannedUid) {
+    if (!id || !venueId || !bannedUid) {
+      alert('参数不完整，无法解除禁言');
+      return;
+    }
+
+    if (!confirm(`确认解除 UID ${bannedUid} 在场地 ${venueId} 的禁言吗？`)) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set('action', 'unmute');
+    params.set('id', String(id));
+    params.set('venue_id', String(venueId));
+    params.set('banned_uid', String(bannedUid));
+
+    fetch(LIST_API, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params.toString()
+    })
+      .then(res => res.json())
+      .then(res => {
+        alert(res.msg || '操作完成');
+        if (Number(res.code) === 0) {
+          loadList(currentPage);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('解除禁言失败，请稍后重试');
+      });
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+</script>
+</body>
+</html>

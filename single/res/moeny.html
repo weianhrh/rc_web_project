@@ -1,365 +1,606 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>财务对账</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <style>
-        /* 定义 CSS 变量 */
-        :root {
-            --primary: #5b8cff;
-            --secondary: #7f8fa4;
-            --background-gradient-start: #f8f9ff;
-            --background-gradient-end: #f0f3ff;
-            --card-bg: #ffffff;
-            --border-color: #ddd;
-            --text-color: #333;
-            --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
-            --transition: all 0.3s ease;
-            --hover-bg: #f9f9f9;
-            --highlight-bg: #eff4ff;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>财务对账</title>
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #ddd;
+      --text-color: #333;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --transition: all 0.3s ease;
+      --hover-bg: #f9f9f9;
+      --highlight-bg: #eff4ff;
+      --danger: #ff6b6b;
+      --success: #4caf50;
+    }
 
-        /* 全局样式 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "PingFang SC", system-ui;
-        }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "PingFang SC", system-ui; }
 
-        body {
-            background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-        }
+    body {
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
 
-        .container {
-            max-width: 1200px;
-            width: 100%;
-        }
+    .container { max-width: 1200px; width: 100%; }
 
-        /* 卡片样式 */
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: var(--shadow);
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            transition: var(--transition);
-        }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: var(--transition);
+    }
 
-        .card:hover {
-            box-shadow: 0 8px 32px rgba(91, 140, 255, 0.16);
-        }
+    .card-title {
+      font-size: 24px;
+      color: var(--text-color);
+      margin-bottom: 8px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-        .card-title {
-            font-size: 24px;
-            color: var(--text-color);
-            margin-bottom: 20px;
-            font-weight: 600;
-            border-bottom: 2px solid var(--primary);
-            padding-bottom: 10px;
-        }
+    .toolbar {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 12px;
+      background: #f7f9ff;
+      border: 1px solid #e4e9ff;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
 
-        /* 账单项样式 */
-        .revenue-item {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 16px;
-            transition: var(--transition);
-            background-color: #fff;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 8px;
-        }
+    .toolbar .field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 0;
+      justify-content: flex-start;
+    }
 
-        .revenue-item:hover {
-            background-color: var(--highlight-bg);
-        }
+    select, input[type="number"] {
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      outline: none;
+      background: #fff;
+      font-size: 14px;
+      min-width: 220px;
+    }
 
-        /* 字段样式 */
-        .field {
-            display: flex;
-            justify-content: space-between;
-            font-size: 14px;
-            align-items: center;
-            margin-bottom: 8px;
-        }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+      background: #e9eefc;
+      color: #2b3a55;
+      white-space: nowrap;
+    }
 
-        .field.label {
-            color: var(--secondary);
-            font-weight: 500;
-        }
+    .btn:hover { filter: brightness(0.98); }
+    .btn.primary { background: var(--primary); color: #fff; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
 
-        .field.value {
-            color: var(--text-color);
-            font-size: 14px;
-            font-weight: 400;
-        }
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--secondary);
+      font-size: 13px;
+      padding: 2px 0 8px;
+    }
 
-        .total-revenue {
-            font-weight: 700;
-            color: var(--primary);
-        }
+    .revenue-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      transition: var(--transition);
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 10px;
+      border: 1px solid #edf0f6;
+    }
 
-        .status {
-            font-size: 12px;
-            color: #5c5c5c;
-        }
+    .revenue-item:hover { background-color: var(--highlight-bg); }
 
-        /* 核对按钮 */
-        .check-button {
-            background-color: var(--primary);
-            color: #fff;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: 0.3s;
-        }
+    .field {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      align-items: center;
+      margin-bottom: 4px;
+      gap: 16px;
+    }
 
-        .check-button:hover {
-            background-color: #4a77e4;
-        }
+    .label { color: var(--secondary); font-weight: 500; flex-shrink: 0; }
+    .value { color: var(--text-color); font-size: 14px; font-weight: 400; text-align: right; word-break: break-all; }
+    .total-revenue { font-weight: 700; color: var(--primary); }
+    .venue-name { color: #2b62ff; font-weight: 600; }
+    .checked { color: var(--success); font-weight: 600; }
+    .unchecked { color: var(--danger); font-weight: 600; }
 
-        .check-button:disabled {
-            background-color: #d0d0d0;
-            cursor: not-allowed;
-        }
+    .check-button {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
 
-        /* 结算状态 */
-        .settled-status {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--primary);
-        }
+    .check-button:hover { background-color: #4a77e4; }
+    .check-button:disabled { background-color: #d0d0d0; cursor: not-allowed; }
 
-        .settled-status.unsettled {
-            color: #ff6b6b;
-        }
+    .loading {
+      text-align: center;
+      font-size: 16px;
+      color: var(--primary);
+      padding: 20px;
+    }
 
-        .settled-status.settled {
-            color: #4caf50;
-        }
+    .empty {
+      text-align: center;
+      color: var(--secondary);
+      padding: 24px 10px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px dashed #dce4ff;
+    }
 
-        /* 加载更多提示 */
-        .loading {
-            text-align: center;
-            font-size: 16px;
-            color: var(--primary);
-            padding: 20px;
-        }
+    .pager {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 0 2px;
+    }
 
-        /* 自定义弹窗样式 */
-        .custom-alert {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            z-index: 999;
-            display: none;
-        }
+    .pager-info {
+      color: var(--secondary);
+      font-size: 13px;
+      margin: 0 4px;
+    }
 
-        .custom-alert .message {
-            font-size: 16px;
-            font-weight: bold;
-        }
+    .page-input {
+      width: 72px;
+      min-width: 72px;
+      text-align: center;
+    }
 
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .card {
-                padding: 16px;
-            }
+    .custom-alert {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      padding: 18px 22px;
+      border-radius: 8px;
+      z-index: 999;
+      display: none;
+      font-size: 15px;
+      font-weight: 600;
+    }
 
-            .field {
-                font-size: 12px;
-            }
-
-            .total-revenue {
-                font-size: 16px;
-            }
-        }
-    </style>
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      .card { padding: 14px; }
+      .card-title { font-size: 21px; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar .field { width: 100%; }
+      select { min-width: 0; width: 100%; }
+      .field { font-size: 13px; align-items: flex-start; }
+      .value { font-size: 13px; }
+      .total-revenue { font-size: 16px; }
+      .pager { justify-content: stretch; }
+      .pager .btn { flex: 1; padding-left: 8px; padding-right: 8px; }
+      .pager-info { width: 100%; text-align: center; margin: 4px 0; }
+      .page-input { flex: 1; min-width: 90px; }
+    }
+  </style>
 </head>
 
 <body>
+  <div class="container" id="pageRoot">
+    <div class="card">
+      <div class="card-title">
+        <span>财务对账</span>
+      </div>
 
-    <div class="container">
-        <div class="card">
-            <div class="card-title">财务对账</div>
-      
-
-            <div id="revenue-details">
-                <!-- 账单信息将动态加载 -->
-            </div>
-            <div id="loading" class="loading" style="display: none;">正在加载...</div>
+      <!-- role_id == 1 才显示 -->
+      <div class="toolbar" id="adminToolbar">
+        <div class="field">
+          <span class="label">场地筛选：</span>
+          <select id="venue_id">
+            <option value="">全部场地</option>
+          </select>
         </div>
+        <button class="btn" id="btnResetVenue">重置</button>
+      </div>
+
+      <div class="summary">
+        <span id="summaryText">正在加载...</span>
+        <span id="roleText"></span>
+      </div>
+
+      <div id="revenue-details"></div>
+      <div id="loading" class="loading" style="display:none;">正在加载...</div>
+
+      <div class="pager" id="pager">
+        <button class="btn" id="btnFirst">首页</button>
+        <button class="btn" id="btnPrev">上一页</button>
+        <span class="pager-info" id="pageInfo">第 1 / 1 页</span>
+        <button class="btn" id="btnNext">下一页</button>
+        <button class="btn" id="btnLast">尾页</button>
+        <input class="page-input" type="number" id="jumpPage" min="1" placeholder="页码" />
+        <button class="btn primary" id="btnJump">跳转</button>
+      </div>
     </div>
+  </div>
 
-    <!-- 自定义弹窗 -->
-    <div id="custom-alert" class="custom-alert">
-        <div class="message">核对成功！</div>
-    </div>
+  <div id="custom-alert" class="custom-alert">核对成功！</div>
 
-    <script>
-        let currentPage = 1;  // 当前页
-        const limit = 31;  // 每页加载20条
+<script>
+(function () {
+  // ✅ 防止后台 iframe / 手机 WebView 重复初始化
+  const pageRoot = document.getElementById('pageRoot');
+  if (pageRoot && pageRoot.dataset.inited === '1') return;
+  if (pageRoot) pageRoot.dataset.inited = '1';
 
-let isLoading = false;      // 防止重复请求
-let noMoreData = false;     // 没有更多数据时停止请求
+  const API_URL = '/api/pay/GetDailyVenueRevenue.php';
+  const CHECK_URL = '/api/pay/CheckDailyVenueRevenue.php';
+  const VENUE_API = '/api/operat/EnergyGift.php'; // action=get_venues
 
-function loadRevenueData(page) {
-    if (isLoading || noMoreData) return;
+  const state = {
+    page: 1,
+    limit: 31,
+    total: 0,
+    totalPages: 1,
+    roleId: 0,
+    isAdmin: false,
+    venueId: '',
+    loading: false,
+    reqSeq: 0,
+    venuesLoaded: false
+  };
 
-    const url = `https://open.rcwulian.cn/api/pay/GetDailyVenueRevenue.php?page=${page}&limit=${limit}&access_token=df39da38cf68a599912b75361e85d19b0269e1a0f355dc72ddf6495a204f41c4`;
-    const loadingEl = document.getElementById('loading');
+  const venueMap = {};
+  const $ = (id) => document.getElementById(id);
 
-    isLoading = true;
-    loadingEl.style.display = 'block';
-    loadingEl.textContent = '正在加载...';
+  const revenueDetails = $('revenue-details');
+  const loadingEl = $('loading');
+  const adminToolbar = $('adminToolbar');
+  const venueSelect = $('venue_id');
 
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data.code === 0 && data.data.length > 0) {
-                displayRevenueDetails(data.data);
-                currentPage++; // 下一页
-            } else {
-                noMoreData = true;
-                loadingEl.textContent = '没有更多数据了';
-            }
-        })
-        .catch(error => {
-            console.error('数据加载失败:', error);
-            loadingEl.textContent = '加载失败，请重试';
-            setTimeout(() => {
-                loadingEl.style.display = 'none';
-            }, 2000);
-        })
-        .finally(() => {
-            // 如果还有数据，就隐藏 loading；没有数据就保持“没有更多数据了”提示
-            if (!noMoreData) {
-                loadingEl.style.display = 'none';
-            }
-            isLoading = false;
-        });
-}
+  function escapeHtml(s) {
+    return String(s ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
 
-
-        // 显示财务数据
-        function displayRevenueDetails(revenues) {
-            const revenueDetailsContainer = document.getElementById('revenue-details');
-
-            revenues.forEach(revenue => {
-                const revenueItem = document.createElement('div');
-                revenueItem.classList.add('revenue-item');
-
-                revenueItem.innerHTML = `
-                    <div class="field">
-                        <div class="label">日期:</div>
-                        <div class="value">${revenue.date}</div> 
-                    </div>
-                    <div class="field">
-                        <div class="label">总收入:</div>
-                        <div class="value total-revenue">${revenue.total_revenue} 元</div>
-                    </div>
-                    <div class="field">
-                        <div class="label">创建时间:</div>
-                        <div class="value">${revenue.created_at}</div> 
-                    </div>
-                    <div class="field">
-                        <div class="label">更新时间:</div>
-                        <div class="value">${revenue.updated_at}</div> 
-                    </div>
-                   
-                    <div class="field">
-                        <div class="label">核对状态:</div>
-                        <div class="value">
-                            ${revenue.is_checked === 1 ? '已核对' : '<button class="check-button" onclick="checkRevenue(' + revenue.id + ', this)">核对</button>'}
-                        </div>
-                    </div>
-                `;
-
-                revenueDetailsContainer.appendChild(revenueItem);
-            });
+  function xhrGetJson(url, cb) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.withCredentials = true;
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        try {
+          cb(JSON.parse(xhr.responseText || '{}'), xhr.status);
+        } catch (e) {
+          cb({ code: -1, msg: '响应解析失败' }, xhr.status);
         }
+      }
+    };
+    xhr.onerror = function () {
+      cb({ code: -1, msg: '网络请求失败' }, 0);
+    };
+    xhr.send(null);
+    return xhr;
+  }
 
-        // 核对财务数据
-        function checkRevenue(id, button) {
-            const url = 'https://open.rcwulian.cn/api/pay/CheckDailyVenueRevenue.php';
-            const data = new URLSearchParams();
-            data.append('id', id);
-
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                },
-                body: data
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.code === 0) {
-                        // 显示自定义弹窗
-                        document.getElementById('custom-alert').style.display = 'block';
-
-                        // 自动隐藏弹窗
-                        setTimeout(() => {
-                            document.getElementById('custom-alert').style.display = 'none';
-                        }, 2000);
-
-                        // 更新按钮文本和禁用
-                        button.textContent = '已核对';
-                        button.disabled = true;
-
-                        // 刷新数据
-                        loadRevenueData(1);
-                    } else if (data.code === 1002) {
-                        // ✅ 单独处理：未绑定提现账号
-                        alert(data.msg || '需要先绑定提现账号才可以核对');
-
-                    } else {
-                        alert('核对失败，请稍后再试');
-                    }
-                })
-                .catch(error => {
-                    console.error('核对失败:', error);
-                    alert('核对请求失败，请重试');
-                });
+  function xhrPostFormJson(url, body, cb) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        try {
+          cb(JSON.parse(xhr.responseText || '{}'), xhr.status);
+        } catch (e) {
+          cb({ code: -1, msg: '响应解析失败' }, xhr.status);
         }
+      }
+    };
+    xhr.onerror = function () {
+      cb({ code: -1, msg: '网络请求失败' }, 0);
+    };
+    xhr.send(body);
+    return xhr;
+  }
 
-        // 页面加载时获取数据
-        loadRevenueData(currentPage);
-// 滚动到底部时加载下一页（兼容手机）
-window.addEventListener('scroll', function () {
-    const doc = document.documentElement;
-    const scrollTop = doc.scrollTop || document.body.scrollTop;
-    const clientHeight = doc.clientHeight;
-    const scrollHeight = doc.scrollHeight;
+  function showLoading(show) {
+    loadingEl.style.display = show ? 'block' : 'none';
+  }
 
-    // 预留 50 像素缓冲，避免必须“顶死”才触发
-    if (scrollTop + clientHeight >= scrollHeight - 50) {
-        loadRevenueData(currentPage);
+  function buildListUrl(page) {
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('limit', state.limit);
+
+    // ✅ 只有 role_id=1 才传 venue_id；普通场地账号由后端强制限制自己的 venue_id
+    if (state.isAdmin && state.venueId) {
+      params.set('venue_id', state.venueId);
     }
-});
-    </script>
 
+    return `${API_URL}?${params.toString()}`;
+  }
+
+  function applyRoleUI() {
+    state.isAdmin = Number(state.roleId) === 1;
+    adminToolbar.style.display = state.isAdmin ? 'flex' : 'none';
+    $('roleText').textContent = state.isAdmin ? '管理员' : '加盟商';
+
+    if (state.isAdmin && !state.venuesLoaded) {
+      loadVenues();
+    }
+  }
+
+  function loadVenues() {
+    state.venuesLoaded = true;
+    venueSelect.innerHTML = '<option value="">全部场地</option>';
+
+    xhrPostFormJson(VENUE_API, 'action=get_venues', function (res, status) {
+      if (status !== 200 || res.code !== 0 || !Array.isArray(res.data)) {
+        return;
+      }
+
+      res.data.forEach(venue => {
+        const id = String(venue.id ?? '');
+        const name = String(venue.venue_name ?? '');
+        if (!id) return;
+
+        venueMap[id] = name;
+
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${id} - ${name}`;
+        venueSelect.appendChild(option);
+      });
+    });
+  }
+
+  function renderRows(rows) {
+    revenueDetails.innerHTML = '';
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      revenueDetails.innerHTML = '<div class="empty">暂无数据</div>';
+      return;
+    }
+
+    rows.forEach(revenue => {
+      const venueId = String(revenue.venue_id ?? '');
+      const venueName = revenue.venue_name || venueMap[venueId] || '';
+      const venueText = venueName ? `${venueId} - ${venueName}` : `场地ID：${venueId || '-'}`;
+      const isChecked = Number(revenue.is_checked) === 1;
+      const showVenueLine = Number(state.roleId) === 1;
+    
+      const venueLineHtml = showVenueLine ? `
+        <div class="field">
+          <div class="label">场地:</div>
+          <div class="value venue-name">${escapeHtml(venueText)}</div>
+        </div>
+      ` : '';
+      const item = document.createElement('div');
+      item.className = 'revenue-item';
+      item.innerHTML = `
+        ${venueLineHtml}
+        <div class="field">
+          <div class="label">日期:</div>
+          <div class="value">${escapeHtml(revenue.date || '')}</div>
+        </div>
+        <div class="field">
+          <div class="label">日期:</div>
+          <div class="value">${escapeHtml(revenue.date || '')}</div>
+        </div>
+        <div class="field">
+          <div class="label">总收入:</div>
+          <div class="value total-revenue">${escapeHtml(revenue.total_revenue || '0.00')} 元</div>
+        </div>
+        <div class="field">
+          <div class="label">创建时间:</div>
+          <div class="value">${escapeHtml(revenue.created_at || '')}</div>
+        </div>
+        <div class="field">
+          <div class="label">更新时间:</div>
+          <div class="value">${escapeHtml(revenue.updated_at || '')}</div>
+        </div>
+        <div class="field">
+          <div class="label">核对状态:</div>
+          <div class="value">
+            ${isChecked
+              ? '<span class="checked">已核对</span>'
+              : `<button class="check-button" data-id="${escapeHtml(revenue.id)}">核对</button>`}
+          </div>
+        </div>
+      `;
+
+      revenueDetails.appendChild(item);
+    });
+  }
+
+  function renderPager() {
+    const totalPages = Math.max(1, Number(state.totalPages || 1));
+    const page = Math.max(1, Number(state.page || 1));
+
+    $('summaryText').textContent = `共 ${state.total} 条，每页 ${state.limit} 条`;
+    $('pageInfo').textContent = `第 ${page} / ${totalPages} 页`;
+    $('jumpPage').max = totalPages;
+    $('jumpPage').value = page;
+
+    $('btnFirst').disabled = page <= 1 || state.loading;
+    $('btnPrev').disabled = page <= 1 || state.loading;
+    $('btnNext').disabled = page >= totalPages || state.loading;
+    $('btnLast').disabled = page >= totalPages || state.loading;
+    $('btnJump').disabled = state.loading;
+  }
+
+  function loadRevenueData(page) {
+    if (state.loading) return;
+
+    state.loading = true;
+    state.reqSeq += 1;
+    const reqSeq = state.reqSeq;
+
+    showLoading(true);
+    renderPager();
+
+    xhrGetJson(buildListUrl(page), function (res, status) {
+      if (reqSeq !== state.reqSeq) return;
+
+      state.loading = false;
+      showLoading(false);
+
+      if (status !== 200) {
+        revenueDetails.innerHTML = `<div class="empty">请求失败：HTTP ${status}</div>`;
+        renderPager();
+        return;
+      }
+
+      if (res.code !== 0) {
+        revenueDetails.innerHTML = `<div class="empty">${escapeHtml(res.msg || '加载失败')}</div>`;
+        renderPager();
+        return;
+      }
+
+      state.roleId = Number(res.role_id || 0);
+      state.page = Number(res.page || page || 1);
+      state.limit = Number(res.limit || state.limit || 31);
+      state.total = Number(res.count || 0);
+      state.totalPages = Number(res.total_pages || 1);
+
+      applyRoleUI();
+      renderRows(res.data || []);
+      renderPager();
+    });
+  }
+
+  function showToast(msg) {
+    const alertEl = $('custom-alert');
+    alertEl.textContent = msg || '操作成功';
+    alertEl.style.display = 'block';
+    setTimeout(() => {
+      alertEl.style.display = 'none';
+    }, 1800);
+  }
+
+  function checkRevenue(id, button) {
+    if (!id || !button) return;
+    button.disabled = true;
+    button.textContent = '处理中...';
+
+    const body = `id=${encodeURIComponent(id)}`;
+    xhrPostFormJson(CHECK_URL, body, function (res, status) {
+      if (status === 200 && res.code === 0) {
+        showToast('核对成功！');
+        loadRevenueData(state.page);
+        return;
+      }
+
+      button.disabled = false;
+      button.textContent = '核对';
+
+      if (res.code === 1002) {
+        alert(res.msg || '需要先绑定提现账号才可以核对');
+      } else {
+        alert(res.msg || '核对失败，请稍后再试');
+      }
+    });
+  }
+
+  // 事件代理：核对按钮
+  revenueDetails.addEventListener('click', function (e) {
+    const btn = e.target.closest('.check-button');
+    if (!btn) return;
+    checkRevenue(btn.dataset.id, btn);
+  });
+
+  venueSelect.addEventListener('change', function () {
+    state.venueId = this.value || '';
+    loadRevenueData(1);
+  });
+
+  $('btnResetVenue').addEventListener('click', function () {
+    venueSelect.value = '';
+    state.venueId = '';
+    loadRevenueData(1);
+  });
+
+  $('btnFirst').addEventListener('click', function () {
+    if (state.page > 1) loadRevenueData(1);
+  });
+
+  $('btnPrev').addEventListener('click', function () {
+    if (state.page > 1) loadRevenueData(state.page - 1);
+  });
+
+  $('btnNext').addEventListener('click', function () {
+    if (state.page < state.totalPages) loadRevenueData(state.page + 1);
+  });
+
+  $('btnLast').addEventListener('click', function () {
+    if (state.page < state.totalPages) loadRevenueData(state.totalPages);
+  });
+
+  $('btnJump').addEventListener('click', function () {
+    let p = parseInt($('jumpPage').value, 10);
+    if (!Number.isFinite(p) || p < 1) p = 1;
+    if (p > state.totalPages) p = state.totalPages;
+    loadRevenueData(p);
+  });
+
+  $('jumpPage').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('btnJump').click();
+  });
+
+  // 初始化：不再用手机下滑无限加载，改成明确分页
+  loadRevenueData(1);
+})();
+</script>
 </body>
-
 </html>

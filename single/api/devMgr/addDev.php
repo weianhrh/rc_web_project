@@ -191,7 +191,59 @@ function resolveImageDeviceSerialForAdd(Database $database, string $inputValue):
         'room_id' => null
     ];
 }
+/**
+ * 根据图像设备序列号判断图传类型
+ * vehicles.image_transmission_type：0=unknown; 1=zego; 2=yl; 3=ch; 4=xm
+ * 规则优先级：YL/ch 前缀 > ZEGO 数字房间号 > XM 字母数字混合乱码
+ */
+function detectImageTransmissionTypeForAdd(string $rawImage, array $resolved = []): int
+{
+    $rawImage = trim($rawImage);
 
+    // 如果匹配到了 device_information，优先用 room_id 判断
+    // 因为 final/resolved_id 只是数据库 id，不一定是真正图传房间号
+    $roomId = isset($resolved['room_id']) ? trim((string)$resolved['room_id']) : '';
+
+    if ($roomId !== '') {
+        $value = $roomId;
+    } else {
+        $value = $rawImage;
+    }
+
+    if ($value === '') {
+        return 0;
+    }
+
+    if (preg_match('/^YL/i', $value)) {
+        return 2; // yl
+    }
+
+    if (preg_match('/^ch/i', $value)) {
+        return 3; // ch
+    }
+
+    if (preg_match('/^[0-9]+$/', $value) && strlen($value) < 8) {
+        return 1; // zego
+    }
+
+    if (preg_match('/[A-Za-z]/', $value) && preg_match('/[0-9]/', $value)) {
+        return 4; // xm
+    }
+
+    return 0;
+}
+
+function imageTransmissionTypeNameForAdd(int $type): string
+{
+    $map = [
+        0 => 'unknown',
+        1 => 'zego',
+        2 => 'yl',
+        3 => 'ch',
+        4 => 'xm',
+    ];
+    return $map[$type] ?? 'unknown';
+}
 /**
  * 提取重复设备序列号
  */
@@ -293,6 +345,7 @@ foreach ($rows as $row) {
     $rawRtc   = $row['rtc_user_id_raw'];
 
     $resolved = resolveImageDeviceSerialForAdd($database, $rawImage);
+    $imageTransmissionType = detectImageTransmissionTypeForAdd($rawImage, $resolved);
 
     if ($rawRtc !== '') {
         if ($rawImage === '') {
@@ -323,7 +376,9 @@ foreach ($rows as $row) {
         'image_device_serial_raw' => $rawImage,
         'image_device_serial_final' => $resolved['final'],
         'rtc_user_id_raw' => $rawRtc,
-        'resolved_image' => $resolved
+        'resolved_image' => $resolved,
+        'image_transmission_type' => $imageTransmissionType,
+        'image_transmission_type_name' => imageTransmissionTypeNameForAdd($imageTransmissionType),
     ];
 
     $resolvedImageDetails[] = [
@@ -356,8 +411,8 @@ try {
     // vehicles
     $vehiclesStmt = $database->prepare("
         INSERT INTO vehicles
-        (serial_number, name, sharing_status, share_name, photo_url, bind_site, uid, image_device_serial)
-        VALUES (?,?,?,?,?,?,?,?)
+        (serial_number, name, sharing_status, share_name, photo_url, bind_site, uid, image_device_serial, image_transmission_type)
+        VALUES (?,?,?,?,?,?,?,?,?)
     ");
     if (!$vehiclesStmt) {
         throw new Exception('vehicles 插入语句准备失败');
@@ -391,10 +446,10 @@ try {
         $currentName = $name . ($startIndex + $index);
         $imageDeviceSerial = $row['image_device_serial_final'];
         $rtcUserId = $row['rtc_user_id_raw'];
-
+        $imageTransmissionType = (int)$row['image_transmission_type'];
         // vehicles
         $vehiclesStmt->bind_param(
-            "sssssiis",
+            "sssssiisi",
             $serialNumber,
             $currentName,
             $sharing_status,
@@ -402,7 +457,8 @@ try {
             $photo_url,
             $bind_site,
             $uid,
-            $imageDeviceSerial
+            $imageDeviceSerial,
+            $imageTransmissionType
         );
 
         if (!$vehiclesStmt->execute()) {

@@ -983,6 +983,21 @@ body {
     transform: translateY(-1px);
 }
 
+/* 用户上麦：可点击切换 */
+.venue-pill-mic-switch {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.venue-pill-mic-switch:hover {
+    filter: brightness(0.96);
+    transform: translateY(-1px);
+}
+
 .venue-pill-scene-indoor {
     background: rgba(16, 185, 129, 0.12);
     color: #059669;
@@ -1749,9 +1764,12 @@ ${isLive ? `
         高消费：${isSpendingAlert ? '已开启' : '未开启'}
     </span>
 
-    <span class="venue-pill venue-pill-mic ${isUserMicEnabled ? 'venue-pill-green' : 'venue-pill-red'}">
-        用户上麦：${isUserMicEnabled ? '已开启' : '已关闭'}
-    </span>
+<button type="button"
+    class="venue-pill venue-pill-mic venue-pill-mic-switch ${isUserMicEnabled ? 'venue-pill-green' : 'venue-pill-red'}"
+    onclick="setVenueUserMicEnabled(${venue.id}, ${isUserMicEnabled ? 0 : 1})"
+    title="点击${isUserMicEnabled ? '关闭' : '开启'}用户上麦">
+    用户上麦：${isUserMicEnabled ? '已开启' : '已关闭'}
+</button>
 <span class="venue-pill venue-pill-voice-room ${isVoiceRoomBanned ? 'venue-pill-red' : 'venue-pill-green'}">
     语音房：${isVoiceRoomBanned ? '已封禁' : '正常'}
 </span>
@@ -1937,7 +1955,45 @@ window.setVenueSoundDisabled = function (venueId, isDisabledSound) {
         alert('请求异常');
     });
 };
+window.setVenueUserMicEnabled = function (venueId, isUserMicEnabled) {
+    isUserMicEnabled = Number(isUserMicEnabled);
 
+    if (![0, 1].includes(isUserMicEnabled)) {
+        alert('用户上麦参数错误');
+        return;
+    }
+
+    const actionText = isUserMicEnabled === 1 ? '开启该场地用户上麦' : '关闭该场地用户上麦';
+
+    if (!confirm(`确定要${actionText}吗？`)) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'set_user_mic_enabled');
+    formData.append('venue_id', venueId);
+    formData.append('is_user_mic_enabled', isUserMicEnabled);
+
+    fetch('https://open.rcwulian.cn/api/venue/VenuesManagement.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.code === 0 || data.code === 200) {
+            alert(data.msg || '用户上麦状态修改成功');
+            loadVenues();
+        } else {
+            alert(data.msg || '用户上麦状态修改失败');
+            loadVenues();
+        }
+    })
+    .catch(err => {
+        console.error('设置用户上麦失败:', err);
+        alert('请求异常');
+        loadVenues();
+    });
+};
 window.setVoiceRoomSceneType = function (venueId, sceneType) {
     sceneType = Number(sceneType);
 

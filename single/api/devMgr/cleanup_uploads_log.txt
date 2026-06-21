@@ -60,3 +60,8 @@
 [2026-06-08 00:00:02] 已删除：/www/wwwroot/open.rcwulian.cn/single/api/devMgr/uploads/20260530
 [2026-06-08 00:00:02] 已删除：/www/wwwroot/open.rcwulian.cn/single/api/devMgr/uploads/20260601
 [2026-06-08 00:00:02] 完成：deleted=5 skipped=4 failed=0 thresholdYmd=20260601
+[2026-06-15 00:00:02] 已删除：/www/wwwroot/open.rcwulian.cn/single/api/devMgr/uploads/20260602
+[2026-06-15 00:00:02] 已删除：/www/wwwroot/open.rcwulian.cn/single/api/devMgr/uploads/20260603
+[2026-06-15 00:00:02] 已删除：/www/wwwroot/open.rcwulian.cn/single/api/devMgr/uploads/20260604
+[2026-06-15 00:00:02] 已删除：/www/wwwroot/open.rcwulian.cn/single/api/devMgr/uploads/20260606
+[2026-06-15 00:00:02] 完成：deleted=4 skipped=3 failed=0 thresholdYmd=20260608

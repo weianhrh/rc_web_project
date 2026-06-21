@@ -27,6 +27,42 @@
     /* 工具栏 */
     .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
     .toolbar .input { flex: 1 1 240px; min-width: 200px; }
+    .page-tabs {
+  display: flex;
+  gap: 10px;
+  margin: -6px 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.page-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: var(--secondary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.page-tabs a:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(91, 140, 255, 0.06);
+}
+
+.page-tabs a.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
     .venue-filter { width: 220px; }
 
     .input { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; transition: var(--transition); background: #fff; }
@@ -137,7 +173,10 @@
   <div class="container">
     <div class="card">
       <div class="card-title">场地用户拉黑管理</div>
-
+<div class="page-tabs">
+  <a href="black_user_gmt.html" class="active">拉黑用户</a>
+  <a href="venue_mute_records.html">禁言用户</a>
+</div>
       <div class="toolbar">
         <input id="kw" class="input" placeholder="按 UID 精确 / 按原因模糊搜索…" />
         <!-- 仅 role_id == 1 可见：场地筛选 -->

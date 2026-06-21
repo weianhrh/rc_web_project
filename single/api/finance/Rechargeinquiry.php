@@ -141,10 +141,20 @@ try {
     }
     $stmt->close();
 
+    // 如果是按单个 uid 查询，即使这个用户没有 RechargeOrders，也要加入统计
+    // 这样 iOS 只有苹果内购金币的用户，也能查到 gold_balance_changes
+    if ($isSingleUser && $singleUid > 0 && !in_array($singleUid, $userIds, true)) {
+        $userIds[] = $singleUid;
+    }
+    
+    $userIds = array_values(array_unique($userIds));
+
+
     // 3) 为每个用户查询实际消费金额
     $userConsumptions = [];
     $userGiftConsumptions = [];        // 礼物消费，gift_orders 金币 / 10
-    $userWaitingConsumptions = []; // 新增：等待实消金额
+    $userWaitingConsumptions = [];     // 等待实消金额
+    $userIapGoldAmounts = [];          // 苹果内购金币折算金额，gold_balance_changes 金币 / 10
     
     if (!empty($userIds)) {
         $placeholders = implode(',', array_fill(0, count($userIds), '?'));
@@ -248,6 +258,38 @@ try {
             $userWaitingConsumptions[intval($row['uid'])] = floatval($row['waiting_consumption'] ?? 0);
         }
         $reservationsStmt->close();
+        // 查询苹果内购金币来源：gold_balance_changes 里的 iap_order
+        // 注意：这里按当前页面口径，金币 / 10 折算金额
+        $iapGoldSql = "SELECT 
+            uid,
+            SUM(IFNULL(change_amount, 0)) / 10 AS iap_gold_amount
+        FROM gold_balance_changes
+        WHERE uid IN ({$placeholders})
+          AND change_type = 'recharge'
+          AND biz_type = 'iap_order'
+        GROUP BY uid";
+        
+        $iapGoldStmt = $database->prepare($iapGoldSql);
+        if (!$iapGoldStmt) {
+            throw new Exception("苹果内购金币统计SQL prepare 失败");
+        }
+        
+        $iapGoldStmt->bind_param($inTypes, ...$userIds);
+        
+        if (!$iapGoldStmt->execute()) {
+            throw new Exception("苹果内购金币统计SQL execute 失败");
+        }
+        
+        $iapGoldRes = $iapGoldStmt->get_result();
+        if ($iapGoldRes === false) {
+            throw new Exception("苹果内购金币统计SQL get_result 失败");
+        }
+        
+        while ($row = $iapGoldRes->fetch_assoc()) {
+            $userIapGoldAmounts[intval($row['uid'])] = floatval($row['iap_gold_amount'] ?? 0);
+        }
+        
+        $iapGoldStmt->close();
     }
 
     // 4) 查询单个用户的余额（仅当查询单个用户时）
@@ -283,8 +325,14 @@ try {
         }
         $walletStmt->close();
 
-        // 修改：计算余额校验结果：充值金额 = (消费金额 + 等待实消金额) + 余额
-        $totalRecharge = floatval($sumRow['paid_total'] ?? 0);
+        // RechargeOrders 支付成功金额
+        $rechargeOrderPaidTotal = floatval($sumRow['paid_total'] ?? 0);
+        
+        // 苹果内购金币折算金额
+        $singleIapGoldAmount = $userIapGoldAmounts[$singleUid] ?? 0;
+        
+        // 核对用充值来源 = RechargeOrders支付成功 + 苹果内购金币折算
+        $totalRecharge = $rechargeOrderPaidTotal + $singleIapGoldAmount;
         
         // 订单消费
         $singleOrderConsumption = $userConsumptions[$singleUid] ?? 0;
@@ -352,13 +400,21 @@ try {
     $totalConsumptionAllUsers      = $totalOrderConsumptionAllUsers + $totalGiftConsumptionAllUsers;
     
     $totalWaitingConsumptionAllUsers = array_sum($userWaitingConsumptions);
-
+    
+    $rechargeOrderPaidTotalAll = floatval($sumRow['paid_total'] ?? 0);
+    $totalIapGoldAmountAllUsers = array_sum($userIapGoldAmounts);
+    $totalPaidSourceAll = $rechargeOrderPaidTotalAll + $totalIapGoldAmountAllUsers;
     // 7) 构建返回结果
     $responseData = [
         'code' => 0,
         'msg' => '查询成功',
         'summary' => [
-            'paid_total' => floatval($sumRow['paid_total'] ?? 0),
+            // 核对用充值来源合计：RechargeOrders + 苹果内购金币折算
+            'paid_total' => floatval($totalPaidSourceAll),
+            
+            // 单独返回明细
+            'recharge_order_paid_total' => floatval($rechargeOrderPaidTotalAll),
+            'iap_gold_amount' => floatval($totalIapGoldAmountAllUsers),
             'paid_count' => intval($sumRow['paid_count'] ?? 0),
             'pending_total' => floatval($sumRow['pending_total'] ?? 0),
             'pending_count' => intval($sumRow['pending_count'] ?? 0),
@@ -382,7 +438,9 @@ try {
 
         // 在summary中添加计算公式详情
         $responseData['summary']['calculation'] = [
-            'total_recharge' => floatval($sumRow['paid_total'] ?? 0),
+            'total_recharge' => floatval($totalRecharge),
+            'recharge_order_paid_total' => floatval($rechargeOrderPaidTotal),
+            'iap_gold_amount' => floatval($singleIapGoldAmount),
         
             // 总消费 = 订单消费 + 礼物消费
             'total_consumption' => floatval($singleConsumption),
@@ -400,7 +458,7 @@ try {
             // 当前余额合计
             'user_wallet' => floatval($userTotalBalanceAmount),
         
-            'formula' => "total_recharge = total_consumption + waiting_consumption + wallet_balance + gold_balance/10"
+            'formula' => "total_recharge = recharge_order_paid_total + iap_gold_amount = total_consumption + waiting_consumption + wallet_balance + gold_balance/10"
         ];
     }
 

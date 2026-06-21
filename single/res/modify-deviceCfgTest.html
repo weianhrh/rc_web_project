@@ -387,6 +387,15 @@
                         <option value="1">主播音（语音房间）</option>
                     </select>
                 </div>
+                <div class="form-field radio-group" id="achievement-field" style="display:none;">
+                    <label>驾驶页成绩</label>
+                
+                    <input type="radio" id="is_show_achievements_true" name="is_show_achievements" value="1">
+                    <label for="is_show_achievements_true">展示</label>
+                
+                    <input type="radio" id="is_show_achievements_false" name="is_show_achievements" value="0">
+                    <label for="is_show_achievements_false">不展示</label>
+                </div>
                 <div class="form-field" id="driver_type-field" style="display:none;">
                     <label for="driver_type">操作方式</label>
                     <select id="driver_type" name="driver_type">
@@ -477,7 +486,8 @@ if (group) group.style.display = canEditShoot ? 'block' : 'none';
   });
 
   // ✅ 仍然只有管理员可见
-const adminOnlyIds = ['throttle-mid-field', 'fw-update-row', 'audio-source-field'];
+// const adminOnlyIds = ['throttle-mid-field', 'fw-update-row', 'audio-source-field'];
+const adminOnlyIds = ['throttle-mid-field', 'fw-update-row', 'audio-source-field', 'achievement-field'];
 
 adminOnlyIds.forEach(id => {
   const el = document.getElementById(id);
@@ -631,6 +641,14 @@ window.addEventListener('DOMContentLoaded',  async function () {
     const audioSourceEl = document.getElementById('audio_source_type');
     if (audioSourceEl) {
       audioSourceEl.value = String(DEVICE_DATA.audio_source_type ?? 0) === '1' ? '1' : '0';
+    }
+    const achievementTrueEl = document.getElementById('is_show_achievements_true');
+    const achievementFalseEl = document.getElementById('is_show_achievements_false');
+    
+    if (achievementTrueEl && achievementFalseEl) {
+      const isShowAchievements = Number(DEVICE_DATA.is_show_achievements || 0) === 1;
+      achievementTrueEl.checked = isShowAchievements;
+      achievementFalseEl.checked = !isShowAchievements;
     }
     document.getElementById('direction_mid_range').value = ((DEVICE_DATA.direction_mid-1000)/1000)*100;
     document.getElementById('direction_mid').value = DEVICE_DATA.direction_mid;

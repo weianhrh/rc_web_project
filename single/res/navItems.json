@@ -8,11 +8,12 @@
         "badgeId": "approval-count"
     },
     {
-        "id": "Performance-ranking",
-        "title": "业绩排行",
-        "icon": "fas fa-trophy",
-        "page": "top",
-        "href": "top.html"
+        "id": "item_1781508625723",
+        "label": "邀请生成",
+        "title": "邀请生成",
+        "href": "user_invite_codes.html",
+        "page": "user_invite_codes.html",
+        "icon": "fas fa-qrcode"
     },
     {
         "id": "xls",

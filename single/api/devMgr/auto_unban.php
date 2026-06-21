@@ -621,4 +621,110 @@ try {
     logMessage("❌ MySQL补扫场地失败: " . $e->getMessage());
 }
 
+
+
+// =============================
+// ⑥ 扫描 MySQL —— 自动删除到期禁言记录
+// 作用：banned_users.end_time 到期后，直接删除这条禁言记录
+// 注意：end_time 为 NULL 的永久禁言不会删除
+// =============================
+
+try {
+    $expiredMuteRow = fetchOne(
+        $conn,
+        "SELECT COUNT(*) AS total
+         FROM banned_users
+         WHERE end_time IS NOT NULL
+           AND end_time <= NOW()"
+    );
+
+    $expiredMuteTotal = intval($expiredMuteRow['total'] ?? 0);
+
+    if ($expiredMuteTotal <= 0) {
+        logMessage("ℹ️ 没有到期禁言记录需要清理");
+    } else {
+        $deletedRows = executeSql(
+            $conn,
+            "DELETE FROM banned_users
+             WHERE end_time IS NOT NULL
+               AND end_time <= NOW()"
+        );
+
+        logMessage("✅ 自动删除到期禁言记录成功: {$deletedRows} 条，检测到期记录 {$expiredMuteTotal} 条");
+    }
+
+} catch (Exception $e) {
+    logMessage("❌ 自动删除到期禁言记录失败: " . $e->getMessage());
+}
+
+// =============================
+// ⑦ 扫描 MySQL —— 自动恢复旧逻辑到期禁言
+// 作用：mute_user_logs.end_time 到期后，把 users.is_mute 改回 0，并删除这条临时日志
+// 注意：这是修复旧逻辑禁言的临时措施
+// =============================
+
+try {
+    $expiredOldMuteUsers = fetchAllRows(
+        $conn,
+        "SELECT 
+            id,
+            admin_uid,
+            banned_uid,
+            start_time,
+            end_time
+         FROM mute_user_logs
+         WHERE end_time IS NOT NULL
+           AND end_time <= NOW()
+         ORDER BY id ASC"
+    );
+
+    if (empty($expiredOldMuteUsers)) {
+        logMessage("ℹ️ 没有到期的旧逻辑禁言记录需要恢复");
+    } else {
+        foreach ($expiredOldMuteUsers as $row) {
+            $logId = (int)$row['id'];
+            $bannedUid = (int)$row['banned_uid'];
+
+            if ($logId <= 0 || $bannedUid <= 0) {
+                continue;
+            }
+
+            $conn->begin_transaction();
+
+            try {
+                // 恢复用户禁言状态
+                executeSql(
+                    $conn,
+                    "UPDATE users 
+                     SET is_mute = 0 
+                     WHERE uid = ?",
+                    "i",
+                    [$bannedUid]
+                );
+
+                // 删除这条临时禁言日志
+                executeSql(
+                    $conn,
+                    "DELETE FROM mute_user_logs 
+                     WHERE id = ?",
+                    "i",
+                    [$logId]
+                );
+
+                $conn->commit();
+
+                logMessage("✅ 旧逻辑禁言已自动恢复: banned_uid={$bannedUid}, log_id={$logId}, end_time={$row['end_time']}");
+
+            } catch (Exception $e) {
+                $conn->rollback();
+
+                logMessage("❌ 旧逻辑禁言恢复失败: banned_uid={$bannedUid}, log_id={$logId}, err=" . $e->getMessage());
+            }
+        }
+    }
+
+} catch (Exception $e) {
+    logMessage("❌ 扫描 mute_user_logs 到期禁言失败: " . $e->getMessage());
+}
+
 logMessage("========== 自动解封任务结束 ==========");

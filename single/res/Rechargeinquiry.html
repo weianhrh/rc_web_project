@@ -503,7 +503,8 @@ function refreshSummaryActive(){
         const walletBalance = calculation.wallet_balance ?? summaryData.wallet_balance ?? 0;
         const goldBalanceAmount = calculation.gold_balance_amount ?? summaryData.gold_balance_amount ?? 0;
         const userWallet = summaryData.user_wallet ?? (Number(walletBalance) + Number(goldBalanceAmount));
-        
+        const rechargeOrderPaidTotal = calculation.recharge_order_paid_total ?? summaryData.recharge_order_paid_total ?? 0;
+        const iapGoldAmount = calculation.iap_gold_amount ?? summaryData.iap_gold_amount ?? 0;
         const orderConsumption = calculation.order_consumption ?? summaryData.order_consumption ?? 0;
         const giftConsumption = calculation.gift_consumption ?? summaryData.gift_consumption ?? 0;
         const totalConsumption = summaryData.total_consumption ?? (Number(orderConsumption) + Number(giftConsumption));
@@ -542,6 +543,14 @@ function refreshSummaryActive(){
 <div class="order-item">
   <span class="item-label">礼物消费</span>
   <span class="item-value">${yuan(giftConsumption)}</span>
+</div>
+<div class="order-item">
+  <span class="item-label">RechargeOrders支付</span>
+  <span class="item-value">${yuan(rechargeOrderPaidTotal)}</span>
+</div>
+<div class="order-item">
+  <span class="item-label">苹果内购金币折算</span>
+  <span class="item-value">${yuan(iapGoldAmount)}</span>
 </div>
           <div class="order-item">
             <span class="item-label">核对状态</span>

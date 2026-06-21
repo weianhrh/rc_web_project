@@ -66,7 +66,7 @@ $page     = isset($_GET['page']) ? (int)$_GET['page'] : 1;   // 当前页码，�
 $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20; // 每页显示条数，默认为20
 $invitation_code = $_GET['invitation_code'] ?? '';
 $is_streamer     = $_GET['is_streamer'] ?? '';
-
+$streamer_venue = trim($_GET['streamer_venue'] ?? '');
 // 计算分页的起始位置
 $offset = ($page - 1) * $limit;
 
@@ -106,41 +106,60 @@ if (!in_array($role_id, [1, 2], true)) {
 
 // 条件查询
 $params = [];
-if ($id) {
-    $sql .= " AND uid = ?";
+$filterSql = '';
+
+if ($id !== '') {
+    $filterSql .= " AND uid = ?";
     $params[] = $id;
 }
-if ($username) {
-    $sql .= " AND nickname LIKE ?";
+
+if ($username !== '') {
+    $filterSql .= " AND nickname LIKE ?";
     $params[] = "%$username%";
 }
-if ($phone) {
-    $sql .= " AND phone_number LIKE ?";
+
+if ($phone !== '') {
+    $filterSql .= " AND phone_number LIKE ?";
     $params[] = "%$phone%";
 }
+
 if ($invitation_code !== '') {
-  $sql .= " AND invitation_code LIKE ?";
-  $params[] = "%$invitation_code%";
+    $filterSql .= " AND invitation_code LIKE ?";
+    $params[] = "%$invitation_code%";
 }
 
 if ($is_streamer !== '') {
     if ($is_streamer === '1,2') {
-        $sql .= " AND IFNULL(is_streamer, 0) IN (1,2)";
+        $filterSql .= " AND IFNULL(is_streamer, 0) IN (1,2)";
     } elseif ($is_streamer === '0' || $is_streamer === '1' || $is_streamer === '2') {
-        $sql .= " AND IFNULL(is_streamer, 0) = ?";
-        $params[] = $is_streamer;
+        $filterSql .= " AND IFNULL(is_streamer, 0) = ?";
+        $params[] = (int)$is_streamer;
     }
 }
-// 添加排序，根据 created_at 降序
-$sql .= " ORDER BY created_at DESC";
 
-// 添加分页
-$sql   .= " LIMIT ?, ?";
+if ($streamer_venue !== '' && ctype_digit($streamer_venue)) {
+    $filterSql .= " AND streamer_venue = ?";
+    $params[] = (int)$streamer_venue;
+}
+
+// 拼接筛选条件
+$sql .= $filterSql;
+
+// 先准备 count，注意要在 LIMIT 参数加入前复制 params
+$countSql = "SELECT COUNT(*) AS count FROM users WHERE 1=1" . $filterSql;
+$countParams = $params;
+
+// 添加排序和分页
+$sql .= " ORDER BY created_at DESC LIMIT ?, ?";
 $params[] = $offset;
 $params[] = $limit;
 
-// 执行查询
+// 执行列表查询
 $result = $database->query($sql, $params);
+
+// 执行总数查询
+$countResult = $database->query($countSql, $countParams);
+$totalCount  = $countResult ? $countResult[0]['count'] : 0;
 
 // 为每个用户查询能量（不区分管理员 / 非管理员，统一加上 energy 字段）
 if ($result) {
