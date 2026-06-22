@@ -1432,7 +1432,7 @@ function goToConfig(btn) {
   }
     sessionStorage.setItem('scrollY', window.scrollY);
 
-    const url = `modify-deviceCfgTest.html?serial_number=${device.serial_number}&name=${encodeURIComponent(device.name)}&image_device_serial=${device.image_device_serial}&bk_image_device_serial=${device.bk_image_device_serial}&sharing_status=${encodeURIComponent(device.sharing_status)}`;
+    const url = `modify-deviceCfgTest_safe_submit.html?serial_number=${device.serial_number}&name=${encodeURIComponent(device.name)}&image_device_serial=${device.image_device_serial}&bk_image_device_serial=${device.bk_image_device_serial}&sharing_status=${encodeURIComponent(device.sharing_status)}`;
     window.location.href = url;
 }
 
