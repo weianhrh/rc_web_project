@@ -19,7 +19,12 @@ if (!$user || !$user['role_id']) {
     exit;
 }
 
-$venue_id = $_GET['venue_id'] ?? $user['venue_id'];  // 绑定的场地ID
+// $venue_id = $_GET['venue_id'] ?? $user['venue_id'];  // 绑定的场地ID
+if ((int)$user['role_id'] === 1) {
+    $venue_id = isset($_GET['venue_id']) ? (int)$_GET['venue_id'] : (int)$user['venue_id'];
+} else {
+    $venue_id = (int)$user['venue_id'];
+}
 
 header('Content-Type: application/json');
 $withdraw_type = $_GET['withdraw_type'] ?? $_POST['withdraw_type'] ?? 'account';

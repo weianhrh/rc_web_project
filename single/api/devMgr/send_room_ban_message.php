@@ -205,9 +205,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = getInputData();
 checkInternalKey($input);
 
-if (ZEGO_SERVER_SECRET === '' || ZEGO_SERVER_SECRET === '5bfaa3399946c98cc6792dd19f9a08ec') {
-    jsonOut(500, 'ZEGO_SERVER_SECRET未配置');
-}
+// if (ZEGO_SERVER_SECRET === '' || ZEGO_SERVER_SECRET === '5bfaa3399946c98cc6792dd19f9a08ec') {
+//     jsonOut(500, 'ZEGO_SERVER_SECRET未配置');
+// }
 
 $roomId = trim((string)($input['room_id'] ?? ''));
 

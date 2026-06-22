@@ -12,7 +12,7 @@ if (!$session_token) {
     exit;
 }
 
-$sql = "SELECT role_id, venue_id FROM admin_users WHERE session_token = ?";
+$sql = "SELECT uid, role_id, venue_id FROM admin_users WHERE session_token = ?";
 $user = $database->query($sql, [$session_token]);
 
 if (!$user) {
@@ -23,7 +23,7 @@ if (!$user) {
 
 $role_id = $user[0]['role_id'];
 $venue_id = $user[0]['venue_id'];
-$operator_uid = $user['uid']; // 可按需赋值
+$operator_uid = $user[0]['uid']; // 可按需赋值
 if (in_array($role_id, [1, 2], true)&& isset($_POST['id']) && is_numeric($_POST['id'])) {
     $venue_id = intval($_POST['id']); // 超管可指定上传场地
 }

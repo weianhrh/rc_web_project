@@ -10,7 +10,7 @@ if (!$session_token) {
     exit;
 }
 
-$user = $database->query("SELECT role_id FROM admin_users WHERE session_token = ?", [$session_token]);
+$user = $database->query("SELECT uid,role_id FROM admin_users WHERE session_token = ?", [$session_token]);
 if (!$user || !in_array((int)$user[0]['role_id'], [1, 2], true)) {
     echo json_encode(['code' => 1002, 'msg' => '权限不足']);
     exit;
@@ -18,7 +18,8 @@ if (!$user || !in_array((int)$user[0]['role_id'], [1, 2], true)) {
 
 $venue_id = $_POST['venue_id'] ?? null;
 $reason = $_POST['reason'] ?? '无原因';
-$reviewer_uid =  $user['uid'];
+$reviewer_uid =  $user[0]['uid'];
+echo "$reviewer_uid";
 $reviewed_at = date('y-m-d H:i:s'); 
 if (!$venue_id) {
     echo json_encode(['code' => 1003, 'msg' => '缺少场地ID']);
@@ -30,7 +31,7 @@ if (!$venue_id) {
 $update_sql = "UPDATE venue_image_reviews SET status = 'rejected', reason = ?, reviewer_uid = ?, reviewed_at = ? WHERE venue_id = ? AND status = 'pending'";
 $result = $database->query($update_sql, [$reason, $reviewer_uid, $reviewed_at, $venue_id], true);
 
-if ($res > 0) {
+if ($result > 0) {
     echo json_encode(['code' => 0, 'msg' => '图片已拒绝']);
 } else {
     echo json_encode(['code' => 1004, 'msg' => '更新失败']);

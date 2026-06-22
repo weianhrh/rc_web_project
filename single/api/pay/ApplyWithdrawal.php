@@ -49,6 +49,7 @@ if ($amount <= 0) {
 }
 
 // 图传费用扣减参数
+/*
 $unsettled_image_fee_total = isset($_POST['unsettled_image_transmission_fee'])
     ? (float)$_POST['unsettled_image_transmission_fee']
     : 0.0;
@@ -60,6 +61,7 @@ if (!empty($_POST['unsettled_image_ids'])) {
         $unsettled_image_ids = array_values(array_filter(array_map('intval', $tmpIds)));
     }
 }
+*/
 
 // 场地评级对应提现比例 / 技术服务费
 // A级：提现比例80%，技术服务费20%
@@ -275,7 +277,7 @@ $totalLockAmount = (float)($lockResult[0]['total_lock_amount'] ?? 0);
 // 计算可提现余额
 $available_balance = max(0.0, $account_balance - $frozen_amount - $totalRefundToDeduct - $totalLockAmount);
 logMessage_frozen("场地ID: {$venue_id}, 账户余额: {$account_balance}, 冻结金额: {$frozen_amount}, 未减去的退款金额: {$totalRefundToDeduct}, 锁定金额: {$totalLockAmount}, 基础可提现余额: {$available_balance}");
-
+/*
 // 如果账户余额等于退款金额，直接从账户余额中扣除退款金额
 if ($account_balance === $totalRefundToDeduct) {
     $account_balance -= $totalRefundToDeduct; // 账户余额扣除退款金额
@@ -291,6 +293,7 @@ if ($account_balance === $totalRefundToDeduct) {
         logMessage_frozen("已更新退款记录ID: {$record['id']} 为已减去状态。");
     }
 }
+*/
 
 // 进行提现操作
 // $amount = isset($_POST['amount']) ? (float)$_POST['amount'] : 0.0;
@@ -351,6 +354,73 @@ logMessage_frozen(
 );
 try {
     $database->beginTransaction();
+
+    // ✅ 最小并发锁：事务内重新锁定资金行，避免并发提现读取旧余额
+    $fundsLockRows = $database->query("
+        SELECT account_balance
+        FROM venue_funds
+        WHERE venue_id = ?
+        FOR UPDATE
+    ", [$venue_id]);
+
+    if (empty($fundsLockRows)) {
+        throw new Exception('资金账号不存在');
+    }
+
+    // 覆盖事务外读取的旧余额
+    $account_balance = (float)$fundsLockRows[0]['account_balance'];
+    // ✅ 事务内重新锁定退款记录，避免并发重复扣同一批退款
+    $refundSql = "
+        SELECT id, refund_amount
+        FROM refund_records
+        WHERE reservation_id = ?
+          AND is_reduced != 1
+        FOR UPDATE
+    ";
+    $refundRecords = $database->query($refundSql, [$venue_id]);
+
+    $totalRefundToDeduct = 0.0;
+    foreach ($refundRecords as $record) {
+        $totalRefundToDeduct += (float)$record['refund_amount'];
+    }
+
+    // ✅ 事务内重新读取并锁定待复核订单金额
+    $lockSql = "
+        SELECT id, lock_amount
+        FROM order_lock_records
+        WHERE venue_id = ?
+          AND status = 1
+        FOR UPDATE
+    ";
+    $lockRows = $database->query($lockSql, [$venue_id]);
+
+    $totalLockAmount = 0.0;
+    foreach ($lockRows as $row) {
+        $totalLockAmount += (float)$row['lock_amount'];
+    }
+    // 重新计算基础可提现
+    $available_balance = max(
+        0.0,
+        $account_balance - $frozen_amount - $totalRefundToDeduct - $totalLockAmount
+    );
+
+    if ($amount > $available_balance + 0.01) {
+        $database->rollBack();
+
+        echo json_encode([
+            'code' => 1008,
+            'msg'  => '超过可提现额度，请刷新后重试',
+            'data' => [
+                'account_balance'   => round($account_balance, 2),
+                'frozen_amount'     => round($frozen_amount, 2),
+                'total_refund'      => round($totalRefundToDeduct, 2),
+                'lock_amount'       => round($totalLockAmount, 2),
+                'available_balance' => round($available_balance, 2)
+            ]
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
 // 申请记录
 $insertQuery = "INSERT INTO withdrawal_requests (
     account_name, account_type, withdrawal_amount, technical_service_fee,
@@ -363,6 +433,7 @@ $ok = $database->query($insertQuery, [
     $venue_id, $uid,  $withdrawal_remark
 ], true);
 if ($ok === false) {
+    $database->rollBack();
     logMessage_frozen(
         "提现申请记录插入失败 | 场地ID: {$venue_id}, UID: {$uid}, 评级: {$venue_level}级, " .
         "提现比例: " . ($withdraw_ratio * 100) . "%, 技术服务费率: " . ($technical_service_rate * 100) . "%, " .
@@ -382,6 +453,23 @@ logMessage_frozen(
 
 // 图传费用扣减校验
 $actualImageFeeToDeduct = 0.0;
+
+// ✅ 最小补丁：后端自己补查未结算图传费用，避免前端参数被删掉绕过
+$imageFeeRows = $database->query("
+    SELECT id, image_transmission_fee
+    FROM image_transmission_fee_daily
+    WHERE reservation_id = ?
+      AND is_settlement = 0
+    FOR UPDATE
+", [$venue_id]);
+
+$unsettled_image_fee_total = 0.0;
+$unsettled_image_ids = [];
+
+foreach ($imageFeeRows as $row) {
+    $unsettled_image_fee_total += (float)$row['image_transmission_fee'];
+    $unsettled_image_ids[] = (int)$row['id'];
+}
 
 if ($unsettled_image_fee_total > 0 && !empty($unsettled_image_ids)) {
     $placeholders = implode(',', array_fill(0, count($unsettled_image_ids), '?'));
@@ -460,18 +548,21 @@ if ($unsettled_image_fee_total > 0 && !empty($unsettled_image_ids)) {
 //                       SET account_balance = account_balance  - ? - ? 
 //                       WHERE venue_id = ?";
 // $ok = $database->query($updateBalanceQuery, [$amount, $totalRefundToDeduct, $venue_id], true);
+$totalDebit = round($amount + $totalRefundToDeduct + $actualImageFeeToDeduct, 2);
+
 $updateBalanceQuery = "UPDATE venue_funds 
-                       SET account_balance = account_balance - ? - ? - ?
-                       WHERE venue_id = ?";
+                       SET account_balance = account_balance - ?
+                       WHERE venue_id = ?
+                         AND account_balance >= ?";
 
 $ok = $database->query($updateBalanceQuery, [
-    $amount,
-    $totalRefundToDeduct,
-    $actualImageFeeToDeduct,
-    $venue_id
+    $totalDebit,
+    $venue_id,
+    $totalDebit
 ], true);
 
-if ($ok === false) {
+if ($ok === false || (int)$ok < 1) {
+    $database->rollBack();
     logMessage_frozen(
         "更新账户余额失败 | 场地ID: {$venue_id}, UID: {$uid}, 评级: {$venue_level}级, " .
         "提现比例: " . ($withdraw_ratio * 100) . "%, 技术服务费率: " . ($technical_service_rate * 100) . "%, " .
@@ -499,6 +590,7 @@ if ($actualImageFeeToDeduct > 0 && !empty($unsettled_image_ids)) {
     $ok = $database->query($updateImageFeeSql, $updateParams, true);
 
     if ($ok === false) {
+        $database->rollBack();
         logMessage_frozen(
             "图传费用记录更新失败 | 场地ID: {$venue_id}, UID: {$uid}, 扣减金额: {$actualImageFeeToDeduct}, IDs: " . implode(',', $unsettled_image_ids)
         );
@@ -526,6 +618,7 @@ $insertChangeQuery = "INSERT INTO fund_changes (
 $operator_id = $uid;
 $ok = $database->query($insertChangeQuery, [$venue_id, $amount, $newBalance, $operator_id], true);
 if ($ok === false) {
+    $database->rollBack();
     logMessage_frozen(
         "插入余额变动记录失败 | 场地ID: {$venue_id}, UID: {$uid}, 评级: {$venue_level}级, " .
         "提现比例: " . ($withdraw_ratio * 100) . "%, 技术服务费率: " . ($technical_service_rate * 100) . "%, " .
@@ -539,10 +632,28 @@ if ($ok === false) {
 
 // 更新退款记录为已减去
 foreach ($refundRecords as $record) {
-    // 在提现申请完成后，才更新退款记录状态为已减去
-    $updateRefundSql = "UPDATE refund_records SET is_reduced = 1 WHERE id = ?";
-    $database->query($updateRefundSql, [$record['id']]);
-    // 记录每条退款更新日志
+    $updateRefundSql = "
+        UPDATE refund_records 
+        SET is_reduced = 1 
+        WHERE id = ? 
+          AND is_reduced != 1
+    ";
+
+    $ok = $database->query($updateRefundSql, [$record['id']], true);
+
+    if ($ok === false || (int)$ok < 1) {
+        $database->rollBack();
+
+        logMessage_frozen("退款记录更新失败，已回滚 | 场地ID: {$venue_id}, 退款记录ID: {$record['id']}");
+
+        echo json_encode([
+            'code' => 1012,
+            'msg'  => '退款记录更新失败，请稍后重试',
+            'data' => []
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     logMessage_frozen("已更新退款记录ID: {$record['id']} 为已减去状态。");
 }
 $database->commit();

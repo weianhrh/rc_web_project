@@ -106,6 +106,21 @@ try {
                 o.action = 1
                 OR o.new_is_live = 1
         )
+          AND IFNULL((
+                SELECT
+                    CASE
+                        WHEN (p.action = 1 OR p.new_is_live = 1) THEN 1
+                        ELSE 0
+                    END
+                FROM venue_live_status_logs p
+                WHERE p.venue_id = o.venue_id
+                  AND (
+                        p.created_at < o.created_at
+                        OR (p.created_at = o.created_at AND p.id < o.id)
+                  )
+                ORDER BY p.created_at DESC, p.id DESC
+                LIMIT 1
+          ), 0) = 0
           AND o.created_at <= ?
           AND (
                 (

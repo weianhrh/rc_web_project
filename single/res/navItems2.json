@@ -47,9 +47,11 @@
     },
     {
         "id": "PaymentDisbursement",
-        "icon": "fa-wallet",
         "label": "提现申请",
-        "href": "PaymentDisbursement.html"
+        "title": "提现申请",
+        "href": "PaymentDisbursement_optimized.html",
+        "page": "PaymentDisbursement_optimized.html",
+        "icon": "fas fa-wallet"
     },
     {
         "id": "FaultDevicesApproval",

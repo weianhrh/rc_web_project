@@ -75,6 +75,7 @@ try {
             rr.applicant_admin_uid,
             rr.created_at,
             rr.updated_at,
+            rr.is_reduced,
             v.venue_name
         FROM refund_records rr
         LEFT JOIN venues v ON v.id = rr.reservation_id

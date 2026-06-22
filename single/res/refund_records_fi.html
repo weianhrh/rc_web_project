@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>退款记录（仅显示已退款）</title>
+  <title>退款记录</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
@@ -48,7 +48,27 @@
     .venue-name{grid-column:1 / -1;font-size:16px;font-weight:600;color:var(--primary);margin-bottom:4px;}
 
     .loading{text-align:center;font-size:16px;color:var(--primary);padding:20px;}
-
+    .deduct-badge{
+      display:inline-flex;
+      align-items:center;
+      padding:3px 8px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:600;
+      line-height:1;
+    }
+    
+    .deduct-wait{
+      color:#b45309;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+    }
+    
+    .deduct-done{
+      color:#b91c1c;
+      background:#fef2f2;
+      border:1px solid #fecaca;
+    }
     .pagination{display:flex;gap:10px;justify-content:center;padding-top:8px;}
     .pagination button{background:var(--primary);color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;}
     .pagination button[disabled]{opacity:.5;cursor:not-allowed;}
@@ -70,7 +90,7 @@
 <body>
   <div class="container">
     <div class="card">
-      <div class="card-title">退款记录（仅显示已退款）</div>
+      <div class="card-title">退款记录</div>
 
       <!-- 筛选：只有订单号/UID -->
       <div class="filters">
@@ -148,7 +168,7 @@
             <span><b>订单：</b>${r.order_id || '—'}</span>
             <span><b>用户ID：</b>${r.uid ?? '—'}</span>
             <span><b>金额：</b>${amountText}</span>
-            <span><b>状态：</b>已退款</span>
+            <span><b>状态：</b>${getReducedBadge(r.is_reduced)}</span>
             <span style="grid-column:1/-1;"><b>原因：</b>${reasonText}</span>
             <span><b>退款人：</b>${r.applicant_admin_uid ?? '—'}</span>
             <span><b>时间：</b>${r.created_at || '—'}</span>
@@ -175,7 +195,15 @@
         .replace(/"/g,'&quot;')
         .replace(/'/g,'&#039;');
     }
-
+   function getReducedBadge(isReduced){
+     const val = Number(isReduced);
+   
+     if(val === 1){
+       return '<span class="deduct-badge deduct-done">已退款扣减</span>';
+     }
+   
+     return '<span class="deduct-badge deduct-wait">待退款扣减</span>';
+   }
     // 事件
     document.getElementById('btnSearch').addEventListener('click', ()=>{ page = 1; loadData(); });
     document.getElementById('prev').addEventListener('click', ()=>{ if(page>1){ page--; loadData(); } });

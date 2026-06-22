@@ -82,10 +82,10 @@ if ($action === 'delete') {
         LIMIT 1
     ";
 
-    $ok = $database->query($deleteSql, [$id]);
-
-    if ($ok === false) {
-        jsonOut(500, '删除失败');
+    $ok = $database->query($deleteSql, [$id], true);
+    
+    if ($ok === false || (int)$ok < 1) {
+        jsonOut(500, '删除失败或记录状态已变化');
     }
 
     jsonOut(0, '删除成功');

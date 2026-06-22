@@ -195,8 +195,9 @@ if (array_key_exists('venue_name', $data)) {
                 [$new_venue_name, $venue_id],
                 true
             );
-            if (isset($updateRes['error'])) {
-                echo json_encode(['code'=>1,'msg'=>'名称更新失败：'.$updateRes['error']], JSON_UNESCAPED_UNICODE);
+            if ($updateRes === false) {
+                echo json_encode(['code'=>1,'msg'=>'名称更新失败：数据库更新失败'], JSON_UNESCAPED_UNICODE);
+                $database->close();
                 exit;
             }
             // 可选：仅做审计记录（不会限制管理员）
@@ -524,10 +525,10 @@ if (!empty($updates)) {
     $params[] = $venue_id;
     $updateResult = $database->query($sql, $params, true);
 
-    if (isset($updateResult['error'])) {
+    if ($updateResult === false) {
         echo json_encode([
             'code' => 1,
-            'msg'  => '场地信息修改失败，数据库错误: ' . $updateResult['error'],
+            'msg'  => '场地信息修改失败，数据库更新失败',
             'data' => []
         ], JSON_UNESCAPED_UNICODE);
         $database->close();

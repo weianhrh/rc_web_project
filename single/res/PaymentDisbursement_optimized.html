@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>提现申请优化版</title>
+  <title>提现申请</title>
   <style>
     :root {
       --page-bg: #f5f7fb;
@@ -651,7 +651,7 @@
 </head>
 <body>
   <div class="page">
-    <h1 class="page-title">提现申请优化版</h1>
+    <h1 class="page-title">提现申请</h1>
 
     <section class="section-card">
       <div class="section-head">
@@ -689,7 +689,7 @@
       <div class="withdraw-box">
         <div class="form-topline">
           <label for="withdraw-amount">提现金额</label>
-          <span class="fee-tip">手续费：以系统计算为准</span>
+          <!--<span class="fee-tip">手续费：以系统计算为准</span>-->
         </div>
         <input type="number" id="withdraw-amount" class="withdraw-input" placeholder="提现金额" min="0" step="0.01" />
         <button class="withdraw-button" id="withdraw-button" type="button" onclick="applyWithdrawal()">立即提现</button>
@@ -822,9 +822,14 @@
         ? `<button type="button" class="check-money-btn" onclick="location.href='moeny.html'">去核对</button>`
         : '';
 
-      const feeHelp = unsettledFee > 0
-        ? `<span class="help-dot" onclick="showCustomModal('图传费用说明', '图传费用 = 驾驶分钟数 × 0.03元\n\n该费用会在提现时作为扣减项参与结算。')">?</span>`
-        : '';
+const feeHelp = `
+  <button
+    type="button"
+    class="help-dot"
+    onclick="showImageFeeInfo(event)"
+    aria-label="图传费用说明"
+  >?</button>
+`;
 
       const amountGrid = document.getElementById('amount-info');
       amountGrid.classList.add('has-full');
@@ -857,10 +862,13 @@
   <div class="amount-icon">↺</div>
   <div class="amount-content"><div class="amount-label">退款金额:</div><div class="amount-value">${formatAmount(data.total_refund)}</div></div>
 </div>
-<div class="amount-item is-warning ${hasUnsettledFee ? 'help-clickable' : ''}" ${hasUnsettledFee ? 'onclick="showImageFeeInfo(event)"' : ''}>
-          <div class="amount-icon">▥</div>
-          <div class="amount-content"><div class="amount-label">未结算图传:${feeHelp}</div><div class="amount-value">${formatAmount(unsettledFee)}</div></div>
-        </div>
+<div class="amount-item is-warning help-clickable" onclick="showImageFeeInfo(event)">
+  <div class="amount-icon">▥</div>
+  <div class="amount-content">
+    <div class="amount-label">未结算图传:${feeHelp}</div>
+    <div class="amount-value">${formatAmount(unsettledFee)}</div>
+  </div>
+</div>
 <div class="amount-item amount-full is-primary">
           <div class="amount-icon">✓</div>
           <div class="amount-content"><div class="amount-label">实际可提现:</div><div class="amount-value">${formatAmount(data.available_balance)}</div></div>
@@ -974,6 +982,18 @@
       return 'danger';
     }
 
+function listStatusText(record) {
+  // 列表只看是否已打款
+  if (Number(record.payout_status) === 1 || Number(record.application_status) === 2) {
+    return '已打款';
+  }
+
+  return '未处理';
+}
+
+function listStatusBadgeClass(record) {
+  return listStatusText(record) === '已打款' ? 'success' : 'pending';
+}
     function getRecordNo(record) {
       return record.withdrawal_no || record.withdrawal_number || record.order_number || record.id || '-';
     }
@@ -1026,7 +1046,7 @@
         const receivedAmount = getReceivedAmount(record);
         return `
           <tr>
-            <td><span class="badge ${applicationBadgeClass(record)}">${applicationStatusText(record.application_status)}</span></td>
+            <td><span class="badge ${listStatusBadgeClass(record)}">${listStatusText(record)}</span></td>
             <td>${esc(record.application_time || '-')}</td>
             <td class="amount-cell">${money(record.withdrawal_amount)} 元</td>
             <td class="amount-cell">${money(receivedAmount)} 元</td>

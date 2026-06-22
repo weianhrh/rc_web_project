@@ -56,7 +56,7 @@ if ($action === 'gift_energy') {
 
     if ($energyResult) {
         $updateSql = "UPDATE energy_records SET energy = energy + ? WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$energyAmount, $userId, $venueId]);
+        $database->query($updateSql, [$energyAmount, $userId, $venueId], true);
         
                         // 记录能量变动
         $current_energy = $energyResult[0]['energy'] ?? 0;
@@ -67,7 +67,7 @@ if ($action === 'gift_energy') {
         $database->query($balanceChangeSql, $balanceChangeParams, true);
     } else {
         $insertSql = "INSERT INTO energy_records (user_uid, venue_id, energy) VALUES (?, ?, ?)";
-        $database->query($insertSql, [$userId, $venueId, $energyAmount]);
+        $database->query($insertSql, [$userId, $venueId, $energyAmount], true);
         
                         // 记录能量变动
         $current_energy = $energyResult[0]['energy'] ?? 0;
@@ -157,11 +157,11 @@ if ($action === 'gift_energy') {
         // 如果指定了清除数量，则进行减法
         $newEnergy = max(0, $currentEnergy - $energyAmount);
         $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$newEnergy, $userId, $venueId]);
+        $database->query($updateSql, [$newEnergy, $userId, $venueId], true);
     } else {
         // 如果没有指定清除数量，则清零
         $updateSql = "UPDATE energy_records SET energy = 0 WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$userId, $venueId]);
+        $database->query($updateSql, [$userId, $venueId], true);
     }
 
     echo json_encode([
@@ -257,7 +257,12 @@ elseif ($action === 'gift_all_energy') {
         echo json_encode(['code' => 1002, 'msg' => '缺少必要参数', 'data' => []]);
         exit;
     }
-
+    
+    $energyAmount = floatval($energyAmount);
+    if ($energyAmount <= 0) {
+        echo json_encode(['code' => 1002, 'msg' => '赠送能量必须大于0', 'data' => []]);
+        exit;
+    }
     // 检查用户是否存在
     $checkUserSql = "SELECT * FROM `users` WHERE `uid` = ?";
     $userResult = $database->query($checkUserSql, [$userId]);
@@ -271,16 +276,17 @@ elseif ($action === 'gift_all_energy') {
                   SELECT ?, v.id, ?
                   FROM venues v
                   ON DUPLICATE KEY UPDATE energy = energy + VALUES(energy)";
-    $database->query($insertSql, [$userId, $energyAmount]);
+    $database->query($insertSql, [$userId, $energyAmount], true);
 
     // 记录能量变动日志
+    // 注意：上面已经把 energy_records 加完了，所以 er.energy 是更新后的余额
+    // 因此：变动前 = er.energy - 本次赠送能量；变动后 = er.energy
     $logSql = "INSERT INTO energy_changes (user_uid, venue_id, energy_change, balance_after_change, reason, balance_before_change)
-               SELECT ?, v.id, ?, IFNULL(er.energy,0) + ?, ?, IFNULL(er.energy,0)
+               SELECT ?, v.id, ?, IFNULL(er.energy,0), ?, IFNULL(er.energy,0) - ?
                FROM venues v
                LEFT JOIN energy_records er ON er.user_uid = ? AND er.venue_id = v.id";
     $reason = '代理充值全场地，充值人员：' . $username;
-    $database->query($logSql, [$userId, $energyAmount, $energyAmount, $reason, $userId]);
-
+    $database->query($logSql, [$userId, $energyAmount, $reason, $energyAmount, $userId], true);
     echo json_encode(['code'=>0, 'msg'=>'全场地赠送成功', 'data'=>[]]);
 }
 
@@ -293,7 +299,7 @@ elseif ($action === 'clear_all_energy') {
 
     // 全场地清零
     $updateSql = "UPDATE energy_records SET energy = 0 WHERE user_uid = ? AND venue_id IN (SELECT id FROM venues)";
-    $database->query($updateSql, [$userId]);
+    $database->query($updateSql, [$userId], true);
 
     echo json_encode(['code'=>0, 'msg'=>'全场地能量清零成功','data'=>[]]);
 }

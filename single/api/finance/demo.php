@@ -189,6 +189,7 @@ $walletStmt->close();
 
 
 // 查询苹果内购金币来源：gold_balance_changes 里的 iap_order
+// 只有这种才会加：Apple IAP充值金币 product_id=com.rcwulian.gold.42
 // 按当前页面口径：金币 / 10 折算金额
 $iapGoldSql = "SELECT 
     uid,
@@ -197,6 +198,8 @@ FROM gold_balance_changes
 WHERE uid IN ({$placeholders})
   AND change_type = 'recharge'
   AND biz_type = 'iap_order'
+  AND remark LIKE '%Apple IAP%'
+  AND remark LIKE '%product_id=com.rcwulian.gold.%'
 GROUP BY uid";
 
 $iapGoldStmt = $database->prepare($iapGoldSql);
