@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>场地资金冻结</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: #172126;
+      background: #f4f8f9;
+    }
+    .page { max-width: 1180px; margin: 0 auto; padding: 18px; }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .crumb { font-size: 12px; color: #7a8a93; margin-bottom: 4px; }
+    h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 800; }
+    .desc { margin-top: 7px; color: #6c7b84; font-size: 13px; line-height: 1.6; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .card { background: #fff; border: 1px solid #dfeaed; border-radius: 16px; box-shadow: 0 10px 30px rgba(29, 67, 76, .06); overflow: hidden; margin-bottom: 14px; }
+    .card-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #eef3f5; }
+    .card-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
+    .card-title::before { content: ""; width: 7px; height: 20px; border-radius: 20px; background: #5b8cff; display: inline-block; }
+    .toolbar { display: grid; grid-template-columns: minmax(220px, 320px) auto auto 1fr; gap: 10px; padding: 16px 18px; align-items: center; }
+    select, input { width: 100%; height: 38px; border: 1px solid #d8e6e9; background: #fff; border-radius: 10px; padding: 0 12px; color: #172126; outline: none; font-size: 14px; }
+    select:focus, input:focus { border-color: #5b8cff; box-shadow: 0 0 0 3px rgba(20, 155, 155, .12); }
+    .btn { border: 1px solid #b9e2e2; background: #e9fbfb; color: #087d7d; border-radius: 10px; height: 38px; padding: 0 14px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: .15s ease; }
+    .btn:hover { filter: brightness(.98); transform: translateY(-1px); }
+    .btn.primary { background: #5b8cff; border-color: #5b8cff; color: #fff; }
+    .btn.danger { background: #fff1f0; border-color: #ffccc7; color: #cf1322; }
+    .btn.ghost { background: #fff; border-color: #d8e6e9; color: #51636d; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 18px 16px; }
+    .stat { border: 1px solid #e4eef1; border-radius: 14px; padding: 14px; background: linear-gradient(180deg, #fbffff, #f8fbfc); }
+    .stat-label { color: #73848d; font-size: 13px; margin-bottom: 7px; }
+    .stat-value { font-size: 24px; font-weight: 900; color: #5b8cff; word-break: break-all; }
+    .table-wrap { overflow: auto; }
+    table { width: 100%; min-width: 900px; border-collapse: collapse; }
+    th, td { padding: 13px 16px; text-align: left; border-top: 1px solid #eef3f5; font-size: 14px; vertical-align: middle; }
+    th { color: #60727b; font-weight: 800; background: #fbfdfe; }
+    .money { color: #cf6b00; font-weight: 900; }
+    .key { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #50616a; background: #f3f7f8; padding: 4px 7px; border-radius: 8px; word-break: break-all; display: inline-block; max-width: 260px; }
+    .venue-name { font-weight: 800; margin-bottom: 3px; }
+    .muted { color: #7a8a93; font-size: 12px; line-height: 1.5; }
+    .reason { max-width: 180px; color: #51636d; line-height: 1.5; }
+    .empty { padding: 36px 16px; text-align: center; color: #81919a; border-top: 1px solid #eef3f5; }
+    .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 9999; background: rgba(23, 33, 38, .92); color: #fff; border-radius: 999px; padding: 10px 16px; font-size: 14px; display: none; max-width: min(92vw, 620px); }
+    .loading { opacity: .65; pointer-events: none; }
+    @media (max-width: 720px) {
+      .page { padding: 12px; }
+      .header { flex-direction: column; align-items: stretch; }
+      .header-actions { justify-content: stretch; }
+      .header-actions .btn { flex: 1; }
+      h1 { font-size: 20px; }
+      .toolbar { grid-template-columns: 1fr; padding: 14px; }
+      .stats { grid-template-columns: 1fr; padding: 0 14px 14px; }
+      .card-hd { padding: 14px; }
+      table { min-width: 0; }
+      thead { display: none; }
+      tbody, tr, td { display: block; width: 100%; }
+      tr { border-top: 1px solid #eef3f5; padding: 10px 12px; }
+      td { border: 0; padding: 6px 0; display: flex; justify-content: space-between; gap: 12px; }
+      td::before { content: attr(data-label); color: #73848d; flex: 0 0 92px; font-weight: 700; }
+      .key { max-width: 210px; text-align: right; }
+      .reason { max-width: 210px; text-align: right; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="page">
+    <div class="header">
+      <div>
+        <div class="crumb">Menu / venue_frozen_funds</div>
+        <h1>场地资金冻结</h1>
+        <div class="desc">只展示 Redis 中正在生效的冻结资金记录，不提供新增冻结。列表每条记录右侧可以单独解除冻结。</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn ghost" onclick="goLogs()">查看冻结记录</button>
+        <button class="btn primary" onclick="loadData()">刷新</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">正在冻结列表</div>
+        <div class="muted" id="scopeTip"></div>
+      </div>
+
+      <div class="toolbar">
+        <select id="venueSelect" style="display:none;"></select>
+        <button class="btn primary" onclick="loadData()">查询</button>
+        <button class="btn ghost" onclick="resetFilter()" id="resetBtn">全部场地</button>
+        <div class="muted">数据来源：Redis DB1，key 格式 venue:{场地ID}:frozen:{封禁ID}</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">当前冻结总额</div>
+          <div class="stat-value" id="totalAmount">¥0.00</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">正在冻结条数</div>
+          <div class="stat-value" id="recordCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">当前范围</div>
+          <div class="stat-value" id="currentScope" style="font-size:18px;">-</div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>场地</th>
+              <th>封禁ID</th>
+              <th>冻结金额</th>
+              <th>剩余时间</th>
+              <th>封禁信息</th>
+              <th>Redis Key</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty" style="display:none;">暂无正在冻结的资金记录</div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+const API = '../api/operat/venue_frozen_funds_api.php';
+let pageData = null;
+let loading = false;
+
+function qs(name) { return new URLSearchParams(location.search).get(name) || ''; }
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.style.display = 'none', 2200);
+}
+function setLoading(flag) {
+  loading = flag;
+  document.getElementById('page').classList.toggle('loading', flag);
+}
+function selectedVenueId() {
+  const select = document.getElementById('venueSelect');
+  if (!select || select.style.display === 'none') return '';
+  return select.value || '';
+}
+async function loadData(initialVenueId) {
+  if (loading) return;
+  setLoading(true);
+  try {
+    const url = new URL(API, location.href);
+    url.searchParams.set('action', 'summary');
+    const vid = initialVenueId !== undefined ? initialVenueId : selectedVenueId();
+    if (vid) url.searchParams.set('venue_id', vid);
+
+    const res = await fetch(url.toString(), { credentials: 'include' });
+    const json = await res.json();
+    if (Number(json.code) !== 0) throw new Error(json.msg || '加载失败');
+    pageData = json.data || {};
+    renderPage(pageData);
+  } catch (err) {
+    toast(err.message || '加载失败');
+  } finally {
+    setLoading(false);
+  }
+}
+function renderVenueSelect(data) {
+  const user = data.user || {};
+  const select = document.getElementById('venueSelect');
+  const resetBtn = document.getElementById('resetBtn');
+  const scopeTip = document.getElementById('scopeTip');
+  const canSelect = !!user.can_select_venue;
+
+  if (!canSelect) {
+    select.style.display = 'none';
+    resetBtn.style.display = 'none';
+    scopeTip.textContent = `role_id=3，仅展示自己场地：${user.venue_id || '-'}`;
+    return;
+  }
+
+  select.style.display = '';
+  resetBtn.style.display = '';
+  const current = String(data.selected_venue_id || '');
+  const venues = data.venues || [];
+  select.innerHTML = '<option value="">全部场地</option>' + venues.map(v => {
+    const id = String(v.id || '');
+    const name = v.venue_name ? ` - ${v.venue_name}` : '';
+    return `<option value="${escapeHtml(id)}" ${current === id ? 'selected' : ''}>${escapeHtml(id + name)}</option>`;
+  }).join('');
+  scopeTip.textContent = 'role_id=1/2，可查看全场地，也可按场地筛选';
+}
+function renderPage(data) {
+  renderVenueSelect(data);
+  const freeze = data.freeze || {};
+  const rows = freeze.records || [];
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  document.getElementById('totalAmount').textContent = `¥${freeze.total_amount_text || '0.00'}`;
+  document.getElementById('recordCount').textContent = freeze.count || 0;
+
+  const selectedId = Number(data.selected_venue_id || 0);
+  const canSelect = !!(data.user && data.user.can_select_venue);
+  document.getElementById('currentScope').textContent = canSelect
+    ? (selectedId > 0 ? `场地 ${selectedId}` : '全部场地')
+    : `我的场地 ${data.user.venue_id || '-'}`;
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  tbody.innerHTML = rows.map(row => {
+    const venueTitle = `${row.venue_id || '-'}${row.venue_name ? ' - ' + row.venue_name : ''}`;
+    const banInfo = [
+      row.ban_created_at ? `创建：${row.ban_created_at}` : '',
+      row.ban_end_time ? `到期：${row.ban_end_time}` : '',
+      row.ban_reason ? `原因：${row.ban_reason}` : ''
+    ].filter(Boolean).join('<br>') || '-';
+    const keyJson = JSON.stringify(row.key || '');
+    return `
+      <tr>
+        <td data-label="场地">
+          <div>
+            <div class="venue-name">${escapeHtml(venueTitle)}</div>
+            <div class="muted">venue_id: ${escapeHtml(row.venue_id)}</div>
+          </div>
+        </td>
+        <td data-label="封禁ID">${escapeHtml(row.ban_id || '-')}</td>
+        <td data-label="冻结金额" class="money">¥${escapeHtml(row.amount_text || '0.00')}</td>
+        <td data-label="剩余时间">${escapeHtml(row.ttl_text || '-')}</td>
+        <td data-label="封禁信息"><div class="reason">${banInfo}</div></td>
+        <td data-label="Redis Key"><span class="key">${escapeHtml(row.key || '')}</span></td>
+        <td data-label="操作"><button class="btn danger" onclick='unfreezeKey(${keyJson})'>解除冻结</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+function resetFilter() {
+  const select = document.getElementById('venueSelect');
+  if (select && select.style.display !== 'none') select.value = '';
+  loadData('');
+}
+async function unfreezeKey(key) {
+  if (!key) return toast('缺少 Redis Key');
+  if (!confirm(`确认解除这条冻结记录？\n${key}`)) return;
+  if (loading) return;
+  setLoading(true);
+  try {
+    const url = new URL(API, location.href);
+    url.searchParams.set('action', 'unfreeze');
+    const selected = selectedVenueId();
+    if (selected) url.searchParams.set('venue_id', selected);
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'unfreeze', key })
+    });
+    const json = await res.json();
+    if (Number(json.code) !== 0) throw new Error(json.msg || '解除失败');
+    toast(json.msg || '操作成功');
+
+    // 解除成功后立即用接口返回的最新冻结列表重绘页面，避免旧数据残留。
+    // 原来的 await loadData(selected) 会被 loading 锁拦截，导致页面不刷新。
+    if (json.data && json.data.freeze && pageData) {
+      pageData.freeze = json.data.freeze;
+      renderPage(pageData);
+    } else {
+      setLoading(false);
+      await loadData(selected);
+    }
+  } catch (err) {
+    toast(err.message || '解除失败');
+  } finally {
+    setLoading(false);
+  }
+}
+function goLogs() {
+  const url = new URL('venue_frozen_logs.html', location.href);
+  const vid = selectedVenueId();
+  if (vid) url.searchParams.set('venue_id', vid);
+  location.href = url.toString();
+}
+window.addEventListener('DOMContentLoaded', () => loadData(qs('venue_id')));
+</script>
+</body>
+</html>

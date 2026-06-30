@@ -40,9 +40,25 @@ function fetchVehiclesBySerials(Database $db, array $serials) {
     $placeholders = implode(',', array_fill(0, count($chunk), '?'));
 
     // ⚠️ 按你 vehicles 表字段改：name/photo_url/bind_site/image_device_serial/bk_image_device_serial/uid
-    $sql = "SELECT serial_number, name, photo_url, bind_site, image_device_serial, bk_image_device_serial, uid
-            FROM vehicles
-            WHERE serial_number IN ($placeholders)";
+    // image_device_room_id 通过 device_information.room_id 补出来，用于前端显示房间号。
+    $sql = "SELECT
+              v.serial_number,
+              v.name,
+              v.photo_url,
+              v.bind_site,
+              v.image_device_serial,
+              v.bk_image_device_serial,
+              v.uid,
+              (
+                SELECT di.room_id
+                FROM device_information di
+                WHERE CAST(di.id AS CHAR) = CAST(v.image_device_serial AS CHAR)
+                   OR CAST(di.device_id AS CHAR) = CAST(v.image_device_serial AS CHAR)
+                   OR CAST(di.room_id AS CHAR) = CAST(v.image_device_serial AS CHAR)
+                LIMIT 1
+              ) AS image_device_room_id
+            FROM vehicles v
+            WHERE v.serial_number IN ($placeholders)";
 
     $rows = $db->query($sql, $chunk);
     if ($rows === false) continue;
@@ -105,6 +121,7 @@ try {
       "photo_url" => $v['photo_url'] ?? "",
       "bind_site" => $v['bind_site'] ?? "",
       "image_device_serial" => $v['image_device_serial'] ?? "",
+      "image_device_room_id" => $v['image_device_room_id'] ?? "",
       "bk_image_device_serial" => $v['bk_image_device_serial'] ?? "",
       "uid" => $v['uid'] ?? "",
 

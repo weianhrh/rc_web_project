@@ -44,12 +44,20 @@
       display:inline-flex;align-items:center;gap:6px;
       padding:2px 8px;border-radius:999px;background:rgba(40,167,69,.12);color:#1f7a34;font-weight:700;font-size:12px;
     }
+    .image-pill{
+      display:inline-flex;align-items:center;gap:6px;max-width:100%;
+      padding:3px 9px;border-radius:999px;background:#f6f9ff;border:1px solid #dbe5ff;
+      color:#355780;font-size:12px;font-weight:700;line-height:1.3;white-space:nowrap;
+    }
+    .image-pill b{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .image-pill .room{color:#0f8f8c;}
     .loading{padding:20px;text-align:center;color:var(--primary);font-weight:700;}
     @media (max-width:768px){
       .device-card{flex-direction:column;align-items:center;}
       .device-img{width:80px;height:80px;}
       .info{text-align:center;align-items:center;}
       .kv{justify-content:center;}
+      .image-pill b{max-width:160px;}
       .input{width:100%;}
       .tools{width:100%;}
     }
@@ -64,7 +72,7 @@
           <div class="meta" id="meta">正在加载...</div>
         </div>
         <div class="tools">
-          <input id="kw" class="input" placeholder="按序列号/名称/场地ID 搜索">
+          <input id="kw" class="input" placeholder="按序列号/名称/场地ID/图传/房间号 搜索">
           <button class="btn" id="refreshBtn"><i class="fas fa-sync-alt"></i>刷新</button>
           <a class="btn gray" href="devMgtV2.html"><i class="fas fa-arrow-left"></i>返回设备管理</a>
         </div>
@@ -80,6 +88,30 @@
 
   function esc(s){
     return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function cleanText(v){
+    const s = String(v ?? '').trim();
+    return (!s || s === 'null' || s === 'undefined') ? '' : s;
+  }
+
+  function formatFrontImage(d){
+    const imageId = cleanText(d.image_device_serial);
+    const roomId = cleanText(d.image_device_room_id ?? d.room_id ?? d.playing_stream_id);
+
+    if (!imageId && !roomId) {
+      return '';
+    }
+
+    if (imageId && roomId) {
+      return `<span class="image-pill" title="前图传 ${esc(imageId)} / 房间号 ${esc(roomId)}"><span>前图传</span><b>${esc(imageId)}</b><span class="room">房间号 ${esc(roomId)}</span></span>`;
+    }
+
+    if (imageId) {
+      return `<span class="image-pill" title="前图传 ${esc(imageId)}"><span>前图传</span><b>${esc(imageId)}</b></span>`;
+    }
+
+    return `<span class="image-pill" title="房间号 ${esc(roomId)}"><span>房间号</span><b>${esc(roomId)}</b></span>`;
   }
 
   function render(devices){
@@ -98,6 +130,7 @@
       const bindSite = d.bind_site ?? d.bind_site_id ?? d.bind_site ?? '';
       const voltage = d.redis?.voltage ?? d.voltage ?? '';
       const ttl = d.redis?.ttl ?? d.ttl ?? '';
+      const frontImageHtml = formatFrontImage(d);
 
       const card = document.createElement('div');
       card.className = 'device-card';
@@ -112,7 +145,7 @@
             ${ttl!=='' ? `<div>TTL：<b>${esc(ttl)}</b>s</div>` : ''}
           </div>
           <div class="kv">
-            <div>前图传：<b>${esc(d.image_device_serial ?? '')}</b></div>
+            ${frontImageHtml ? `<div>${frontImageHtml}</div>` : ''}
             ${d.bk_image_device_serial ? `<div>后图传：<b>${esc(d.bk_image_device_serial)}</b></div>` : ''}
             <div>绑定用户：<b>${esc(d.uid ?? '未绑定')}</b></div>
           </div>
@@ -130,7 +163,9 @@
       const s = (d.serial_number||'').toLowerCase();
       const n = (d.name||'').toLowerCase();
       const b = String(d.bind_site ?? '').toLowerCase();
-      return s.includes(kw) || n.includes(kw) || b.includes(kw);
+      const img = String(d.image_device_serial ?? '').toLowerCase();
+      const room = String(d.image_device_room_id ?? d.room_id ?? d.playing_stream_id ?? '').toLowerCase();
+      return s.includes(kw) || n.includes(kw) || b.includes(kw) || img.includes(kw) || room.includes(kw);
     });
     render(filtered);
   }

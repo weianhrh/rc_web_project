@@ -3,8 +3,9 @@
  * /api/pay/GetDailyVenueRevenue.php
  *
  * 财务对账列表接口
- * - role_id = 1：可查看全部场地，可通过 GET venue_id 筛选某个场地
- * - role_id != 1：只能查看自己绑定 venue_id 的数据
+ * - role_id = 1/2：可查看全部场地，可通过 GET venue_id 筛选某个场地
+ * - role_id != 1/2：只能查看自己绑定 venue_id 的数据
+ * - role_id = 1/2：支持 GET start_date / end_date 日期筛选，支持 GET hide_zero=1 隐藏 0 收入
  * - 全部角色都支持分页：page / limit
  * - 返回每条记录的 venue_id + venue_name，方便前端显示“场地ID - 场地名称”
  */
@@ -30,6 +31,17 @@ function req_int($key, $default = 0, $min = null, $max = null) {
     return $val;
 }
 
+function req_date($key) {
+    $val = trim($_GET[$key] ?? '');
+    if ($val === '') return '';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $val)) return '';
+
+    $dt = DateTime::createFromFormat('Y-m-d', $val);
+    if (!$dt || $dt->format('Y-m-d') !== $val) return '';
+
+    return $val;
+}
+
 $database = new Database();
 
 try {
@@ -46,28 +58,52 @@ try {
 
     $role_id       = intval($user['role_id']);
     $userVenueId   = intval($user['venue_id'] ?? 0);
-    $isAdmin       = ($role_id === 1);
+    $isAdmin       = in_array($role_id, [1, 2], true);
 
     // -------------------- 分页参数 --------------------
     $page  = req_int('page', 1, 1);
     $limit = req_int('limit', 31, 1, 100); // 最大 100，防止一次拉太多
     $offset = ($page - 1) * $limit;
 
-    // role_id=1 才允许使用 venue_id 筛选
+    // role_id=1/2 才允许使用这些筛选项；非管理员前端不显示，后端也不使用 venue_id 过滤全部
     $filterVenueId = req_int('venue_id', 0, 0);
+    $startDate     = req_date('start_date');
+    $endDate       = req_date('end_date');
+    $hideZero      = req_int('hide_zero', 0, 0, 1);
+
+    // 日期反了就自动交换，避免前端误填后查不到
+    if ($startDate !== '' && $endDate !== '' && $startDate > $endDate) {
+        $tmp = $startDate;
+        $startDate = $endDate;
+        $endDate = $tmp;
+    }
 
     // -------------------- 查询条件 --------------------
     $where = ['1=1'];
     $params = [];
 
     if ($isAdmin) {
-        // 管理员：不传 venue_id = 全部场地；传了 venue_id = 只看该场地
+        // 管理员/运营：不传 venue_id = 全部场地；传了 venue_id = 只看该场地
         if ($filterVenueId > 0) {
             $where[] = 'd.venue_id = ?';
             $params[] = $filterVenueId;
         }
+
+        if ($startDate !== '') {
+            $where[] = 'd.date >= ?';
+            $params[] = $startDate;
+        }
+
+        if ($endDate !== '') {
+            $where[] = 'd.date <= ?';
+            $params[] = $endDate;
+        }
+
+        if ($hideZero === 1) {
+            $where[] = 'COALESCE(d.total_revenue, 0) <> 0';
+        }
     } else {
-        // 非管理员：强制只能看自己的场地，忽略前端传入的 venue_id
+        // 非管理员：强制只能看自己的场地，忽略前端传入的 venue_id / 日期 / 0收入过滤
         if ($userVenueId <= 0) {
             out_json(1002, '当前账号未绑定场地', []);
         }
@@ -123,6 +159,11 @@ try {
         'role_id'          => $role_id,
         'is_admin'         => $isAdmin ? 1 : 0,
         'current_venue_id' => $isAdmin ? $filterVenueId : $userVenueId,
+        'filters'          => [
+            'start_date' => $isAdmin ? $startDate : '',
+            'end_date'   => $isAdmin ? $endDate : '',
+            'hide_zero'  => $isAdmin ? $hideZero : 0,
+        ],
     ]);
 
 } catch (Throwable $e) {

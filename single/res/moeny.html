@@ -81,7 +81,7 @@
       justify-content: flex-start;
     }
 
-    select, input[type="number"] {
+    select, input[type="number"], input[type="date"] {
       padding: 8px 10px;
       border: 1px solid var(--border-color);
       border-radius: 8px;
@@ -90,6 +90,21 @@
       font-size: 14px;
       min-width: 220px;
     }
+
+    input[type="date"] { min-width: 150px; }
+
+    .filter-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--secondary);
+      font-size: 14px;
+      padding: 8px 2px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .filter-check input { margin: 0; }
 
     .btn {
       border: none;
@@ -220,7 +235,8 @@
       .card-title { font-size: 21px; }
       .toolbar { flex-direction: column; align-items: stretch; }
       .toolbar .field { width: 100%; }
-      select { min-width: 0; width: 100%; }
+      select, input[type="date"] { min-width: 0; width: 100%; }
+      .filter-check { width: 100%; padding: 6px 0; }
       .field { font-size: 13px; align-items: flex-start; }
       .value { font-size: 13px; }
       .total-revenue { font-size: 16px; }
@@ -239,7 +255,7 @@
         <span>财务对账</span>
       </div>
 
-      <!-- role_id == 1 才显示 -->
+      <!-- role_id == 1/2 才显示 -->
       <div class="toolbar" id="adminToolbar">
         <div class="field">
           <span class="label">场地筛选：</span>
@@ -247,7 +263,20 @@
             <option value="">全部场地</option>
           </select>
         </div>
-        <button class="btn" id="btnResetVenue">重置</button>
+        <div class="field">
+          <span class="label">开始日期：</span>
+          <input type="date" id="start_date" />
+        </div>
+        <div class="field">
+          <span class="label">结束日期：</span>
+          <input type="date" id="end_date" />
+        </div>
+        <label class="filter-check" title="勾选后不展示总收入为 0 的记录">
+          <input type="checkbox" id="hide_zero" />
+          <span>隐藏0收入</span>
+        </label>
+        <button class="btn primary" id="btnSearch">查询</button>
+        <button class="btn" id="btnResetFilter">重置</button>
       </div>
 
       <div class="summary">
@@ -291,6 +320,9 @@
     roleId: 0,
     isAdmin: false,
     venueId: '',
+    startDate: '',
+    endDate: '',
+    hideZero: false,
     loading: false,
     reqSeq: 0,
     venuesLoaded: false
@@ -303,6 +335,9 @@
   const loadingEl = $('loading');
   const adminToolbar = $('adminToolbar');
   const venueSelect = $('venue_id');
+  const startDateInput = $('start_date');
+  const endDateInput = $('end_date');
+  const hideZeroInput = $('hide_zero');
 
   function escapeHtml(s) {
     return String(s ?? '')
@@ -363,18 +398,24 @@
     params.set('page', page);
     params.set('limit', state.limit);
 
-    // ✅ 只有 role_id=1 才传 venue_id；普通场地账号由后端强制限制自己的 venue_id
-    if (state.isAdmin && state.venueId) {
-      params.set('venue_id', state.venueId);
+    // ✅ 只有 role_id=1/2 才传这些筛选条件；普通场地账号由后端强制限制自己的 venue_id
+    if (state.isAdmin) {
+      if (state.venueId) params.set('venue_id', state.venueId);
+      if (state.startDate) params.set('start_date', state.startDate);
+      if (state.endDate) params.set('end_date', state.endDate);
+      if (state.hideZero) params.set('hide_zero', '1');
     }
 
     return `${API_URL}?${params.toString()}`;
   }
 
   function applyRoleUI() {
-    state.isAdmin = Number(state.roleId) === 1;
+    const roleId = Number(state.roleId);
+    state.isAdmin = roleId === 1 || roleId === 2;
     adminToolbar.style.display = state.isAdmin ? 'flex' : 'none';
-    $('roleText').textContent = state.isAdmin ? '管理员' : '加盟商';
+
+    const roleNameMap = { 1: '管理员', 2: '运营', 3: '加盟商' };
+    $('roleText').textContent = roleNameMap[roleId] || '';
 
     if (state.isAdmin && !state.venuesLoaded) {
       loadVenues();
@@ -418,7 +459,7 @@
       const venueName = revenue.venue_name || venueMap[venueId] || '';
       const venueText = venueName ? `${venueId} - ${venueName}` : `场地ID：${venueId || '-'}`;
       const isChecked = Number(revenue.is_checked) === 1;
-      const showVenueLine = Number(state.roleId) === 1;
+      const showVenueLine = state.isAdmin;
     
       const venueLineHtml = showVenueLine ? `
         <div class="field">
@@ -430,10 +471,6 @@
       item.className = 'revenue-item';
       item.innerHTML = `
         ${venueLineHtml}
-        <div class="field">
-          <div class="label">日期:</div>
-          <div class="value">${escapeHtml(revenue.date || '')}</div>
-        </div>
         <div class="field">
           <div class="label">日期:</div>
           <div class="value">${escapeHtml(revenue.date || '')}</div>
@@ -560,15 +597,36 @@
     checkRevenue(btn.dataset.id, btn);
   });
 
-  venueSelect.addEventListener('change', function () {
-    state.venueId = this.value || '';
+  function syncFilterState() {
+    state.venueId = venueSelect.value || '';
+    state.startDate = startDateInput.value || '';
+    state.endDate = endDateInput.value || '';
+    state.hideZero = !!hideZeroInput.checked;
+  }
+
+  function reloadWithFilters() {
+    syncFilterState();
+    loadRevenueData(1);
+  }
+
+  venueSelect.addEventListener('change', reloadWithFilters);
+  hideZeroInput.addEventListener('change', reloadWithFilters);
+
+  $('btnSearch').addEventListener('click', reloadWithFilters);
+
+  $('btnResetFilter').addEventListener('click', function () {
+    venueSelect.value = '';
+    startDateInput.value = '';
+    endDateInput.value = '';
+    hideZeroInput.checked = false;
+    syncFilterState();
     loadRevenueData(1);
   });
 
-  $('btnResetVenue').addEventListener('click', function () {
-    venueSelect.value = '';
-    state.venueId = '';
-    loadRevenueData(1);
+  [startDateInput, endDateInput].forEach(function (input) {
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') reloadWithFilters();
+    });
   });
 
   $('btnFirst').addEventListener('click', function () {

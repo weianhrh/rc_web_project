@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>冻结记录</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif; color: #172126; background: #f4f8f9; }
+    .page { max-width: 1180px; margin: 0 auto; padding: 18px; }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .crumb { font-size: 12px; color: #7a8a93; margin-bottom: 4px; }
+    h1 { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 800; }
+    .desc { margin-top: 7px; color: #6c7b84; font-size: 13px; line-height: 1.6; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .card { background: #fff; border: 1px solid #dfeaed; border-radius: 16px; box-shadow: 0 10px 30px rgba(29, 67, 76, .06); overflow: hidden; margin-bottom: 14px; }
+    .card-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #eef3f5; }
+    .card-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
+    .card-title::before { content: ""; width: 7px; height: 20px; border-radius: 20px; background: #5b8cff; display: inline-block; }
+    .toolbar { display: grid; grid-template-columns: minmax(220px, 320px) minmax(160px, 1fr) 110px 110px 1fr; gap: 10px; padding: 16px 18px; align-items: center; }
+    select, input { width: 100%; height: 38px; border: 1px solid #d8e6e9; background: #fff; border-radius: 10px; padding: 0 12px; color: #172126; outline: none; font-size: 14px; }
+    select:focus, input:focus { border-color: #5b8cff; box-shadow: 0 0 0 3px rgba(20, 155, 155, .12); }
+    .btn { border: 1px solid #b9e2e2; background: #e9fbfb; color: #087d7d; border-radius: 10px; height: 38px; padding: 0 14px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: .15s ease; }
+    .btn:hover { filter: brightness(.98); transform: translateY(-1px); }
+    .btn.primary { background: #5b8cff; border-color: #5b8cff; color: #fff; }
+    .btn.ghost { background: #fff; border-color: #d8e6e9; color: #51636d; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .muted { color: #7a8a93; font-size: 12px; line-height: 1.5; }
+    .table-wrap { overflow: auto; }
+    table { width: 100%; min-width: 820px; border-collapse: collapse; }
+    th, td { padding: 13px 16px; text-align: left; border-top: 1px solid #eef3f5; font-size: 14px; vertical-align: middle; }
+    th { color: #60727b; font-weight: 800; background: #fbfdfe; }
+    .tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 800; }
+    .tag.frozen { background: #fff7e6; color: #ad6800; }
+    .tag.released { background: #f6ffed; color: #237804; }
+    .tag.no_freeze { background: #f0f5ff; color: #1d39c4; }
+    .tag.other { background: #f5f5f5; color: #595959; }
+    .money { color: #cf6b00; font-weight: 900; }
+    .key { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #50616a; background: #f3f7f8; padding: 4px 7px; border-radius: 8px; word-break: break-all; display: inline-block; max-width: 260px; }
+    .empty { padding: 36px 16px; text-align: center; color: #81919a; border-top: 1px solid #eef3f5; }
+    .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 9999; background: rgba(23, 33, 38, .92); color: #fff; border-radius: 999px; padding: 10px 16px; font-size: 14px; display: none; max-width: min(92vw, 620px); }
+    .loading { opacity: .65; pointer-events: none; }
+    @media (max-width: 720px) {
+      .page { padding: 12px; }
+      .header { flex-direction: column; align-items: stretch; }
+      .header-actions { justify-content: stretch; }
+      .header-actions .btn { flex: 1; }
+      h1 { font-size: 20px; }
+      .toolbar { grid-template-columns: 1fr; padding: 14px; }
+      .card-hd { padding: 14px; }
+      table { min-width: 0; }
+      thead { display: none; }
+      tbody, tr, td { display: block; width: 100%; }
+      tr { border-top: 1px solid #eef3f5; padding: 10px 12px; }
+      td { border: 0; padding: 6px 0; display: flex; justify-content: space-between; gap: 12px; }
+      td::before { content: attr(data-label); color: #73848d; flex: 0 0 92px; font-weight: 700; }
+      .key { max-width: 210px; text-align: right; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="page">
+    <div class="header">
+      <div>
+        <div class="crumb">Menu / venue_frozen_logs</div>
+        <h1>冻结记录</h1>
+        <div class="desc">直接读取接口目录下的 frozen_log.txt，用于回看历史冻结和手动解除冻结记录。</div>
+      </div>
+      <div class="header-actions">
+        <button class="btn ghost" onclick="goList()">返回正在冻结</button>
+        <button class="btn primary" onclick="loadLogs()">刷新</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-title">冻结日志</div>
+        <div class="muted" id="scopeTip"></div>
+      </div>
+      <div class="toolbar">
+        <select id="venueSelect" style="display:none;"></select>
+        <input id="keyword" placeholder="搜索：ban_id / redisKey / 关键词" />
+        <input id="limit" type="number" min="1" max="1000" value="300" />
+        <button class="btn primary" onclick="loadLogs()">查询</button>
+        <div class="muted" id="logPath"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>状态</th>
+              <th>场地</th>
+              <th>封禁ID</th>
+              <th>金额</th>
+              <th>时长/TTL</th>
+              <th>Redis Key</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty" style="display:none;">暂无冻结日志</div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+<script>
+const API = '../api/operat/venue_frozen_funds_api.php';
+let pageData = null;
+let loading = false;
+function qs(name) { return new URLSearchParams(location.search).get(name) || ''; }
+function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+function toast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.style.display = 'block'; clearTimeout(el._timer); el._timer = setTimeout(() => el.style.display = 'none', 2200); }
+function setLoading(flag) { loading = flag; document.getElementById('page').classList.toggle('loading', flag); }
+function selectedVenueId() { const select = document.getElementById('venueSelect'); if (!select || select.style.display === 'none') return ''; return select.value || ''; }
+function renderVenueSelect(data) {
+  const user = data.user || {};
+  const select = document.getElementById('venueSelect');
+  const scopeTip = document.getElementById('scopeTip');
+  const canSelect = !!user.can_select_venue;
+  if (!canSelect) {
+    select.style.display = 'none';
+    scopeTip.textContent = `role_id=3，仅展示自己场地：${user.venue_id || '-'}`;
+    return;
+  }
+  select.style.display = '';
+  const current = String(data.selected_venue_id || qs('venue_id') || '');
+  const venues = data.venues || [];
+  select.innerHTML = '<option value="">全部场地</option>' + venues.map(v => {
+    const id = String(v.id || '');
+    const name = v.venue_name ? ` - ${v.venue_name}` : '';
+    return `<option value="${escapeHtml(id)}" ${current === id ? 'selected' : ''}>${escapeHtml(id + name)}</option>`;
+  }).join('');
+  scopeTip.textContent = 'role_id=1/2，可查看全场地，也可按场地筛选';
+}
+async function loadLogs(initialVenueId) {
+  if (loading) return;
+  setLoading(true);
+  try {
+    const url = new URL(API, location.href);
+    url.searchParams.set('action', 'logs');
+    const vid = initialVenueId !== undefined ? initialVenueId : selectedVenueId();
+    if (vid) url.searchParams.set('venue_id', vid);
+    const keyword = document.getElementById('keyword').value.trim();
+    if (keyword) url.searchParams.set('keyword', keyword);
+    const limit = document.getElementById('limit').value || '300';
+    url.searchParams.set('limit', limit);
+    const res = await fetch(url.toString(), { credentials: 'include' });
+    const json = await res.json();
+    if (Number(json.code) !== 0) throw new Error(json.msg || '加载失败');
+    pageData = json.data || {};
+    renderLogs(pageData);
+  } catch (err) {
+    toast(err.message || '加载失败');
+  } finally {
+    setLoading(false);
+  }
+}
+function renderLogs(data) {
+  renderVenueSelect(data);
+  const logs = data.logs || {};
+  const rows = logs.records || [];
+  document.getElementById('logPath').textContent = logs.exists ? `文件：${logs.path || ''}` : (logs.message || '未找到日志文件');
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = rows.map(row => {
+    const venueTitle = `${row.venue_id || '-'}${row.venue_name ? ' - ' + row.venue_name : ''}`;
+    const tagClass = row.status || 'other';
+    const ttlText = row.ban_seconds_text !== '-' ? row.ban_seconds_text : row.ttl_text;
+    return `
+      <tr>
+        <td data-label="时间">${escapeHtml(row.time || '-')}</td>
+        <td data-label="状态"><span class="tag ${escapeHtml(tagClass)}">${escapeHtml(row.status_text || '-')}</span></td>
+        <td data-label="场地">${escapeHtml(venueTitle)}</td>
+        <td data-label="封禁ID">${escapeHtml(row.ban_id || '-')}</td>
+        <td data-label="金额" class="money">${row.amount_text === '-' ? '-' : '¥' + escapeHtml(row.amount_text)}</td>
+        <td data-label="时长/TTL">${escapeHtml(ttlText || '-')}</td>
+        <td data-label="Redis Key"><span class="key">${escapeHtml(row.key || '-')}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+function goList() {
+  const url = new URL('venue_frozen_funds.html', location.href);
+  const vid = selectedVenueId() || qs('venue_id');
+  if (vid) url.searchParams.set('venue_id', vid);
+  location.href = url.toString();
+}
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('keyword').value = qs('keyword');
+  loadLogs(qs('venue_id'));
+});
+</script>
+</body>
+</html>

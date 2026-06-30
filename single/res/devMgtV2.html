@@ -274,29 +274,41 @@ body {
 }
 
 .device-head {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
     gap: 8px;
     line-height: 1.2;
 }
 
 .device-name {
-    /*font-size: 16px;*/
+    display: block;
+    min-width: 0;
     font-weight: 700;
     color: var(--primary);
     word-break: break-word;
+    line-height: 1.35;
+}
+
+.device-status-badges {
+    max-width: 255px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .device-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 22px;
-    padding: 0 10px;
+    height: 20px;
+    padding: 0 8px;
     border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
     white-space: nowrap;
 }
 
@@ -386,7 +398,7 @@ body {
 .device-tag {
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
+    min-height: 28px;
     padding: 5px 12px;
     border-radius: 999px;
     background: #f3f5f9;
@@ -395,6 +407,121 @@ body {
     color: #555;
     line-height: 1;
     white-space: nowrap;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.device-tag-editable {
+    cursor: pointer;
+    background: #f8fbff;
+    border-color: #d8e3ff;
+    color: #355780;
+    transition: var(--transition);
+}
+
+.device-tag-editable:hover {
+    border-color: var(--primary);
+    color: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(91, 140, 255, 0.12);
+}
+
+.device-tag-editable::after {
+    content: "✎";
+    margin-left: 6px;
+    color: var(--primary);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.device-image-row {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.device-image-pill {
+    max-width: 100%;
+    min-width: 0;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 5px 11px;
+    border: 1px solid #d8e3ff;
+    border-radius: 999px;
+    background: #f8fbff;
+    color: #355780;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.device-image-pill:hover {
+    border-color: var(--primary);
+    color: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(91, 140, 255, 0.12);
+}
+
+.device-image-pill .image-pill-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-image-pill::after {
+    content: "✎";
+    margin-left: 6px;
+    color: var(--primary);
+    font-size: 11px;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.image-room-display {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 0 11px;
+    border: 1px solid #edf1f7;
+    border-radius: 8px;
+    background: #f8faff;
+    color: #526071;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.image-back-toggle-btn {
+    width: 100%;
+    min-height: 36px;
+    margin: 4px 0 12px;
+    border: 1px dashed #cbd8ef;
+    border-radius: 8px;
+    background: #fbfcff;
+    color: #355780;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.image-back-toggle-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary-hover);
+    background: #f8faff;
+}
+
+.image-back-editor {
+    display: none;
+}
+
+.image-back-editor.show {
+    display: block;
 }
 
 .ban-end-time {
@@ -472,7 +599,7 @@ body {
 .device-sync-row {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 8px;
 }
 
@@ -550,6 +677,20 @@ body {
     color: #333;
 }
 
+.field-modal-close {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    color: #888;
+}
+
+.field-modal-close:hover {
+    color: #333;
+}
+
 .form-group {
     margin-bottom: 15px;
 }
@@ -583,6 +724,111 @@ body {
 
 .form-group input[readonly] {
     background-color: #f5f5f5;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.modal-actions .modify-btn,
+.modal-actions .add-device-btn {
+    width: auto;
+    min-width: 88px;
+}
+
+.ghost-modal-btn {
+    min-height: 34px;
+    padding: 7px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #fff;
+    color: #596579;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.ghost-modal-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary-hover);
+    background: #f8faff;
+}
+
+.mini-modal-content {
+    max-width: 430px;
+}
+
+.device-field-meta,
+.stream-info-grid {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0 14px;
+    padding: 12px;
+    border: 1px solid #edf1f7;
+    border-radius: 10px;
+    background: #f8faff;
+    color: #526071;
+    font-size: 13px;
+}
+
+.device-field-meta b,
+.stream-info-grid b {
+    color: var(--text-color);
+    word-break: break-all;
+}
+
+.modal-message {
+    min-height: 20px;
+    margin-top: 8px;
+    color: var(--text-light);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.modal-message.success {
+    color: var(--green);
+}
+
+.modal-message.error {
+    color: var(--red);
+}
+
+.stream-result-box {
+    min-height: 74px;
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px dashed #dbe4f3;
+    border-radius: 10px;
+    background: #fbfcff;
+    color: #526071;
+    font-size: 13px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.stream-result-box.success {
+    border-style: solid;
+    border-color: rgba(40, 167, 69, .28);
+    background: rgba(40, 167, 69, .06);
+    color: #1f8f3e;
+}
+
+.stream-result-box.error {
+    border-style: solid;
+    border-color: rgba(255, 91, 91, .28);
+    background: rgba(255, 91, 91, .06);
+    color: #c62828;
+}
+
+.stream-result-box.loading {
+    border-style: solid;
+    border-color: rgba(91, 140, 255, .28);
+    background: rgba(91, 140, 255, .06);
+    color: var(--primary-hover);
 }
 
 /* =========================
@@ -666,6 +912,23 @@ body {
         font-size: 15px;
     }
 
+    .device-head {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .device-status-badges {
+        max-width: 100%;
+        justify-content: flex-start;
+        gap: 5px;
+    }
+
+    .device-badge {
+        height: 19px;
+        padding: 0 7px;
+        font-size: 11px;
+    }
+
     .meta-row {
         font-size: 13px;
     }
@@ -675,8 +938,9 @@ body {
     }
 
     .device-tag {
+        min-height: 26px;
         font-size: 12px;
-        padding: 5px 10px;
+        padding: 4px 9px;
     }
 
     .button-group {
@@ -700,6 +964,28 @@ body {
     .modal-content {
         margin: 16% auto;
         padding: 16px;
+    }
+
+    .modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .modal-actions .modify-btn,
+    .modal-actions .ghost-modal-btn {
+        width: 100%;
+    }
+
+    .device-image-pill {
+        max-width: 100%;
+        min-height: 26px;
+        padding: 4px 9px;
+        font-size: 12px;
+    }
+
+    .device-image-pill::after {
+        margin-left: 4px;
+        font-size: 10px;
     }
 }
 
@@ -862,6 +1148,79 @@ body {
             </form>
         </div>
     </div>
+
+<!-- 小弹窗：修改场地ID/绑定用户 -->
+<div id="deviceFieldModal" class="modal">
+    <div class="modal-content mini-modal-content">
+        <span class="field-modal-close" onclick="closeDeviceFieldModal()">&times;</span>
+        <h2 id="deviceFieldModalTitle">修改信息</h2>
+        <div class="device-field-meta">
+            <div>设备序列号：<b id="deviceFieldSerialText">-</b></div>
+            <div>修改字段：<b id="deviceFieldNameText">-</b></div>
+        </div>
+        <input type="hidden" id="deviceFieldSerial">
+        <input type="hidden" id="deviceFieldType">
+        <div class="form-group">
+            <label for="deviceFieldValue" id="deviceFieldValueLabel">新值</label>
+            <input type="text" id="deviceFieldValue" autocomplete="off">
+        </div>
+        <div id="deviceFieldMessage" class="modal-message"></div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-modal-btn" onclick="closeDeviceFieldModal()">取消</button>
+            <button type="button" class="modify-btn" id="deviceFieldSaveBtn" onclick="submitDeviceFieldEdit()">保存修改</button>
+        </div>
+    </div>
+</div>
+
+<!-- 小弹窗：图传编辑 -->
+<div id="deviceImageModal" class="modal">
+    <div class="modal-content mini-modal-content">
+        <span class="field-modal-close" onclick="closeDeviceImageModal()">&times;</span>
+        <h2>修改图传</h2>
+        <div class="device-field-meta">
+            <div>设备序列号：<b id="deviceImageSerialText">-</b></div>
+            <div>当前 room_id：<b id="deviceImageRoomText">-</b></div>
+        </div>
+        <input type="hidden" id="deviceImageSerial">
+        <div class="form-group">
+            <label for="deviceFrontImageValue">前图传ID</label>
+            <input type="text" id="deviceFrontImageValue" autocomplete="off" placeholder="可填写 device_information.id 或 room_id">
+        </div>
+        <div class="form-group">
+            <label>room_id</label>
+            <div class="image-room-display" id="deviceImageRoomDisplay">-</div>
+        </div>
+        <button type="button" class="image-back-toggle-btn" id="deviceBackImageToggle" onclick="toggleBackImageEdit()">新增后图传</button>
+        <div class="image-back-editor" id="deviceBackImageEditor">
+            <div class="form-group">
+                <label for="deviceBackImageValue">后图传ID</label>
+                <input type="text" id="deviceBackImageValue" autocomplete="off" placeholder="请输入后图传ID，可留空">
+            </div>
+        </div>
+        <div id="deviceImageMessage" class="modal-message"></div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-modal-btn" onclick="closeDeviceImageModal()">取消</button>
+            <button type="button" class="modify-btn" id="deviceImageSaveBtn" onclick="submitDeviceImageEdit()">保存修改</button>
+        </div>
+    </div>
+</div>
+
+<!-- 小弹窗：流状态检测 -->
+<div id="streamStatusModal" class="modal">
+    <div class="modal-content mini-modal-content">
+        <span class="field-modal-close" onclick="closeStreamStatusModal()">&times;</span>
+        <h2>流状态检测</h2>
+        <div class="stream-info-grid">
+            <div>设备序列号：<b id="streamSerialText">-</b></div>
+            <div>房间号：<b id="streamRoomText">-</b></div>
+        </div>
+        <div id="streamStatusResult" class="stream-result-box">等待检测...</div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-modal-btn" onclick="closeStreamStatusModal()">关闭</button>
+            <button type="button" class="modify-btn" id="streamRetryBtn" onclick="retryCurrentStreamCheck()">重新检测</button>
+        </div>
+    </div>
+</div>
  <script src="canvas-nest-colorful.js"></script>
     <script> 
     
@@ -902,6 +1261,32 @@ function formatDurationFromSeconds(seconds) {
     if (!text && secs) text += `${secs}秒`;
 
     return text || '0分钟';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, function (ch) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch];
+    });
+}
+
+function cleanMetaText(value) {
+    const text = String(value ?? '').trim();
+    return (!text || text === 'null' || text === 'undefined') ? '' : text;
+}
+
+function formatImagePillText(imageId, roomId) {
+    const id = cleanMetaText(imageId);
+    const room = cleanMetaText(roomId);
+
+    if (!id && !room) return '图传 未设置';
+    if (id && room) return `图传 ${id}/${room}`;
+    return `图传 ${id || room}`;
 }
         let currentPage = 1; 
         const limit = 10; 
@@ -959,11 +1344,11 @@ function switchVenue(venueId) {
     selectedVenueId = venueId;
     currentPage = 1;
 
-    const venue = allVenues.find(v => String(v.id) === String(venueId));
     const venueSearchInput = document.getElementById('venue-fuzzy-search');
 
-    if (venueSearchInput && venue) {
-        venueSearchInput.value = `${venue.id}-${venue.venue_name}`;
+    // 模糊搜索框只作为输入入口，不再默认回填“场地ID-场地名称”，避免看起来像已经带了搜索条件。
+    if (venueSearchInput) {
+        venueSearchInput.value = '';
     }
 
     document.getElementById('global-search').value = '';
@@ -1180,10 +1565,10 @@ function displayDevices(devices) {
 
         const banClass = device.is_banned ? 'badge-ban' : 'badge-normal';
 
-        const imageSerialText = device.image_device_serial
-            ? `${device.image_device_serial}${device.image_device_room_id ? `（房间号: ${device.image_device_room_id}）` : ''}`
-            : '无';
-        const bkImageSerialText = device.bk_image_device_serial || '无';
+        const frontImageId = cleanMetaText(device.image_device_serial);
+        const frontRoomId = cleanMetaText(device.image_device_room_id);
+        const backImageId = cleanMetaText(device.bk_image_device_serial);
+        const imagePillText = formatImagePillText(frontImageId, frontRoomId);
 
         card.innerHTML = `
             <img class="device-img" src="${device.photo_url || ''}" alt="设备图片">
@@ -1191,28 +1576,47 @@ function displayDevices(devices) {
             <div class="device-info">
                 <div class="device-head">
                     <span class="device-name">${device.name || '-'}</span>
-                    <span class="device-badge ${statusClass}">${device.status || '未知'}</span>
-                    <span class="device-badge ${banClass}">${device.is_banned ? '已封禁' : '未封禁'}</span>
-                    <span class="device-badge badge-share">${device.sharing_status || '未知'}</span>
+                    <div class="device-status-badges">
+                        <span class="device-badge ${statusClass}">${device.status || '未知'}</span>
+                        <span class="device-badge ${banClass}">${device.is_banned ? '已封禁' : '未封禁'}</span>
+                        <span class="device-badge badge-share">${device.sharing_status || '未知'}</span>
+                    </div>
                 </div>
 
                 <div class="device-serial">序列号：${device.serial_number || '-'}</div>
 
                 <div class="device-meta-list">
-                    <div class="meta-row">
-                        <span class="meta-label">前图传</span>
-       <span class="meta-value device-front-image-serial">${imageSerialText}</span>
-                    </div>
-                    <div class="meta-row">
-                        <span class="meta-label">后图传</span>
-                        <span class="meta-value device-bk-image-serial">${bkImageSerialText}</span>
+                    <div class="device-image-row">
+                        <button type="button"
+                                class="device-image-pill"
+                                data-serial="${escapeHtml(device.serial_number || '')}"
+                                data-front-image-id="${escapeHtml(frontImageId)}"
+                                data-front-room-id="${escapeHtml(frontRoomId)}"
+                                data-back-image-id="${escapeHtml(backImageId)}"
+                                title="点击修改前/后图传">
+                            <span class="image-pill-text">${escapeHtml(imagePillText)}</span>
+                        </button>
                     </div>
                 </div>
 
                 <div class="device-tags">
                     <div class="device-tags-row">
-                        <span class="device-tag device-venue-id">场地 ID：${device.bind_site ?? '-'}</span>
-                        <span class="device-tag device-uid">绑定用户：${device.uid || '未绑定'}</span>
+                        <button type="button"
+                                class="device-tag device-tag-editable device-venue-id"
+                                data-field="bind_site"
+                                data-label="场地ID"
+                                data-serial="${device.serial_number || ''}"
+                                data-value="${device.bind_site ?? ''}">
+                            场地ID：${device.bind_site ?? '-'}
+                        </button>
+                        <button type="button"
+                                class="device-tag device-tag-editable device-uid"
+                                data-field="uid"
+                                data-label="绑定用户"
+                                data-serial="${device.serial_number || ''}"
+                                data-value="${device.uid || ''}">
+                            绑定用户：${device.uid || '未绑定'}
+                        </button>
                     </div>
                 </div>
 
@@ -1230,13 +1634,6 @@ function displayDevices(devices) {
                     违规通知
                 </button>
 
-                <button class="modify-site-btn" data-serial="${device.serial_number}" data-bind-site="${device.bind_site || ''}">
-                    修改场地ID
-                </button>
-
-                <button class="modify-uid-btn" data-serial="${device.serial_number}" data-uid="${device.uid || ''}">
-                    修改用户ID
-                </button>
 
                 <button class="modify-config-btn" onclick="goToConfig(this)" data-device='${JSON.stringify(device)}'>
                     修改配置
@@ -1249,12 +1646,7 @@ function displayDevices(devices) {
     <button class="check-stream-btn"
             data-serial="${device.serial_number || ''}"
             data-playing-stream-id="${device.image_device_room_id || ''}">
-        检测流状态
-    </button>
-
-    <button class="sync-device-btn"
-            data-serial="${device.serial_number || ''}">
-        一键同步
+        流状态
     </button>
 </div>
             </div>
@@ -1270,12 +1662,29 @@ function displayDevices(devices) {
             sendViolationNotice(this.dataset.serial);
         });
 
-        card.querySelector('.modify-site-btn').addEventListener('click', function () {
-            updateBindSite(this);
-        });
+        const imagePill = card.querySelector('.device-image-pill');
+        if (imagePill) {
+            imagePill.addEventListener('click', function () {
+                openDeviceImageModal(this);
+            });
+            imagePill.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openDeviceImageModal(this);
+                }
+            });
+        }
 
-        card.querySelector('.modify-uid-btn').addEventListener('click', function () {
-            updateUid(this);
+        card.querySelectorAll('.device-tag-editable').forEach(function (tag) {
+            tag.addEventListener('click', function () {
+                openDeviceFieldModal(this);
+            });
+            tag.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openDeviceFieldModal(this);
+                }
+            });
         });
 
         card.querySelector('.modify-config-btn').addEventListener('click', function () {
@@ -1283,9 +1692,6 @@ function displayDevices(devices) {
         });
         card.querySelector('.check-stream-btn').addEventListener('click', function () {
             checkStreamSetSnStatus(this);
-        });
-        card.querySelector('.sync-device-btn').addEventListener('click', function () {
-            syncSingleVehicleToDr(this);
         });
         if (device.is_banned) {
             getBanEndTime(device.serial_number);
@@ -1476,6 +1882,48 @@ function goToConfig(btn) {
         document.querySelector('.modal-close').onclick = function() {
             document.getElementById('banModal').style.display = 'none';
         };
+
+        document.getElementById('deviceFieldModal').addEventListener('click', function (event) {
+            if (event.target === this) closeDeviceFieldModal();
+        });
+
+        document.getElementById('deviceImageModal').addEventListener('click', function (event) {
+            if (event.target === this) closeDeviceImageModal();
+        });
+
+        document.getElementById('streamStatusModal').addEventListener('click', function (event) {
+            if (event.target === this) closeStreamStatusModal();
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeDeviceFieldModal();
+                closeDeviceImageModal();
+                closeStreamStatusModal();
+                document.getElementById('banModal').style.display = 'none';
+            }
+        });
+
+        document.getElementById('deviceFieldValue').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitDeviceFieldEdit();
+            }
+        });
+
+        document.getElementById('deviceFrontImageValue').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitDeviceImageEdit();
+            }
+        });
+
+        document.getElementById('deviceBackImageValue').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitDeviceImageEdit();
+            }
+        });
 
         // 处理封禁表单提交
         document.getElementById('banForm').onsubmit = function(e) {
@@ -1679,27 +2127,78 @@ function updateDeviceStatus(serialNumber, banStatus, deviceCard) {
                     alert('请求失败，请稍后再试'); 
                 }); 
         } 
+let currentStreamCheck = {
+    serialNumber: '',
+    playingStreamId: '',
+    button: null
+};
+
+function setStreamResult(message, type = '') {
+    const box = document.getElementById('streamStatusResult');
+    if (!box) return;
+    box.className = 'stream-result-box' + (type ? ' ' + type : '');
+    box.innerHTML = message;
+}
+
+function closeStreamStatusModal() {
+    const modal = document.getElementById('streamStatusModal');
+    if (modal) modal.style.display = 'none';
+}
+
 function checkStreamSetSnStatus(button) {
     const serialNumber = (button.dataset.serial || '').trim();
     const playingStreamId = (button.dataset.playingStreamId || '').trim();
 
+    currentStreamCheck = {
+        serialNumber,
+        playingStreamId,
+        button
+    };
+
+    document.getElementById('streamSerialText').textContent = serialNumber || '-';
+    document.getElementById('streamRoomText').textContent = playingStreamId || '-';
+    document.getElementById('streamStatusModal').style.display = 'block';
+
     if (!serialNumber) {
-        alert('缺少设备序列号');
+        setStreamResult('缺少设备序列号，无法检测。', 'error');
         return;
     }
 
     if (!playingStreamId) {
-        alert('缺少房间号 playing_stream_id');
+        setStreamResult('缺少房间号 playing_stream_id，无法检测。', 'error');
         return;
     }
 
-    if (!confirm(`确认检测流状态？\n\nSN：${serialNumber}\n房间号：${playingStreamId}`)) {
+    runStreamStatusCheck(serialNumber, playingStreamId, button);
+}
+
+function retryCurrentStreamCheck() {
+    if (!currentStreamCheck || !currentStreamCheck.serialNumber) {
+        setStreamResult('没有可重新检测的设备。', 'error');
         return;
     }
+    runStreamStatusCheck(
+        currentStreamCheck.serialNumber,
+        currentStreamCheck.playingStreamId,
+        currentStreamCheck.button
+    );
+}
 
-    const oldText = button.textContent;
-    button.disabled = true;
-    button.textContent = '检测中...';
+function runStreamStatusCheck(serialNumber, playingStreamId, button) {
+    const oldText = button ? button.textContent : '';
+    const retryBtn = document.getElementById('streamRetryBtn');
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = '检测中...';
+    }
+
+    if (retryBtn) {
+        retryBtn.disabled = true;
+        retryBtn.textContent = '检测中...';
+    }
+
+    setStreamResult('正在检测流状态，请稍候...', 'loading');
 
     const formData = new URLSearchParams();
     formData.append('sn', serialNumber);
@@ -1717,26 +2216,31 @@ function checkStreamSetSnStatus(button) {
             console.log('检测流状态返回:', data);
 
             if (data.code === 200) {
-                alert(data.msg || '检测完成');
+                setStreamResult(data.msg || '检测完成，设备流状态已同步。', 'success');
 
-                /**
-                 * 成功后刷新当前列表，保证页面状态和数据库一致
-                 */
+                // 成功后刷新当前列表，保证页面状态和数据库一致。
                 currentPage = 1;
                 loadDeviceData(currentPage, selectedVenueId);
             } else {
-                alert('检测失败：' + (data.msg || '未知错误'));
+                setStreamResult('检测失败：' + (data.msg || '未知错误'), 'error');
             }
         })
         .catch(error => {
             console.error('检测流状态请求失败:', error);
-            alert('请求失败，请稍后再试');
+            setStreamResult('请求失败，请稍后再试。', 'error');
         })
         .finally(() => {
-            button.disabled = false;
-            button.textContent = oldText;
+            if (button) {
+                button.disabled = false;
+                button.textContent = oldText || '流状态';
+            }
+            if (retryBtn) {
+                retryBtn.disabled = false;
+                retryBtn.textContent = '重新检测';
+            }
         });
 }
+
 function syncSingleVehicleToDr(button) {
     const serialNumber = (button.dataset.serial || '').trim();
 
@@ -1815,111 +2319,360 @@ function syncSingleVehicleToDr(button) {
         button.textContent = oldText;
     });
 }
-        // 修改 updateBindSite 函数
-function updateBindSite(button) {
-    const serialNumber = button.dataset.serial;
-    const currentBindSite = button.dataset.bindSite;
+        // 图传：点击胶囊标签打开小模态框，支持当前页修改前图传 / 后图传
+let currentDeviceImageEdit = null;
 
-    const newBindSite = prompt('请输入新的场地ID:', currentBindSite);
-    if (newBindSite === null) return;
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            try {
-                const response = JSON.parse(xhr.responseText);
-                if (response.code === 0) {
-                    button.dataset.bindSite = newBindSite;
-
-                    const deviceCard = button.closest('.device-card');
-                    const venueIdSpan = deviceCard.querySelector('.device-venue-id');
-                    if (venueIdSpan) {
-                        venueIdSpan.textContent = `场地 ID：${newBindSite}`;
-                    }
-
-                    const deviceIndex = allDevices.findIndex(device => device.serial_number === serialNumber);
-                    if (deviceIndex !== -1) {
-                        allDevices[deviceIndex].bind_site = newBindSite;
-                    }
-
-                    const deviceInfo = JSON.parse(deviceCard.getAttribute('data-device'));
-                    deviceInfo.bind_site = newBindSite;
-                    deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
-
-                    alert('场地ID更新成功');
-                } else {
-                    alert('更新失败: ' + response.msg);
-                }
-            } catch (error) {
-                console.error('更新失败:', error);
-                alert('更新失败，请稍后重试');
-            }
-        }
-    };
-
-    const data = JSON.stringify({
-        update_bind: true,
-        serial_number: serialNumber,
-        bind_site: newBindSite
-    });
-    xhr.send(data);
+function setDeviceImageMessage(message, type = '') {
+    const msg = document.getElementById('deviceImageMessage');
+    if (!msg) return;
+    msg.className = 'modal-message' + (type ? ' ' + type : '');
+    msg.textContent = message || '';
 }
 
-        // 添加修改用户ID的函数
-function updateUid(button) {
-    const serialNumber = button.dataset.serial;
-    const currentUid = button.dataset.uid;
+function openDeviceImageModal(pill) {
+    if (!pill) return;
 
-    const newUid = prompt('请输入新的用户ID:', currentUid);
-    if (newUid === null) return;
+    const deviceCard = pill.closest('.device-card');
+    const deviceInfo = deviceCard ? JSON.parse(deviceCard.getAttribute('data-device') || '{}') : {};
+    const serialNumber = (pill.dataset.serial || deviceInfo.serial_number || '').trim();
+    const frontImageId = cleanMetaText(pill.dataset.frontImageId || deviceInfo.image_device_serial || '');
+    const frontRoomId = cleanMetaText(pill.dataset.frontRoomId || deviceInfo.image_device_room_id || '');
+    const backImageId = cleanMetaText(pill.dataset.backImageId || deviceInfo.bk_image_device_serial || '');
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            try {
-                const response = JSON.parse(xhr.responseText);
-
-                if (response.code === 0) {
-                    button.dataset.uid = newUid;
-
-                    const deviceCard = button.closest('.device-card');
-                    const uidElement = deviceCard.querySelector('.device-uid');
-                    if (uidElement) {
-                        uidElement.textContent = `绑定用户：${newUid || '未绑定'}`;
-                    }
-
-                    const deviceIndex = allDevices.findIndex(device => device.serial_number === serialNumber);
-                    if (deviceIndex !== -1) {
-                        allDevices[deviceIndex].uid = newUid;
-                    }
-
-                    const deviceInfo = JSON.parse(deviceCard.getAttribute('data-device'));
-                    deviceInfo.uid = newUid;
-                    deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
-
-                    alert('用户ID更新成功');
-                } else {
-                    alert('更新失败: ' + response.msg);
-                }
-            } catch (error) {
-                console.error('更新失败:', error);
-                alert('更新失败，请稍后重试');
-            }
-        }
+    currentDeviceImageEdit = {
+        pill,
+        deviceCard,
+        deviceInfo,
+        serialNumber,
+        frontImageId,
+        frontRoomId,
+        backImageId
     };
 
-    const data = JSON.stringify({
+    document.getElementById('deviceImageSerialText').textContent = serialNumber || '-';
+    document.getElementById('deviceImageSerial').value = serialNumber;
+    document.getElementById('deviceImageRoomText').textContent = frontRoomId || '-';
+    document.getElementById('deviceImageRoomDisplay').textContent = frontRoomId || '-';
+    document.getElementById('deviceFrontImageValue').value = frontImageId || '';
+    document.getElementById('deviceBackImageValue').value = backImageId || '';
+
+    const editor = document.getElementById('deviceBackImageEditor');
+    const toggle = document.getElementById('deviceBackImageToggle');
+    if (editor) editor.classList.remove('show');
+    if (toggle) {
+        toggle.dataset.open = '0';
+        toggle.textContent = backImageId ? '后图传编辑（已设置）' : '新增后图传';
+    }
+
+    setDeviceImageMessage('前图传可填写 device_information.id 或 room_id；后图传默认收起，需要时展开编辑。');
+    document.getElementById('deviceImageModal').style.display = 'block';
+
+    setTimeout(function () {
+        const input = document.getElementById('deviceFrontImageValue');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 30);
+}
+
+function toggleBackImageEdit() {
+    const editor = document.getElementById('deviceBackImageEditor');
+    const toggle = document.getElementById('deviceBackImageToggle');
+    if (!editor || !toggle) return;
+
+    const opened = toggle.dataset.open === '1';
+    if (opened) {
+        editor.classList.remove('show');
+        toggle.dataset.open = '0';
+        toggle.textContent = currentDeviceImageEdit && currentDeviceImageEdit.backImageId ? '后图传编辑（已设置）' : '新增后图传';
+    } else {
+        editor.classList.add('show');
+        toggle.dataset.open = '1';
+        toggle.textContent = '收起后图传编辑';
+        const input = document.getElementById('deviceBackImageValue');
+        if (input) setTimeout(() => input.focus(), 20);
+    }
+}
+
+function closeDeviceImageModal() {
+    const modal = document.getElementById('deviceImageModal');
+    if (modal) modal.style.display = 'none';
+    currentDeviceImageEdit = null;
+}
+
+function submitDeviceImageEdit() {
+    const state = currentDeviceImageEdit;
+    if (!state) return;
+
+    const serialNumber = (document.getElementById('deviceImageSerial').value || state.serialNumber || '').trim();
+    const frontValue = document.getElementById('deviceFrontImageValue').value.trim();
+    const backValue = document.getElementById('deviceBackImageValue').value.trim();
+    const saveBtn = document.getElementById('deviceImageSaveBtn');
+
+    if (!serialNumber) {
+        setDeviceImageMessage('缺少设备序列号，无法保存。', 'error');
+        return;
+    }
+
+    if (!frontValue) {
+        setDeviceImageMessage('前图传ID不能为空。', 'error');
+        return;
+    }
+
+    const deviceInfo = state.deviceInfo || {};
+    const payload = {
+        device_id: serialNumber,
+        name: deviceInfo.name || '',
+        share_name: deviceInfo.share_name || deviceInfo.name || '',
+        image_device_serial: frontValue,
+        bk_image_device_serial: backValue,
+        sharing_status: deviceInfo.sharing_status || '正在共享',
+        photo_url: deviceInfo.photo_url || '',
+        status: deviceInfo.status || ''
+    };
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+    }
+    setDeviceImageMessage('正在保存图传信息...');
+
+    fetch('https://open.rcwulian.cn/api/vehicle/modifyDevice.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(response => response.json())
+        .then(response => {
+            if (response.code === 0) {
+                updateDeviceImageStatic(state, frontValue, backValue, response.data || {});
+                setDeviceImageMessage('保存成功，当前卡片已更新。', 'success');
+                setTimeout(closeDeviceImageModal, 650);
+            } else {
+                setDeviceImageMessage('更新失败：' + (response.msg || '未知错误'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('图传更新失败:', error);
+            setDeviceImageMessage('请求失败，请稍后重试。', 'error');
+        })
+        .finally(() => {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存修改';
+            }
+        });
+}
+
+function updateDeviceImageStatic(state, frontValue, backValue, responseData) {
+    const pill = state.pill;
+    const deviceCard = state.deviceCard || (pill ? pill.closest('.device-card') : null);
+    const serialNumber = state.serialNumber;
+
+    const resolvedFrontId = cleanMetaText(responseData.image_device_serial || responseData.device_id || frontValue);
+    const resolvedRoomId = cleanMetaText(responseData.image_device_room_id || responseData.room_id || state.frontRoomId || '');
+    const resolvedBackId = cleanMetaText(responseData.bk_image_device_serial || backValue);
+    const displayText = formatImagePillText(resolvedFrontId, resolvedRoomId);
+
+    if (pill) {
+        pill.dataset.frontImageId = resolvedFrontId;
+        pill.dataset.frontRoomId = resolvedRoomId;
+        pill.dataset.backImageId = resolvedBackId;
+        const text = pill.querySelector('.image-pill-text');
+        if (text) {
+            text.textContent = displayText;
+        } else {
+            pill.textContent = displayText;
+        }
+    }
+
+    const deviceIndex = allDevices.findIndex(device => String(device.serial_number) === String(serialNumber));
+    if (deviceIndex !== -1) {
+        allDevices[deviceIndex].image_device_serial = resolvedFrontId;
+        allDevices[deviceIndex].image_device_room_id = resolvedRoomId;
+        allDevices[deviceIndex].bk_image_device_serial = resolvedBackId;
+    }
+
+    if (deviceCard) {
+        const deviceInfo = JSON.parse(deviceCard.getAttribute('data-device') || '{}');
+        deviceInfo.image_device_serial = resolvedFrontId;
+        deviceInfo.image_device_room_id = resolvedRoomId;
+        deviceInfo.bk_image_device_serial = resolvedBackId;
+        deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
+
+        const streamBtn = deviceCard.querySelector('.check-stream-btn');
+        if (streamBtn) {
+            streamBtn.dataset.playingStreamId = resolvedRoomId;
+        }
+
+        deviceCard.querySelectorAll('[data-device]').forEach(function (el) {
+            el.dataset.device = JSON.stringify(deviceInfo);
+        });
+    }
+}
+
+        // 修改场地ID / 绑定用户：改为点击胶囊标签打开小模态框
+function setDeviceFieldMessage(message, type = '') {
+    const msg = document.getElementById('deviceFieldMessage');
+    if (!msg) return;
+    msg.className = 'modal-message' + (type ? ' ' + type : '');
+    msg.textContent = message || '';
+}
+
+function openDeviceFieldModal(tag) {
+    if (!tag) return;
+
+    const serialNumber = (tag.dataset.serial || '').trim();
+    const field = (tag.dataset.field || '').trim();
+    const label = tag.dataset.label || (field === 'bind_site' ? '场地ID' : '绑定用户');
+    const currentValue = (tag.dataset.value || '').trim();
+
+    document.getElementById('deviceFieldModalTitle').textContent = '修改' + label;
+    document.getElementById('deviceFieldSerialText').textContent = serialNumber || '-';
+    document.getElementById('deviceFieldNameText').textContent = label;
+    document.getElementById('deviceFieldSerial').value = serialNumber;
+    document.getElementById('deviceFieldType').value = field;
+    document.getElementById('deviceFieldValue').value = currentValue;
+    document.getElementById('deviceFieldValueLabel').textContent = '新的' + label;
+    setDeviceFieldMessage(field === 'uid' ? '绑定用户可留空，留空后显示为未绑定。' : '请输入新的场地ID。');
+
+    document.getElementById('deviceFieldModal').style.display = 'block';
+    setTimeout(function () {
+        const input = document.getElementById('deviceFieldValue');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 30);
+}
+
+function closeDeviceFieldModal() {
+    const modal = document.getElementById('deviceFieldModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function submitDeviceFieldEdit() {
+    const serialNumber = document.getElementById('deviceFieldSerial').value.trim();
+    const field = document.getElementById('deviceFieldType').value.trim();
+    const newValue = document.getElementById('deviceFieldValue').value.trim();
+    const saveBtn = document.getElementById('deviceFieldSaveBtn');
+
+    if (!serialNumber) {
+        setDeviceFieldMessage('缺少设备序列号，无法保存。', 'error');
+        return;
+    }
+
+    if (field !== 'bind_site' && field !== 'uid') {
+        setDeviceFieldMessage('未知字段，无法保存。', 'error');
+        return;
+    }
+
+    if (field === 'bind_site' && !/^\d+$/.test(newValue)) {
+        setDeviceFieldMessage('场地ID只能填写数字。', 'error');
+        return;
+    }
+
+    if (field === 'uid' && newValue && !/^\d+$/.test(newValue)) {
+        setDeviceFieldMessage('绑定用户ID只能填写数字，或留空。', 'error');
+        return;
+    }
+
+    const payload = {
         update_bind: true,
-        serial_number: serialNumber,
-        uid: newUid
-    });
-    xhr.send(data);
+        serial_number: serialNumber
+    };
+
+    if (field === 'bind_site') {
+        payload.bind_site = newValue;
+    } else {
+        payload.uid = newValue;
+    }
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+    }
+    setDeviceFieldMessage('正在保存...');
+
+    fetch('https://open.rcwulian.cn/api/devMgr/devMgtV2.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(response => response.json())
+        .then(response => {
+            if (response.code === 0) {
+                updateDeviceFieldStatic(serialNumber, field, newValue);
+                setDeviceFieldMessage('保存成功，页面已更新。', 'success');
+                setTimeout(closeDeviceFieldModal, 500);
+            } else {
+                setDeviceFieldMessage('更新失败：' + (response.msg || '未知错误'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('更新失败:', error);
+            setDeviceFieldMessage('请求失败，请稍后重试。', 'error');
+        })
+        .finally(() => {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存修改';
+            }
+        });
+}
+
+function updateDeviceFieldStatic(serialNumber, field, newValue) {
+    const selector = `.device-card .device-tag-editable[data-field="${field}"][data-serial="${serialNumber}"]`;
+    const tag = document.querySelector(selector);
+    const deviceCard = tag ? tag.closest('.device-card') : null;
+
+    if (tag) {
+        tag.dataset.value = newValue;
+        if (field === 'bind_site') {
+            tag.textContent = `场地ID：${newValue || '-'}`;
+        } else {
+            tag.textContent = `绑定用户：${newValue || '未绑定'}`;
+        }
+    }
+
+    const key = field === 'bind_site' ? 'bind_site' : 'uid';
+    const deviceIndex = allDevices.findIndex(device => String(device.serial_number) === String(serialNumber));
+    if (deviceIndex !== -1) {
+        allDevices[deviceIndex][key] = newValue;
+    }
+
+    if (deviceCard) {
+        const deviceInfo = JSON.parse(deviceCard.getAttribute('data-device') || '{}');
+        deviceInfo[key] = newValue;
+        deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
+
+        // 修改配置/修改信息按钮里也有 data-device，顺手同步，避免点进去还是旧值。
+        deviceCard.querySelectorAll('[data-device]').forEach(function (el) {
+            el.dataset.device = JSON.stringify(deviceInfo);
+        });
+    }
+}
+
+// 兼容旧按钮调用，当前页面已改为点击胶囊标签。
+function updateBindSite(button) {
+    if (!button) return;
+    button.dataset.field = 'bind_site';
+    button.dataset.label = '场地ID';
+    button.dataset.value = button.dataset.bindSite || '';
+    openDeviceFieldModal(button);
+}
+
+function updateUid(button) {
+    if (!button) return;
+    button.dataset.field = 'uid';
+    button.dataset.label = '绑定用户';
+    button.dataset.value = button.dataset.uid || '';
+    openDeviceFieldModal(button);
 }
 
         // 添加获取封禁结束时间的函数
