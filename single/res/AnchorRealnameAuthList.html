@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>主播实名认证通过记录</title>
+    <title>主播实名认证管理</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
@@ -17,6 +17,7 @@
             --text-color: #333;
             --muted: #6b7280;
             --success: #18a058;
+            --warning: #d48806;
             --danger: #ff4d4f;
             --danger-dark: #cf1322;
             --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
@@ -66,7 +67,32 @@
         .sub-title {
             font-size: 13px;
             color: var(--muted);
+            margin-bottom: 14px;
+            line-height: 1.7;
+        }
+
+        .tabs {
+            display: inline-flex;
+            padding: 4px;
+            background: #eef2ff;
+            border-radius: 999px;
             margin-bottom: 18px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            height: 34px;
+            border-radius: 999px;
+            padding: 0 18px;
+            color: var(--primary);
+            background: transparent;
+            border: 0;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+            background: var(--primary);
+            box-shadow: 0 6px 14px rgba(91, 140, 255, 0.25);
         }
 
         .filter-row {
@@ -146,19 +172,6 @@
             background: #e0e7ff;
         }
 
-        .btn-danger {
-            height: 30px;
-            padding: 0 10px;
-            font-size: 13px;
-            background: #fff1f0;
-            color: var(--danger-dark);
-            border: 1px solid #ffa39e;
-        }
-
-        .btn-danger:hover {
-            background: #ffccc7;
-        }
-
         .btn-warning {
             height: 30px;
             padding: 0 10px;
@@ -212,7 +225,7 @@
             width: 100%;
             border-collapse: collapse;
             background: #fff;
-            min-width: 760px;
+            min-width: 860px;
         }
 
         thead {
@@ -252,6 +265,11 @@
             background: #e9f8ef;
         }
 
+        .badge-muted {
+            color: #6b7280;
+            background: #f3f4f6;
+        }
+
         .empty,
         .loading {
             padding: 36px 0;
@@ -288,6 +306,16 @@
                 grid-template-columns: 1fr;
             }
 
+            .tabs {
+                display: flex;
+                width: 100%;
+            }
+
+            .tab-btn {
+                flex: 1;
+                padding: 0 10px;
+            }
+
             .card-title {
                 font-size: 20px;
             }
@@ -302,19 +330,24 @@
 <body>
 <div class="container">
     <div class="card">
-        <div class="card-title">主播实名认证通过记录</div>
-        <div class="sub-title">
-            只展示当前仍绑定场地的主播实名认证通过记录；点击“解绑”会把 anchor_realname_auth.venue_id 置为 0，并同步清空 users.streamer_venue，旧认证信息仍保留。
+        <div class="card-title">主播实名认证管理</div>
+        <div class="sub-title" id="page_desc">
+            默认展示当前仍绑定场地的主播实名认证记录；点击“解绑记录”可查看已经释放场地的旧认证信息。
+        </div>
+
+        <div class="tabs">
+            <button type="button" id="tab_active" class="tab-btn active" onclick="switchTab('active')">当前认证</button>
+            <button type="button" id="tab_unbound" class="tab-btn" onclick="switchTab('unbound')">解绑记录</button>
         </div>
 
         <div class="filter-row">
             <div class="form-item">
-                <label for="venue_search">场地搜索</label>
+                <label for="venue_search" id="venue_search_label">场地搜索</label>
                 <input id="venue_search" type="text" placeholder="输入场地ID或名称过滤下拉框">
             </div>
 
             <div class="form-item">
-                <label for="venue_id">场地下拉框</label>
+                <label for="venue_id" id="venue_select_label">场地下拉框</label>
                 <select id="venue_id">
                     <option value="">全部场地</option>
                 </select>
@@ -322,7 +355,7 @@
 
             <div class="form-item">
                 <label for="keyword">记录搜索</label>
-                <input id="keyword" type="text" placeholder="搜索 uid / venue_id / 场地名">
+                <input id="keyword" type="text" placeholder="搜索 uid / 场地ID / 场地名">
             </div>
 
             <button class="btn-primary" onclick="loadList(1)">查询</button>
@@ -331,7 +364,7 @@
 
         <div class="stats-row">
             <div class="stat-card">
-                <div class="stat-label">认证通过总数</div>
+                <div class="stat-label" id="total_label">当前认证总数</div>
                 <div class="stat-value" id="total_count">0</div>
             </div>
 
@@ -341,8 +374,8 @@
             </div>
 
             <div class="stat-card">
-                <div class="stat-label">当前筛选场地</div>
-                <div class="stat-value" id="current_venue">全部</div>
+                <div class="stat-label" id="current_venue_label">当前筛选场地</div>
+                <div class="stat-value" id="current_venue">全部场地</div>
             </div>
         </div>
     </div>
@@ -350,17 +383,7 @@
     <div class="card">
         <div class="table-wrap">
             <table>
-                <thead>
-                <tr>
-                    <th>UID</th>
-                    <th>场地ID</th>
-                    <th>场地名称</th>
-                    <th>阿里云 Passed</th>
-                    <th>认证完成时间</th>
-                    <th>操作</th>
-                </tr>
-                </thead>
-
+                <thead id="table_head"></thead>
                 <tbody id="table_body">
                 <tr>
                     <td colspan="6" class="loading">加载中...</td>
@@ -378,19 +401,7 @@
 </div>
 
 <script>
-    /**
-     * 这两个文件建议放同级目录：
-     * AnchorRealnameAuthList.html
-     * AnchorRealnameAuthList.php
-     *
-     * EnergyGift.php 如果也在同级目录，就用这个：
-     */
     const VENUE_API = '/api/operat/EnergyGift.php';
-
-    /**
-     * 如果你的 EnergyGift.php 在固定线上地址，可以改成：
-     * const VENUE_API = 'https://open.nodistanceco.com/api/operat/EnergyGift.php';
-     */
     const LIST_API = '/api/admin/AnchorRealnameAuthList.php';
 
     let allVenues = [];
@@ -399,9 +410,12 @@
     let pageSize = 20;
     let isAdmin = 0;
     let loginVenueId = 0;
+    let currentStatus = 'active';
 
     document.addEventListener('DOMContentLoaded', function () {
         bindEvents();
+        renderTableHead();
+        updateTabText();
         loadVenues();
     });
 
@@ -419,6 +433,74 @@
                 loadList(1);
             }
         });
+    }
+
+    function switchTab(status) {
+        if (!['active', 'unbound'].includes(status)) {
+            status = 'active';
+        }
+
+        if (currentStatus === status) {
+            return;
+        }
+
+        currentStatus = status;
+        currentPage = 1;
+        updateTabText();
+        renderTableHead();
+        loadList(1);
+    }
+
+    function updateTabText() {
+        document.getElementById('tab_active').classList.toggle('active', currentStatus === 'active');
+        document.getElementById('tab_unbound').classList.toggle('active', currentStatus === 'unbound');
+
+        document.getElementById('page_desc').textContent = currentStatus === 'active'
+            ? '默认展示当前仍绑定场地的主播实名认证记录；点击“解绑”会释放 anchor_realname_auth.venue_id，并同步清空 users.streamer_venue，旧认证信息仍保留。'
+            : '这里展示已经解绑的旧认证信息；场地ID取 old_venue_id，用来追溯该主播原来绑定过哪个场地。';
+
+        document.getElementById('total_label').textContent = currentStatus === 'active' ? '当前认证总数' : '解绑记录总数';
+        document.getElementById('current_venue_label').textContent = currentStatus === 'active' ? '当前筛选场地' : '当前筛选解绑前场地';
+        document.getElementById('venue_select_label').textContent = currentStatus === 'active' ? '场地下拉框' : '解绑前场地下拉框';
+        document.getElementById('venue_search_label').textContent = currentStatus === 'active' ? '场地搜索' : '解绑前场地搜索';
+        document.getElementById('keyword').placeholder = currentStatus === 'active'
+            ? '搜索 uid / 当前场地ID / 场地名'
+            : '搜索 uid / 解绑前场地ID / 场地名';
+    }
+
+    function renderTableHead() {
+        const thead = document.getElementById('table_head');
+
+        if (currentStatus === 'unbound') {
+            thead.innerHTML = `
+                <tr>
+                    <th>UID</th>
+                    <th>解绑前场地ID</th>
+                    <th>场地名称</th>
+                    <th>阿里云 Passed</th>
+                    <th>认证完成时间</th>
+                    <th>解绑时间</th>
+                    <th>解绑操作人</th>
+                    <th>状态</th>
+                </tr>
+            `;
+            return;
+        }
+
+        thead.innerHTML = `
+            <tr>
+                <th>UID</th>
+                <th>场地ID</th>
+                <th>场地名称</th>
+                <th>阿里云 Passed</th>
+                <th>认证完成时间</th>
+                <th>操作</th>
+            </tr>
+        `;
+    }
+
+    function getColspan() {
+        return currentStatus === 'unbound' ? 8 : 6;
     }
 
     function loadVenues() {
@@ -482,13 +564,14 @@
 
         const params = new URLSearchParams();
         params.append('action', 'list');
+        params.append('status', currentStatus);
         params.append('page', currentPage);
         params.append('page_size', pageSize);
         params.append('venue_id', venueId);
         params.append('keyword', keyword);
 
         const tbody = document.getElementById('table_body');
-        tbody.innerHTML = `<tr><td colspan="6" class="loading">加载中...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${getColspan()}" class="loading">加载中...</td></tr>`;
 
         fetch(`${LIST_API}?${params.toString()}`, {
             method: 'GET',
@@ -503,7 +586,7 @@
                 }
 
                 if (res.code !== 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="empty">${escapeHtml(res.msg || '加载失败')}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="${getColspan()}" class="empty">${escapeHtml(res.msg || '加载失败')}</td></tr>`;
                     return;
                 }
 
@@ -513,7 +596,6 @@
                 loginVenueId = Number(data.login_venue_id || 0);
 
                 handlePermission();
-
                 renderTable(data.list || []);
 
                 totalPage = Number(data.total_page || 1);
@@ -530,7 +612,7 @@
             })
             .catch(err => {
                 console.error(err);
-                tbody.innerHTML = `<tr><td colspan="6" class="empty">请求失败，请检查接口路径</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${getColspan()}" class="empty">请求失败，请检查接口路径</td></tr>`;
             });
     }
 
@@ -552,7 +634,26 @@
         const tbody = document.getElementById('table_body');
 
         if (!list.length) {
-            tbody.innerHTML = `<tr><td colspan="6" class="empty">暂无认证通过记录</td></tr>`;
+            const text = currentStatus === 'active' ? '暂无当前认证记录' : '暂无解绑记录';
+            tbody.innerHTML = `<tr><td colspan="${getColspan()}" class="empty">${text}</td></tr>`;
+            return;
+        }
+
+        if (currentStatus === 'unbound') {
+            tbody.innerHTML = list.map(item => {
+                return `
+                    <tr>
+                        <td>${escapeHtml(item.uid)}</td>
+                        <td>${escapeHtml(item.old_venue_id || '-')}</td>
+                        <td>${escapeHtml(item.venue_name || '-')}</td>
+                        <td><span class="badge badge-success">${escapeHtml(item.aliyun_passed || '-')}</span></td>
+                        <td>${escapeHtml(item.certify_finished_at || '-')}</td>
+                        <td>${escapeHtml(item.unbound_at || '-')}</td>
+                        <td>${escapeHtml(item.unbound_by || '-')}</td>
+                        <td><span class="badge badge-muted">已解绑</span></td>
+                    </tr>
+                `;
+            }).join('');
             return;
         }
 
@@ -574,9 +675,7 @@
                     <td>${escapeHtml(item.uid)}</td>
                     <td>${escapeHtml(item.venue_id)}</td>
                     <td>${escapeHtml(item.venue_name || '-')}</td>
-                    <td>
-                        <span class="badge badge-success">${escapeHtml(item.aliyun_passed || '-')}</span>
-                    </td>
+                    <td><span class="badge badge-success">${escapeHtml(item.aliyun_passed || '-')}</span></td>
                     <td>${escapeHtml(item.certify_finished_at || '-')}</td>
                     <td>${actionHtml}</td>
                 </tr>
@@ -590,7 +689,7 @@
             return;
         }
 
-        const confirmText = `确定解绑这条主播认证吗？\n\nUID：${uid || '-'}\n当前场地ID：${venueId || '-'}\n\n解绑后不会删除旧认证信息，会把 anchor_realname_auth.venue_id 置为 0，并同步把该 uid 的 users.streamer_venue 置为 0，该场地可重新发起认证。`;
+        const confirmText = `确定解绑这条主播认证吗？\n\nUID：${uid || '-'}\n当前场地ID：${venueId || '-'}\n\n解绑后不会删除旧认证信息，会释放 anchor_realname_auth.venue_id，并同步把该 uid 的 users.streamer_venue 置为 0，该场地可重新发起认证。`;
 
         if (!confirm(confirmText)) {
             return;
@@ -624,60 +723,6 @@
                 alert('解绑成功，该场地现在可以重新认证');
 
                 const total = Number(document.getElementById('total_count').textContent || 0);
-
-                const nextPage = (total - 1 <= (currentPage - 1) * pageSize && currentPage > 1)
-                    ? currentPage - 1
-                    : currentPage;
-
-                loadList(nextPage);
-            })
-            .catch(err => {
-                console.error(err);
-                alert('请求失败，请检查接口路径');
-            });
-    }
-
-    function deleteAuthRecord(id) {
-        if (!id) {
-            alert('缺少记录ID');
-            return;
-        }
-
-        const confirmText = '确定删除这条实名认证通过记录吗？删除后，该场地可能会被判断为未完成主播实名认证。';
-
-        if (!confirm(confirmText)) {
-            return;
-        }
-
-        const params = new URLSearchParams();
-        params.append('action', 'delete');
-        params.append('id', id);
-
-        fetch(LIST_API, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: params.toString()
-        })
-            .then(res => res.json())
-            .then(res => {
-                if (res.code === 1001) {
-                    alert(res.msg || '登录已过期');
-                    location.href = 'login.html';
-                    return;
-                }
-
-                if (res.code !== 0) {
-                    alert(res.msg || '删除失败');
-                    return;
-                }
-
-                alert('删除成功');
-
-                const total = Number(document.getElementById('total_count').textContent || 0);
-
                 const nextPage = (total - 1 <= (currentPage - 1) * pageSize && currentPage > 1)
                     ? currentPage - 1
                     : currentPage;
@@ -714,7 +759,7 @@
 
     function updateCurrentVenueText() {
         const venueSelect = document.getElementById('venue_id');
-        const selectedText = venueSelect.options[venueSelect.selectedIndex]?.textContent || '全部';
+        const selectedText = venueSelect.options[venueSelect.selectedIndex]?.textContent || '全部场地';
 
         document.getElementById('current_venue').textContent = selectedText;
     }

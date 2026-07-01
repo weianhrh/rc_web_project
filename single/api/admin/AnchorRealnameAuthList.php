@@ -459,6 +459,8 @@ if ($action === 'delete') {
 
 /**
  * 列表查询
+ * status=active  ：默认当前仍绑定场地的认证记录，显示“解绑”按钮。
+ * status=unbound ：已解绑历史记录，按 old_venue_id 展示解绑前场地，不再显示解绑按钮。
  */
 if ($action !== 'list') {
     jsonOut(400, '无效操作');
@@ -473,43 +475,57 @@ $offset = ($page - 1) * $pageSize;
 
 $venueId = (int)($_GET['venue_id'] ?? $_POST['venue_id'] ?? 0);
 $keyword = trim($_GET['keyword'] ?? $_POST['keyword'] ?? '');
+$status = trim($_GET['status'] ?? $_POST['status'] ?? 'active');
+$status = ($status === 'unbound') ? 'unbound' : 'active';
 
 $where = [];
 $params = [];
 
-/**
- * 核心条件：
- * 只展示当前仍绑定场地，并且阿里云认证通过的记录。
- * 被解绑的旧记录 venue_id = 0，不在当前生效列表展示，但仍保留在表里。
- */
-$where[] = "a.venue_id IS NOT NULL";
-$where[] = "a.venue_id > 0";
 $where[] = "a.aliyun_passed = 'T'";
 
 /**
- * 非管理员只能看自己的场地
+ * 当前认证：venue_id 还有值。
+ * 已解绑：venue_id 已释放为 NULL 或 0，解绑前场地从 old_venue_id 取。
+ */
+if ($status === 'unbound') {
+    $where[] = "(a.venue_id IS NULL OR a.venue_id = 0)";
+    $venueField = 'a.old_venue_id';
+    $venueJoin = 'v.id = a.old_venue_id';
+    $orderSql = "a.unbound_at DESC, a.id DESC";
+} else {
+    $where[] = "a.venue_id IS NOT NULL";
+    $where[] = "a.venue_id > 0";
+    $venueField = 'a.venue_id';
+    $venueJoin = 'v.id = a.venue_id';
+    $orderSql = "a.certify_finished_at DESC, a.id DESC";
+}
+
+/**
+ * 非管理员只能看自己场地。
+ * 当前认证按 venue_id 限制；已解绑记录按 old_venue_id 限制。
  */
 if (!$isAdmin) {
     if ($loginVenueId <= 0) {
         jsonOut(403, '当前账号未绑定场地，无法查看认证记录');
     }
 
-    $where[] = "a.venue_id = ?";
+    $where[] = "{$venueField} = ?";
     $params[] = $loginVenueId;
 } else {
     /**
-     * 管理员可以按场地筛选
+     * 管理员可以按场地筛选。
+     * 当前认证筛选当前场地；解绑记录筛选解绑前场地。
      */
     if ($venueId > 0) {
-        $where[] = "a.venue_id = ?";
+        $where[] = "{$venueField} = ?";
         $params[] = $venueId;
     }
 }
 
 /**
  * 搜索：
- * a.id 不直接展示，也不作为搜索项。
- * 支持 uid / venue_id / 场地名称
+ * 当前认证支持 uid / 当前 venue_id / old_venue_id / 场地名称。
+ * 解绑记录支持 uid / 解绑前 old_venue_id / 当前 venue_id(NULL/0) / 场地名称。
  */
 if ($keyword !== '') {
     $like = '%' . $keyword . '%';
@@ -517,9 +533,11 @@ if ($keyword !== '') {
     $where[] = "(
         CAST(a.uid AS CHAR) LIKE ?
         OR CAST(a.venue_id AS CHAR) LIKE ?
+        OR CAST(a.old_venue_id AS CHAR) LIKE ?
         OR v.venue_name LIKE ?
     )";
 
+    $params[] = $like;
     $params[] = $like;
     $params[] = $like;
     $params[] = $like;
@@ -530,25 +548,29 @@ $whereSql = implode(' AND ', $where);
 $countSql = "
     SELECT COUNT(*) AS total
     FROM anchor_realname_auth a
-    LEFT JOIN venues v ON v.id = a.venue_id
+    LEFT JOIN venues v ON {$venueJoin}
     WHERE {$whereSql}
 ";
 
 $countRows = $database->query($countSql, $params);
 $total = (int)($countRows[0]['total'] ?? 0);
+$totalPage = max(1, (int)ceil($total / $pageSize));
 
 $listSql = "
     SELECT
         a.id,
         a.uid,
         a.venue_id,
+        a.old_venue_id,
         v.venue_name,
         a.aliyun_passed,
-        a.certify_finished_at
+        a.certify_finished_at,
+        a.unbound_at,
+        a.unbound_by
     FROM anchor_realname_auth a
-    LEFT JOIN venues v ON v.id = a.venue_id
+    LEFT JOIN venues v ON {$venueJoin}
     WHERE {$whereSql}
-    ORDER BY a.certify_finished_at DESC, a.id DESC
+    ORDER BY {$orderSql}
     LIMIT {$pageSize} OFFSET {$offset}
 ";
 
@@ -559,7 +581,8 @@ jsonOut(0, 'success', [
     'page' => $page,
     'page_size' => $pageSize,
     'total' => $total,
-    'total_page' => (int)ceil($total / $pageSize),
+    'total_page' => $totalPage,
+    'status' => $status,
     'is_admin' => $isAdmin ? 1 : 0,
     'login_venue_id' => $loginVenueId
 ]);

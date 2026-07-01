@@ -599,11 +599,12 @@ body {
 .device-sync-row {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
 
 .check-stream-btn,
+.device-control-btn,
 .sync-device-btn {
     width: 100%;
     min-height: 34px;
@@ -625,6 +626,14 @@ body {
 
 .check-stream-btn:hover {
     background-color: #5a32a3;
+}
+
+.device-control-btn {
+    background-color: #0f766e;
+}
+
+.device-control-btn:hover {
+    background-color: #0d665f;
 }
 
 .sync-device-btn {
@@ -831,6 +840,210 @@ body {
     color: var(--primary-hover);
 }
 
+
+
+/* =========================
+   设备控制弹窗（从 device_information.html 迁移）
+========================= */
+#deviceControlModal {
+    z-index: 1100;
+}
+
+#deviceControlModal .device-control-modal-content {
+    width: 960px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    margin: 16px auto;
+    padding: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#deviceControlModal .device-control-header {
+    padding: 22px 24px 14px;
+    border-bottom: 1px solid #eef2f7;
+    background: #fff;
+    flex: 0 0 auto;
+}
+
+#deviceControlModal .device-control-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#deviceControlModal .device-control-subtitle {
+    margin-top: 8px;
+    color: #7b8794;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+#deviceControlModal .device-control-body {
+    padding: 18px 24px;
+    overflow-y: auto;
+    background: #fbfcff;
+}
+
+#deviceControlModal .device-control-footer {
+    padding: 14px 24px 18px;
+    border-top: 1px solid #eef2f7;
+    background: #fff;
+    display: flex;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+}
+
+#deviceControlModal .device-control-common-card,
+#deviceControlModal .device-command-group {
+    background: #fff;
+    border: 1px solid #e9edf5;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+#deviceControlModal .device-control-common-card {
+    margin-bottom: 14px;
+}
+
+#deviceControlModal .device-control-section-title,
+#deviceControlModal .device-command-group-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 10px;
+}
+
+#deviceControlModal .device-command-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+#deviceControlModal .device-command-top {
+    grid-column: span 2;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#deviceControlModal .device-command-half {
+    grid-column: span 3;
+    min-height: 170px;
+    display: flex;
+    flex-direction: column;
+}
+
+#deviceControlModal .device-command-full {
+    grid-column: 1 / -1;
+}
+
+#deviceControlModal .device-command-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: auto;
+}
+
+#deviceControlModal .device-command-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+
+#deviceControlModal .device-command-form-field {
+    min-width: 0;
+}
+
+#deviceControlModal .device-command-form-field label {
+    display: block;
+    margin-bottom: 6px;
+    color: #7f8fa4;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#deviceControlModal input {
+    width: 100%;
+    height: 36px;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    font-size: 13px;
+}
+
+#deviceControlModal input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+}
+
+#deviceControlModal .readonly-input {
+    background: #f8fafc;
+    color: #64748b;
+}
+
+#deviceControlModal .device-control-tip {
+    margin: 8px 0 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(91,140,255,.18);
+    border-radius: 10px;
+    background: #f8fbff;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+#deviceControlModal .device-command-actions .ghost-modal-btn,
+#deviceControlModal .device-command-actions .modify-btn {
+    width: 100%;
+    min-width: 0;
+}
+
+#deviceControlModal .device-command-group > .modal-actions {
+    margin-top: 14px;
+}
+
+#deviceControlMessage {
+    margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+    #deviceControlModal .device-control-modal-content {
+        width: 100%;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        margin: 8px auto;
+    }
+
+    #deviceControlModal .device-control-header,
+    #deviceControlModal .device-control-body,
+    #deviceControlModal .device-control-footer {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    #deviceControlModal .device-command-grid,
+    #deviceControlModal .device-command-form-row,
+    #deviceControlModal .device-command-actions {
+        grid-template-columns: 1fr;
+    }
+
+    #deviceControlModal .device-command-top,
+    #deviceControlModal .device-command-half,
+    #deviceControlModal .device-command-full {
+        grid-column: auto;
+        min-height: auto;
+    }
+}
+
 /* =========================
    响应式
 ========================= */
@@ -955,6 +1168,7 @@ body {
 .modify-config-btn,
 .modify-info-btn,
 .check-stream-btn,
+.device-control-btn,
 .sync-device-btn {
     min-height: 32px;
     font-size: 12px;
@@ -1218,6 +1432,157 @@ body {
         <div class="modal-actions">
             <button type="button" class="ghost-modal-btn" onclick="closeStreamStatusModal()">关闭</button>
             <button type="button" class="modify-btn" id="streamRetryBtn" onclick="retryCurrentStreamCheck()">重新检测</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- 大弹窗：设备 room_id 控制 -->
+<div id="deviceControlModal" class="modal">
+    <div class="modal-content device-control-modal-content">
+        <div class="device-control-header">
+            <div class="device-control-title-row">
+                <h2 id="deviceControlModalTitle">设备控制</h2>
+                <button type="button" class="ghost-modal-btn" onclick="closeDeviceControlModal()">关闭</button>
+            </div>
+            <div class="device-control-subtitle">复制 device_information.html 的 room_id 控制逻辑，所有指令都会发送到当前设备的图传 room_id。</div>
+        </div>
+
+        <div class="device-control-body">
+            <div class="device-control-common-card">
+                <div class="device-control-section-title">公共参数</div>
+                <div class="device-command-form-row">
+                    <div class="device-command-form-field">
+                        <label>room_id</label>
+                        <input id="deviceControlRoomId" class="readonly-input" readonly>
+                    </div>
+                    <div class="device-command-form-field">
+                        <label>from_user_id</label>
+                        <input id="deviceControlFromUserId" value="server_bot_1">
+                    </div>
+                </div>
+                <div class="device-command-form-row">
+                    <div class="device-command-form-field">
+                        <label>设备序列号</label>
+                        <input id="deviceControlSerial" class="readonly-input" readonly>
+                    </div>
+                    <div class="device-command-form-field">
+                        <label>前图传ID</label>
+                        <input id="deviceControlImageId" class="readonly-input" readonly>
+                    </div>
+                </div>
+                <div id="deviceControlMessage" class="modal-message"></div>
+            </div>
+
+            <div class="device-command-grid">
+                <div class="device-command-group device-command-top">
+                    <div class="device-command-group-title">OSD</div>
+                    <div class="device-command-actions">
+                        <button class="ghost-modal-btn" type="button" data-device-command="osd_on">OSD启用</button>
+                        <button class="ghost-modal-btn" type="button" data-device-command="osd_off">OSD禁用</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-top">
+                    <div class="device-command-group-title">屏幕方向</div>
+                    <div class="device-command-actions">
+                        <button class="ghost-modal-btn" type="button" data-device-command="rotate_on">竖屏显示</button>
+                        <button class="ghost-modal-btn" type="button" data-device-command="rotate_off">横屏显示</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-top">
+                    <div class="device-command-group-title">推流码流</div>
+                    <div class="device-command-actions">
+                        <button class="ghost-modal-btn" type="button" data-device-command="sub_on">推子码流</button>
+                        <button class="ghost-modal-btn" type="button" data-device-command="sub_off">推主码流</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-half">
+                    <div class="device-command-group-title">抓图上传</div>
+                    <div class="device-command-form-row">
+                        <div class="device-command-form-field">
+                            <label>抓图文件名</label>
+                            <input id="deviceControlCaptureFilename" value="snap.jpg" placeholder="例如：snap.jpg">
+                        </div>
+                        <div class="device-command-form-field">
+                            <label>抓图上传地址</label>
+                            <input id="deviceControlCaptureUploadUrl" class="readonly-input" readonly>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modify-btn" type="button" data-device-command="capture">发送抓图</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-half">
+                    <div class="device-command-group-title">WIFI 设置</div>
+                    <div class="device-command-form-row">
+                        <div class="device-command-form-field">
+                            <label>WIFI 名称（ESSID）</label>
+                            <input id="deviceControlWifiEssid" value="srr1">
+                        </div>
+                        <div class="device-command-form-field">
+                            <label>WIFI 密码</label>
+                            <input id="deviceControlWifiPasswd" value="88888888">
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modify-btn" type="button" data-device-command="wifi">发送 WIFI 设置</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-full">
+                    <div class="device-command-group-title">电压回传地址变更</div>
+                    <div class="device-control-tip">发送：+VU#回传地址-；恢复默认发送：+VU#RESET-</div>
+                    <div class="device-command-form-field">
+                        <label>电压回传地址</label>
+                        <input id="deviceControlVoltageUploadUrl" value="http://rcwulian.cn/app/dump/dump_post.php">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modify-btn" type="button" data-device-command="voltage_url">发送电压回传地址</button>
+                        <button class="ghost-modal-btn" type="button" data-device-command="voltage_reset">恢复默认</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-full">
+                    <div class="device-command-group-title">摄像头 OTA 升级</div>
+                    <div class="device-command-form-row">
+                        <div class="device-command-form-field">
+                            <label>摄像头 OTA 版本号</label>
+                            <input id="deviceControlOtaVer" value="1.0.1">
+                        </div>
+                        <div class="device-command-form-field">
+                            <label>摄像头 OTA force</label>
+                            <input id="deviceControlOtaForce" type="number" min="0" max="1" value="0">
+                        </div>
+                    </div>
+                    <div class="device-command-form-field" style="margin-top:10px;">
+                        <label>摄像头 OTA 固件地址</label>
+                        <input id="deviceControlOtaUrl" value="http://120.79.154.209/models/cv181x/firmware_CIVTEK-1811CA-SC4336-APP_1.0.1_20260129185732.bin">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modify-btn" type="button" data-device-command="ota">发送摄像头 OTA 升级</button>
+                    </div>
+                </div>
+
+                <div class="device-command-group device-command-full">
+                    <div class="device-command-group-title">硬件 OTA 升级</div>
+                    <div class="device-control-tip">发送：+UP#固件地址-</div>
+                    <div class="device-command-form-field">
+                        <label>硬件 OTA 固件地址</label>
+                        <input id="deviceControlHardwareOtaUrl" value="https://rcwulian.cn/OTA/zxb.bin">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="modify-btn" type="button" data-device-command="hardware_ota">发送硬件 OTA 升级</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="device-control-footer">
+            <button type="button" class="ghost-modal-btn" onclick="closeDeviceControlModal()">关闭</button>
         </div>
     </div>
 </div>
@@ -1645,8 +2010,14 @@ function displayDevices(devices) {
 <div class="device-sync-row">
     <button class="check-stream-btn"
             data-serial="${device.serial_number || ''}"
-            data-playing-stream-id="${device.image_device_room_id || ''}">
+            data-playing-stream-id="${frontRoomId || frontImageId || ''}">
         流状态
+    </button>
+    <button class="device-control-btn"
+            data-serial="${escapeHtml(device.serial_number || '')}"
+            data-room-id="${escapeHtml(frontRoomId || frontImageId || '')}"
+            data-image-id="${escapeHtml(frontImageId || '')}">
+        升级
     </button>
 </div>
             </div>
@@ -1693,6 +2064,12 @@ function displayDevices(devices) {
         card.querySelector('.check-stream-btn').addEventListener('click', function () {
             checkStreamSetSnStatus(this);
         });
+        const controlButton = card.querySelector('.device-control-btn');
+        if (controlButton) {
+            controlButton.addEventListener('click', function () {
+                openDeviceControlModal(this);
+            });
+        }
         if (device.is_banned) {
             getBanEndTime(device.serial_number);
         }
@@ -1895,11 +2272,16 @@ function goToConfig(btn) {
             if (event.target === this) closeStreamStatusModal();
         });
 
+        document.getElementById('deviceControlModal').addEventListener('click', function (event) {
+            if (event.target === this) closeDeviceControlModal();
+        });
+
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeDeviceFieldModal();
                 closeDeviceImageModal();
                 closeStreamStatusModal();
+                closeDeviceControlModal();
                 document.getElementById('banModal').style.display = 'none';
             }
         });
@@ -2127,6 +2509,233 @@ function updateDeviceStatus(serialNumber, banStatus, deviceCard) {
                     alert('请求失败，请稍后再试'); 
                 }); 
         } 
+
+const DEVICE_CONTROL_API = '/api/devMgr/device_command.php';
+let currentDeviceControl = null;
+
+function setDeviceControlMessage(message, type = '') {
+    const msg = document.getElementById('deviceControlMessage');
+    if (!msg) return;
+    msg.className = 'modal-message' + (type ? ' ' + type : '');
+    msg.textContent = message || '';
+}
+
+function buildDeviceControlCaptureUploadUrl() {
+    const input = document.getElementById('deviceControlCaptureFilename');
+    const fileName = (input && input.value ? input.value : 'snap.jpg').trim() || 'snap.jpg';
+    return `https://open.rcwulian.cn/?name=${encodeURIComponent(fileName)}`;
+}
+
+function refreshDeviceControlCaptureUploadUrl() {
+    const input = document.getElementById('deviceControlCaptureUploadUrl');
+    if (input) input.value = buildDeviceControlCaptureUploadUrl();
+}
+
+function getDeviceControlValue(id, fallback = '') {
+    const el = document.getElementById(id);
+    return (el && el.value ? el.value : fallback).trim();
+}
+
+function buildDeviceControlCommandText(type) {
+    switch (type) {
+        case 'osd_on':
+            return JSON.stringify({ type: 'cfg_osd', data: { enable: 1 } });
+        case 'osd_off':
+            return JSON.stringify({ type: 'cfg_osd', data: { enable: 0 } });
+        case 'rotate_on':
+            return JSON.stringify({ type: 'cfg_rotate', data: { enable: 1 } });
+        case 'rotate_off':
+            return JSON.stringify({ type: 'cfg_rotate', data: { enable: 0 } });
+        case 'sub_on':
+            return JSON.stringify({ type: 'cfg_sub', data: { enable: 1 } });
+        case 'sub_off':
+            return JSON.stringify({ type: 'cfg_sub', data: { enable: 0 } });
+        case 'capture':
+            return JSON.stringify({
+                type: 'capture',
+                upload_url: buildDeviceControlCaptureUploadUrl()
+            });
+        case 'wifi':
+            return JSON.stringify({
+                type: 'cfg_wifi',
+                data: {
+                    essid: getDeviceControlValue('deviceControlWifiEssid', 'srr1') || 'srr1',
+                    passwd: getDeviceControlValue('deviceControlWifiPasswd', '88888888') || '88888888'
+                }
+            });
+        case 'voltage_url': {
+            const url = getDeviceControlValue('deviceControlVoltageUploadUrl', 'http://rcwulian.cn/app/dump/dump_post.php') || 'http://rcwulian.cn/app/dump/dump_post.php';
+            if (!/^https?:\/\//i.test(url)) {
+                setDeviceControlMessage('电压回传地址必须以 http:// 或 https:// 开头', 'error');
+                return '';
+            }
+            return `+VU#${url}-`;
+        }
+        case 'voltage_reset':
+            return '+VU#RESET-';
+        case 'ota':
+            return JSON.stringify({
+                type: 'ota_update',
+                data: {
+                    ver: getDeviceControlValue('deviceControlOtaVer', '1.0.1') || '1.0.1',
+                    url: getDeviceControlValue('deviceControlOtaUrl', 'http://120.79.154.209/models/cv181x/firmware_CIVTEK-1811CA-SC4336-APP_1.0.1_20260129185732.bin') || 'http://120.79.154.209/models/cv181x/firmware_CIVTEK-1811CA-SC4336-APP_1.0.1_20260129185732.bin',
+                    force: Number(getDeviceControlValue('deviceControlOtaForce', '0') || '0')
+                }
+            });
+        case 'hardware_ota': {
+            const url = getDeviceControlValue('deviceControlHardwareOtaUrl', 'https://rcwulian.cn/OTA/zxb.bin') || 'https://rcwulian.cn/OTA/zxb.bin';
+            if (!/^https?:\/\//i.test(url)) {
+                setDeviceControlMessage('硬件 OTA 地址必须以 http:// 或 https:// 开头', 'error');
+                return '';
+            }
+            return `+UP#${url}-`;
+        }
+        default:
+            return '';
+    }
+}
+
+function openDeviceControlModal(button) {
+    if (!button) return;
+
+    const deviceCard = button.closest('.device-card');
+    const deviceInfo = deviceCard ? JSON.parse(deviceCard.getAttribute('data-device') || '{}') : {};
+    const serialNumber = (button.dataset.serial || deviceInfo.serial_number || '').trim();
+    const roomId = cleanMetaText(button.dataset.roomId || deviceInfo.image_device_room_id || deviceInfo.image_device_serial || '');
+    const imageId = cleanMetaText(button.dataset.imageId || deviceInfo.image_device_serial || '');
+
+    currentDeviceControl = {
+        button,
+        deviceCard,
+        deviceInfo,
+        serialNumber,
+        roomId,
+        imageId
+    };
+
+    document.getElementById('deviceControlModalTitle').textContent = `设备控制 - ${serialNumber || '-'}`;
+    document.getElementById('deviceControlRoomId').value = roomId || '';
+    document.getElementById('deviceControlFromUserId').value = 'server_bot_1';
+    document.getElementById('deviceControlSerial').value = serialNumber || '';
+    document.getElementById('deviceControlImageId').value = imageId || '';
+
+    document.getElementById('deviceControlCaptureFilename').value = 'snap.jpg';
+    document.getElementById('deviceControlWifiEssid').value = 'srr1';
+    document.getElementById('deviceControlWifiPasswd').value = '88888888';
+    document.getElementById('deviceControlVoltageUploadUrl').value = 'http://rcwulian.cn/app/dump/dump_post.php';
+    document.getElementById('deviceControlOtaVer').value = '1.0.1';
+    document.getElementById('deviceControlOtaUrl').value = 'http://120.79.154.209/models/cv181x/firmware_CIVTEK-1811CA-SC4336-APP_1.0.1_20260129185732.bin';
+    document.getElementById('deviceControlOtaForce').value = '0';
+    document.getElementById('deviceControlHardwareOtaUrl').value = 'https://rcwulian.cn/OTA/zxb.bin';
+    refreshDeviceControlCaptureUploadUrl();
+
+    if (!roomId) {
+        setDeviceControlMessage('当前设备没有 room_id，不能发送控制指令。请先在图传胶囊里绑定前图传。', 'error');
+    } else {
+        setDeviceControlMessage(`当前控制 room_id：${roomId}`);
+    }
+
+    document.getElementById('deviceControlModal').style.display = 'block';
+}
+
+function closeDeviceControlModal() {
+    const modal = document.getElementById('deviceControlModal');
+    if (modal) modal.style.display = 'none';
+    currentDeviceControl = null;
+}
+
+function sendDeviceControlCommandByType(type, triggerBtn = null) {
+    const roomId = getDeviceControlValue('deviceControlRoomId');
+    const fromUserId = getDeviceControlValue('deviceControlFromUserId', 'server_bot_1') || 'server_bot_1';
+
+    if (!roomId) {
+        setDeviceControlMessage('room_id 不能为空，无法发送控制指令。', 'error');
+        return;
+    }
+
+    const message = buildDeviceControlCommandText(type);
+    if (!message) {
+        setDeviceControlMessage('指令生成失败。', 'error');
+        return;
+    }
+
+    const oldText = triggerBtn ? triggerBtn.textContent : '';
+    if (triggerBtn) {
+        triggerBtn.disabled = true;
+        triggerBtn.textContent = '发送中...';
+    }
+
+    setDeviceControlMessage('正在发送指令...');
+
+    const formData = new URLSearchParams();
+    formData.append('room_id', roomId);
+    formData.append('from_user_id', fromUserId);
+    formData.append('message', message);
+
+    fetch(DEVICE_CONTROL_API, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+        },
+        body: formData.toString(),
+        credentials: 'include'
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (Number(data.code) !== 200) {
+                setDeviceControlMessage(data.msg || '发送失败', 'error');
+                return;
+            }
+
+            const successTextMap = {
+                osd_on: 'OSD启用已发送',
+                osd_off: 'OSD禁用已发送',
+                rotate_on: '竖屏显示已发送',
+                rotate_off: '横屏显示已发送',
+                sub_on: '推子码流已发送',
+                sub_off: '推主码流已发送',
+                capture: '抓图上传已发送',
+                wifi: 'WIFI设置已发送',
+                ota: '摄像头 OTA 升级已发送',
+                hardware_ota: '硬件 OTA 升级指令已发送',
+                voltage_url: '电压回传地址变更指令已发送',
+                voltage_reset: '电压回传地址恢复默认指令已发送'
+            };
+
+            const failUsers = data.data && Array.isArray(data.data.fail_users) ? data.data.fail_users : [];
+            if (failUsers.length > 0) {
+                setDeviceControlMessage(`${successTextMap[type] || '发送成功'}，但有 ${failUsers.length} 个用户未收到`, 'error');
+            } else {
+                setDeviceControlMessage(successTextMap[type] || '发送成功', 'success');
+            }
+        })
+        .catch(error => {
+            console.error('设备控制发送失败:', error);
+            setDeviceControlMessage('网络错误：发送失败', 'error');
+        })
+        .finally(() => {
+            if (triggerBtn) {
+                triggerBtn.disabled = false;
+                triggerBtn.textContent = oldText;
+            }
+        });
+}
+
+function initDeviceControlEvents() {
+    const captureFileInput = document.getElementById('deviceControlCaptureFilename');
+    if (captureFileInput) {
+        captureFileInput.addEventListener('input', refreshDeviceControlCaptureUploadUrl);
+    }
+
+    document.querySelectorAll('#deviceControlModal [data-device-command]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            sendDeviceControlCommandByType(btn.dataset.deviceCommand, btn);
+        });
+    });
+}
+
+initDeviceControlEvents();
+
 let currentStreamCheck = {
     serialNumber: '',
     playingStreamId: '',
@@ -2506,6 +3115,12 @@ function updateDeviceImageStatic(state, frontValue, backValue, responseData) {
         const streamBtn = deviceCard.querySelector('.check-stream-btn');
         if (streamBtn) {
             streamBtn.dataset.playingStreamId = resolvedRoomId;
+        }
+
+        const controlBtn = deviceCard.querySelector('.device-control-btn');
+        if (controlBtn) {
+            controlBtn.dataset.roomId = resolvedRoomId;
+            controlBtn.dataset.imageId = resolvedFrontId;
         }
 
         deviceCard.querySelectorAll('[data-device]').forEach(function (el) {
