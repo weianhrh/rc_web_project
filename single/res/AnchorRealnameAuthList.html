@@ -159,6 +159,19 @@
             background: #ffccc7;
         }
 
+        .btn-warning {
+            height: 30px;
+            padding: 0 10px;
+            font-size: 13px;
+            background: #fff7e6;
+            color: #ad6800;
+            border: 1px solid #ffd591;
+        }
+
+        .btn-warning:hover {
+            background: #ffe7ba;
+        }
+
         .stats-row {
             display: flex;
             gap: 12px;
@@ -291,7 +304,7 @@
     <div class="card">
         <div class="card-title">主播实名认证通过记录</div>
         <div class="sub-title">
-            只展示 anchor_realname_auth 中 aliyun_passed = T 的记录，a.id 不直接展示，仅用于删除操作。
+            只展示当前仍绑定场地的主播实名认证通过记录；点击“解绑”会把 anchor_realname_auth.venue_id 置为 0，并同步清空 users.streamer_venue，旧认证信息仍保留。
         </div>
 
         <div class="filter-row">
@@ -550,8 +563,8 @@
 
             if (isAdmin) {
                 actionHtml = `
-                    <button class="btn-danger" onclick="deleteAuthRecord(${recordId})">
-                        删除
+                    <button class="btn-warning" onclick="unbindAuthRecord(${recordId}, '${escapeJs(item.uid)}', '${escapeJs(item.venue_id)}')">
+                        解绑
                     </button>
                 `;
             }
@@ -569,6 +582,59 @@
                 </tr>
             `;
         }).join('');
+    }
+
+    function unbindAuthRecord(id, uid, venueId) {
+        if (!id) {
+            alert('缺少记录ID');
+            return;
+        }
+
+        const confirmText = `确定解绑这条主播认证吗？\n\nUID：${uid || '-'}\n当前场地ID：${venueId || '-'}\n\n解绑后不会删除旧认证信息，会把 anchor_realname_auth.venue_id 置为 0，并同步把该 uid 的 users.streamer_venue 置为 0，该场地可重新发起认证。`;
+
+        if (!confirm(confirmText)) {
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.append('action', 'unbind');
+        params.append('id', id);
+
+        fetch(LIST_API, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: params.toString()
+        })
+            .then(res => res.json())
+            .then(res => {
+                if (res.code === 1001) {
+                    alert(res.msg || '登录已过期');
+                    location.href = 'login.html';
+                    return;
+                }
+
+                if (res.code !== 0) {
+                    alert(res.msg || '解绑失败');
+                    return;
+                }
+
+                alert('解绑成功，该场地现在可以重新认证');
+
+                const total = Number(document.getElementById('total_count').textContent || 0);
+
+                const nextPage = (total - 1 <= (currentPage - 1) * pageSize && currentPage > 1)
+                    ? currentPage - 1
+                    : currentPage;
+
+                loadList(nextPage);
+            })
+            .catch(err => {
+                console.error(err);
+                alert('请求失败，请检查接口路径');
+            });
     }
 
     function deleteAuthRecord(id) {
@@ -651,6 +717,18 @@
         const selectedText = venueSelect.options[venueSelect.selectedIndex]?.textContent || '全部';
 
         document.getElementById('current_venue').textContent = selectedText;
+    }
+
+    function escapeJs(value) {
+        if (value === null || value === undefined) {
+            return '';
+        }
+
+        return String(value)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r');
     }
 
     function escapeHtml(value) {
