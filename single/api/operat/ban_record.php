@@ -11,6 +11,44 @@ function logSql($sql, $params = []) {
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
+function normalizeLimitDateTime($value, $isEnd = false) {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return '';
+    }
+
+    // 兼容 datetime-local 传来的 2026-07-01T00:00
+    $value = str_replace('T', ' ', $value);
+
+    // 只有日期时，开始时间补 00:00:00，结束时间补 23:59:59
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return $value . ($isEnd ? ' 23:59:59' : ' 00:00:00');
+    }
+
+    // 只有到分钟时补秒
+    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value)) {
+        return $value . ':00';
+    }
+
+    return $value;
+}
+
+function isBeforeLimitDateTime($value, $limitDateTime) {
+    $value = normalizeLimitDateTime($value, false);
+    if ($value === '') {
+        return false;
+    }
+
+    $time = strtotime($value);
+    $limit = strtotime($limitDateTime);
+
+    if ($time === false || $limit === false) {
+        return false;
+    }
+
+    return $time < $limit;
+}
+
 $database = new Database();
 $session_token = $_COOKIE['session_token'] ?? null;
 
@@ -34,6 +72,15 @@ if (!$user || !$user['role_id']) {
  */
 $role_id = intval($user['role_id'] ?? 0);
 $user_venue_id = intval($user['venue_id'] ?? 0);
+$username = trim($user['username'] ?? '');
+
+/**
+ * 针对指定后台账号隐藏 2026 年 7 月之前的违规记录数据
+ * 账号：cc0123456
+ */
+$limitUsers = ['cc0123456'];
+$visibleFrom = '2026-07-01 00:00:00';
+$isDateLimitedUser = in_array($username, $limitUsers, true);
 
 $raw_venue_id = $_GET['venue_id'] ?? null;
 $venue_id = null;
@@ -44,7 +91,7 @@ if ($raw_venue_id !== null && $raw_venue_id !== '' && $raw_venue_id !== 'all') {
 
 $get_default = isset($_GET['get_default']) && $_GET['get_default'] == '1';
 
-// ✅ role_id == 3 是场地方，只允许看自己绑定场地
+// ✅ role_id == 3 / 4 是场地方，只允许看自己绑定场地
 if ($role_id === 3 || $role_id === 4) {
     if ($user_venue_id <= 0) {
         echo json_encode([
@@ -68,6 +115,41 @@ if (!$start_date) {
 }
 if (!$end_date) {
     $end_date = date('Y-m-d 23:59:59');
+}
+
+$start_date = normalizeLimitDateTime($start_date, false);
+$end_date = normalizeLimitDateTime($end_date, true);
+
+if ($isDateLimitedUser) {
+    // 如果查询结束时间早于 2026-07-01，直接返回空数据
+    if ($end_date !== '' && isBeforeLimitDateTime($end_date, $visibleFrom)) {
+        echo json_encode([
+            'code' => 0,
+            'msg' => '查询成功',
+            'data' => [
+                'total_bans' => 0,
+                'device_count' => 0,
+                'venue_count' => 0,
+                'voice_room_count' => 0,
+                'device_bans' => [],
+                'venue_bans' => [],
+                'voice_room_bans' => [],
+                'venue_stats' => [],
+                'start_date' => $start_date,
+                'end_date' => $end_date,
+                'selected_venue_id' => null,
+                'role_id' => $role_id,
+                'is_venue_limited' => ($role_id === 3 || $role_id === 4),
+                'visible_from' => $visibleFrom
+            ]
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 没传开始时间，或者开始时间早于 2026-07-01，都强制从 2026-07-01 开始查
+    if ($start_date === '' || isBeforeLimitDateTime($start_date, $visibleFrom)) {
+        $start_date = $visibleFrom;
+    }
 }
 
 /**
@@ -97,6 +179,7 @@ if ($role_id === 3 || $role_id === 4) {
         $selectedVenueId = null;
     }
 }
+
 $device_details = [];
 $venue_details = [];
 $voice_room_details = [];
@@ -156,31 +239,31 @@ try {
         $venueParams[] = $selectedVenueId;
     }
 
-$sql_venue_detail = "
-    SELECT 
-        v.venue_name,
-        vb.venue_id,
-        NULL AS serial_number,
-        vb.created_at,
+    $sql_venue_detail = "
+        SELECT 
+            v.venue_name,
+            vb.venue_id,
+            NULL AS serial_number,
+            vb.created_at,
 
-        -- 兼容旧字段
-        vb.image_url,
-        vb.image_url_2,
-        vb.image_url_3,
+            -- 兼容旧字段
+            vb.image_url,
+            vb.image_url_2,
+            vb.image_url_3,
 
-        -- 前端按 image1 / image2 / image3 使用
-        vb.image_url AS image1,
-        vb.image_url_2 AS image2,
-        vb.image_url_3 AS image3,
+            -- 前端按 image1 / image2 / image3 使用
+            vb.image_url AS image1,
+            vb.image_url_2 AS image2,
+            vb.image_url_3 AS image3,
 
-        vb.ban_duration,
-        vb.ban_end_time,
-        vb.ban_reason
-    FROM venue_bans vb
-    LEFT JOIN venues v ON vb.venue_id = v.id
-    WHERE {$venueWhere}
-    ORDER BY vb.created_at DESC
-";
+            vb.ban_duration,
+            vb.ban_end_time,
+            vb.ban_reason
+        FROM venue_bans vb
+        LEFT JOIN venues v ON vb.venue_id = v.id
+        WHERE {$venueWhere}
+        ORDER BY vb.created_at DESC
+    ";
     logSql($sql_venue_detail, $venueParams);
     $venue_details = $database->query($sql_venue_detail, $venueParams);
 
@@ -311,7 +394,8 @@ $sql_venue_detail = "
             'end_date' => $end_date,
             'selected_venue_id' => $selectedVenueId,
             'role_id' => $role_id,
-            'is_venue_limited' => ($role_id === 3 || $role_id === 4)
+            'is_venue_limited' => ($role_id === 3 || $role_id === 4),
+            'visible_from' => $isDateLimitedUser ? $visibleFrom : ''
         ]
     ], JSON_UNESCAPED_UNICODE);
     exit;

@@ -9,18 +9,27 @@ try {
     // 1) 登录 & 权限
     $session_token = $_COOKIE['session_token'] ?? null;
     if (!$session_token) {
-        echo json_encode(['code' => 1001, 'msg' => '用户未登录或会话已过期', 'data' => []]);
+        echo json_encode(['code' => 1001, 'msg' => '用户未登录或会话已过期', 'data' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     $user = $db->getUserBySessionToken($session_token);
     if (!$user || !$user['role_id']) {
-        echo json_encode(['code' => 1002, 'msg' => '用户无权限访问', 'data' => []]);
+        echo json_encode(['code' => 1002, 'msg' => '用户无权限访问', 'data' => []], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     $role_id   = (int)$user['role_id'];
+    $username  = trim($user['username'] ?? '');
     $venue_id  = isset($user['venue_id']) ? (string)$user['venue_id'] : null;
+
+    /**
+     * 针对指定后台账号隐藏 2026 年 7 月之前的退款记录数据
+     * 账号：cc0123456
+     */
+    $limitUsers = ['cc0123456'];
+    $visibleFrom = '2026-07-01 00:00:00';
+    $isDateLimitedUser = in_array($username, $limitUsers, true);
 
     // 2) 读取筛选参数（可选）
     $order_number = isset($_GET['order_number']) ? trim($_GET['order_number']) : '';
@@ -35,11 +44,17 @@ try {
     // 非超管：仅能查看绑定场地
     if (!in_array($role_id, [1, 2], true)) {
         if (empty($venue_id)) {
-            echo json_encode(['code' => 1003, 'msg' => '未绑定场地', 'data' => []]);
+            echo json_encode(['code' => 1003, 'msg' => '未绑定场地', 'data' => []], JSON_UNESCAPED_UNICODE);
             exit;
         }
         $where .= " AND rr.reservation_id = ? ";
         $params[] = $venue_id;
+    }
+
+    // 指定账号只能看 2026-07-01 之后的退款记录
+    if ($isDateLimitedUser) {
+        $where .= " AND rr.created_at >= ? ";
+        $params[] = $visibleFrom;
     }
 
     if ($order_number !== '') {
@@ -101,9 +116,10 @@ try {
         'count' => $total,
         'data'  => $rows,
         'page'  => $page,
-        'page_size' => $pageSize
-    ]);
+        'page_size' => $pageSize,
+        'visible_from' => $isDateLimitedUser ? $visibleFrom : ''
+    ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     error_log($e);
-    echo json_encode(['code' => 500, 'msg' => '服务器异常', 'data' => []]);
+    echo json_encode(['code' => 500, 'msg' => '服务器异常', 'data' => []], JSON_UNESCAPED_UNICODE);
 }

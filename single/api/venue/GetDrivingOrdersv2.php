@@ -23,6 +23,7 @@ if (!$user || !isset($user['role_id'])) {
 }
 
 $role_id = (int)$user['role_id'];
+$username = trim($user['username'] ?? '');
 
 $page  = max(1, (int)($_GET['page'] ?? 1));
 $limit = (int)($_GET['limit'] ?? 20);
@@ -42,7 +43,7 @@ $order_number   = trim($_GET['order_number'] ?? '');
 $uid            = trim($_GET['uid'] ?? '');
 $serial_number  = trim($_GET['serial_number'] ?? '');
 
-// 兼容旧参数 start_date/end_date，同时支持你要的 start_time/end_time
+// 兼容旧参数 start_date/end_date，同时支持 start_time/end_time
 $start_time     = trim($_GET['start_time'] ?? ($_GET['start_date'] ?? ''));
 $end_time       = trim($_GET['end_time'] ?? ($_GET['end_date'] ?? ''));
 
@@ -51,6 +52,84 @@ $exclude_energy = $_GET['exclude_energy'] ?? 'off';
 
 $isAdmin = in_array($role_id, [1, 2], true);
 $userVenueId = (int)($user['venue_id'] ?? 0);
+
+/**
+ * 针对指定后台账号隐藏 2026 年 7 月之前的收入明细
+ * 账号：cc0123456
+ * 生效逻辑：
+ * 1. 查询结束时间早于 2026-07-01，直接返回空数据。
+ * 2. 查询开始时间为空或早于 2026-07-01，强制改成 2026-07-01 00:00:00。
+ * 3. 前端就算手动改参数，也查不到 2026-07-01 之前的收入明细。
+ */
+$incomeLimitUsers = ['cc0123456'];
+$incomeVisibleFrom = '2026-07-01 00:00:00';
+$isIncomeLimitedUser = in_array($username, $incomeLimitUsers, true);
+
+function normalizeIncomeDateTime($value) {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return '';
+    }
+
+    // 兼容 datetime-local 传来的 2026-07-01T00:00
+    $value = str_replace('T', ' ', $value);
+
+    // 如果只有到分钟，补秒
+    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value)) {
+        $value .= ':00';
+    }
+
+    // 如果只有日期，补当天开始
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        $value .= ' 00:00:00';
+    }
+
+    return $value;
+}
+
+function isBeforeIncomeVisibleFrom($value, $incomeVisibleFrom) {
+    $value = normalizeIncomeDateTime($value);
+    if ($value === '') {
+        return false;
+    }
+
+    $time = strtotime($value);
+    $limit = strtotime($incomeVisibleFrom);
+
+    if ($time === false || $limit === false) {
+        return false;
+    }
+
+    return $time < $limit;
+}
+
+if ($isIncomeLimitedUser) {
+    $start_time = normalizeIncomeDateTime($start_time);
+    $end_time   = normalizeIncomeDateTime($end_time);
+
+    // 如果结束时间都在 2026-07-01 之前，直接返回空数据
+    if ($end_time !== '' && isBeforeIncomeVisibleFrom($end_time, $incomeVisibleFrom)) {
+        echo json_encode([
+            'code' => 0,
+            'msg'  => '',
+            'order_type' => $order_type,
+            'role_id' => $role_id,
+            'count' => 0,
+            'data'  => [],
+            'total_income' => 0.00,
+            'total_payment_amount' => 0.00,
+            'income_visible_from' => $incomeVisibleFrom
+        ], JSON_UNESCAPED_UNICODE);
+
+        $database->close();
+        exit;
+    }
+
+    // 没传开始时间，或者开始时间早于 2026-07-01，都强制从 2026-07-01 开始查
+    if ($start_time === '' || isBeforeIncomeVisibleFrom($start_time, $incomeVisibleFrom)) {
+        $start_time = $incomeVisibleFrom;
+    }
+}
 
 if ($order_type === 'gift') {
     // =========================
@@ -145,7 +224,8 @@ if ($order_type === 'gift') {
         'count' => $totalCount,
         'data'  => $data ?: [],
         'total_income' => $totalIncome,
-        'total_payment_amount' => $totalPaymentAmount
+        'total_payment_amount' => $totalPaymentAmount,
+        'income_visible_from' => $isIncomeLimitedUser ? $incomeVisibleFrom : ''
     ], JSON_UNESCAPED_UNICODE);
 
     $database->close();
@@ -176,7 +256,7 @@ if ($serial_number !== '') {
     $params[] = "%$serial_number%";
 }
 
-// 设备订单按 end_time 过滤，和原来一致
+// 设备订单按 end_time 过滤
 if ($start_time !== '') {
     $whereSql .= " AND o.end_time >= ?";
     $params[] = $start_time;
@@ -245,7 +325,8 @@ echo json_encode([
     'role_id' => $role_id,
     'count' => $totalCount,
     'data'  => $data ?: [],
-    'total_income' => $totalIncome
+    'total_income' => $totalIncome,
+    'income_visible_from' => $isIncomeLimitedUser ? $incomeVisibleFrom : ''
 ], JSON_UNESCAPED_UNICODE);
 
 $database->close();
