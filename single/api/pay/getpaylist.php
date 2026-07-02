@@ -22,7 +22,8 @@ if (!$user || !$user['role_id']) {
 $query = "SELECT
     wr.*,
     vf.withdrawal_account, 
-    v.venue_name
+    v.venue_name,
+    COALESCE(NULLIF(v.venue_level, ''), '未评级') AS venue_level
 FROM
     withdrawal_requests wr
 JOIN

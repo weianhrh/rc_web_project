@@ -177,7 +177,7 @@
         //         item.innerHTML  = `
         //             <span class="record-title">提现编号：${record.id}</span> 
         //             <span>账户姓名：${record.account_name}</span> 
-        //             <span>场地名称：${record.venue_name}(ID:${record.venue_id})</span> 
+        //             <span>场地名称：${formatVenueName(record)}</span> 
         //             <span>账户类型：${record.account_type}</span> 
         //             <span style="color: #007BFF; font-weight: 700; text-shadow: 0 0 2px rgba(0,123,255,0.3);">实际打款：${record.actual_amount}  元</span>
         //             <span>提现账号 ：${record.withdrawal_account}</span> 
@@ -194,6 +194,19 @@
         //     });
         // }
 // 显示提现记录列表
+function formatVenueLevel(level) {
+    level = (level || '未评级').toString().trim();
+    if (!level) return '未评级';
+    return level === '未评级' || level.endsWith('级') ? level : `${level}级`;
+}
+
+function formatVenueName(record) {
+    const venueName = record.venue_name || '-';
+    const venueId = record.venue_id || '-';
+    const venueLevel = formatVenueLevel(record.venue_level);
+    return `${venueName}（${venueLevel}，ID:${venueId}）`;
+}
+
 function displayWithdrawalRecords(records) {
     // 按账户姓名排序（升序）
     records.sort((a, b) => {
@@ -210,7 +223,7 @@ function displayWithdrawalRecords(records) {
         item.innerHTML = `
             <span class="record-title">提现编号：${record.id}</span> 
             <span>账户姓名：${record.account_name}</span> 
-            <span>场地名称：${record.venue_name}(ID:${record.venue_id})</span> 
+            <span>场地名称：${formatVenueName(record)}</span> 
             <span>账户类型：${record.account_type}</span> 
             <span style="color: #007BFF; font-weight: 700; text-shadow: 0 0 2px rgba(0,123,255,0.3);">实际打款：${record.actual_amount} 元</span>
             <span>提现账号 ：${record.withdrawal_account}</span> 
@@ -318,7 +331,7 @@ function displayWithdrawalRecords(records) {
                         const wsData = records.map(record => ({
                             '提现编号': record.id,  
                             '账户姓名': record.account_name,  
-                            '场地名称': `${record.venue_name}(ID:${record.venue_id})`,  
+                            '场地名称': formatVenueName(record),  
                             '账户类型': record.account_type,  
                             '实际打款': `${record.actual_amount}`, 
                             '提现账号': record.withdrawal_account,  
