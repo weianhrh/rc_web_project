@@ -231,6 +231,26 @@
       vertical-align: middle;
     }
 
+    .frozen-detail-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 20px;
+      margin-left: 6px;
+      padding: 0 8px;
+      border: 1px solid rgba(234, 88, 12, .24);
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #ea580c;
+      font-size: 12px;
+      cursor: pointer;
+      vertical-align: middle;
+    }
+
+    .frozen-detail-btn:hover {
+      background: #ffedd5;
+    }
+
     .withdraw-box {
       padding: 12px 18px 16px;
       border-top: 1px solid var(--border-light);
@@ -670,7 +690,7 @@
       <div class="amount-grid" id="amount-info">
         <div class="amount-item"><div class="amount-icon">≋</div><div class="amount-content"><div class="amount-label">总余额:</div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">❄</div><div class="amount-content"><div class="amount-label">可提现:</div><div class="amount-value">--</div></div></div>
-        <div class="amount-item"><div class="amount-icon">↔</div><div class="amount-content"><div class="amount-label">冻结中:</div><div class="amount-value">--</div></div></div>
+        <div class="amount-item"><div class="amount-icon">↔</div><div class="amount-content"><div class="amount-label">冻结中:<button type="button" class="frozen-detail-btn" onclick="goFrozenFundsDetail(event)">详情</button></div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">◷</div><div class="amount-content"><div class="amount-label">锁定订单:</div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">?</div><div class="amount-content"><div class="amount-label">待复核订单:</div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">▤</div><div class="amount-content"><div class="amount-label">未核对金额:</div><div class="amount-value">--</div></div></div>
@@ -818,6 +838,14 @@ function getTotalDebitAmount(record) {
       );
     }
 
+    function goFrozenFundsDetail(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      window.location.href = 'venue_frozen_funds.html';
+    }
+
     function renderAccountInfo(data) {
       const accountInfo = document.getElementById('account-info');
       accountInfo.innerHTML = `
@@ -837,6 +865,7 @@ function getTotalDebitAmount(record) {
       const checkBtn = Math.abs(parseFloat(data.notSettledAmount || 0)) > 0
         ? `<button type="button" class="check-money-btn" onclick="location.href='moeny.html'">去核对</button>`
         : '';
+      const frozenDetailBtn = `<button type="button" class="frozen-detail-btn" onclick="goFrozenFundsDetail(event)">详情</button>`;
 
 const feeHelp = `
   <button
@@ -860,7 +889,7 @@ const feeHelp = `
 </div>
 <div class="amount-item is-warning">
   <div class="amount-icon">↔</div>
-  <div class="amount-content"><div class="amount-label">冻结中:</div><div class="amount-value">${formatAmount(data.frozen_amount)}</div></div>
+  <div class="amount-content"><div class="amount-label">冻结中:${frozenDetailBtn}</div><div class="amount-value">${formatAmount(data.frozen_amount)}</div></div>
 </div>
 <div class="amount-item is-muted">
   <div class="amount-icon">◷</div>
