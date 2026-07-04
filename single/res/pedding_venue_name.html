@@ -139,6 +139,10 @@ table + table {
         color: var(--secondary);
       }
     }
+
+/* 设备名称审核弹窗 */
+.audit-modal-mask{display:none;position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.48);padding:20px;align-items:center;justify-content:center}.audit-modal-mask.show{display:flex}.audit-modal-card{width:min(460px,100%);background:#fff;border-radius:16px;box-shadow:0 18px 60px rgba(15,23,42,.24);overflow:hidden}.audit-modal-head{display:flex;align-items:center;gap:10px;padding:18px 20px 10px}.audit-modal-icon{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;background:var(--primary);flex-shrink:0}.audit-modal-icon.success{background:#22c55e}.audit-modal-icon.warning{background:#f59e0b}.audit-modal-icon.error{background:#ef4444}.audit-modal-title{font-size:17px;font-weight:700;color:#172033}.audit-modal-body{padding:8px 20px 18px;color:#4b5563;font-size:14px;line-height:1.7;word-break:break-word}.audit-modal-body .review-value{margin-top:8px;padding:10px 12px;border-radius:10px;background:#f8faff;border:1px solid #e2e8ff;color:#1f2d4d}.audit-modal-textarea{width:100%;min-height:96px;margin-top:10px;border:1px solid #d7dded;border-radius:10px;padding:10px;font-size:14px;outline:none;resize:vertical}.audit-modal-textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(91,140,255,.12)}.audit-modal-actions{padding:14px 20px 18px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #eef2ff}.audit-modal-btn{min-width:82px;border:none;border-radius:9px;padding:9px 14px;cursor:pointer;font-size:14px}.audit-modal-btn.cancel{background:#f3f4f6;color:#374151}.audit-modal-btn.confirm{background:var(--primary);color:#fff}.audit-modal-btn.danger{background:#e74c3c;color:#fff}@media(max-width:520px){.audit-modal-actions{flex-direction:column-reverse}.audit-modal-btn{width:100%}}
+
   </style>
 </head>
 <body>
@@ -183,7 +187,134 @@ table + table {
   </div>
 </div>
 
+<div class="audit-modal-mask" id="audit-modal-mask" aria-hidden="true"><div class="audit-modal-card" role="dialog" aria-modal="true" aria-labelledby="audit-modal-title"><div class="audit-modal-head"><div class="audit-modal-icon" id="audit-modal-icon">i</div><div class="audit-modal-title" id="audit-modal-title">提示</div></div><div class="audit-modal-body" id="audit-modal-body"></div><div class="audit-modal-actions"><button type="button" class="audit-modal-btn cancel" id="audit-modal-cancel">取消</button><button type="button" class="audit-modal-btn confirm" id="audit-modal-confirm">确定</button></div></div></div>
+
   <script>
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeJs(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '');
+    }
+
+    function showAuditModal(options = {}) {
+      const mask = document.getElementById('audit-modal-mask');
+      const icon = document.getElementById('audit-modal-icon');
+      const titleEl = document.getElementById('audit-modal-title');
+      const bodyEl = document.getElementById('audit-modal-body');
+      const confirmBtn = document.getElementById('audit-modal-confirm');
+      const cancelBtn = document.getElementById('audit-modal-cancel');
+      if (!mask || !titleEl || !bodyEl || !confirmBtn || !cancelBtn) {
+        return Promise.resolve({ confirmed: true, value: '' });
+      }
+
+      const type = options.type || 'info';
+      titleEl.textContent = options.title || '提示';
+      icon.className = 'audit-modal-icon ' + type;
+      icon.textContent = type === 'success' ? '✓' : (type === 'error' ? '×' : (type === 'warning' ? '!' : 'i'));
+      confirmBtn.textContent = options.confirmText || '确定';
+      cancelBtn.textContent = options.cancelText || '取消';
+      cancelBtn.style.display = options.showCancel ? '' : 'none';
+      confirmBtn.className = 'audit-modal-btn confirm' + (options.danger ? ' danger' : '');
+
+      let html = options.message || '';
+      if (options.textarea) {
+        html += `<textarea class="audit-modal-textarea" id="audit-modal-textarea" placeholder="${escapeHtml(options.placeholder || '请输入拒绝理由')}">${escapeHtml(options.defaultValue || '')}</textarea>`;
+      }
+      bodyEl.innerHTML = html;
+
+      return new Promise(resolve => {
+        let resolved = false;
+        const close = (confirmed) => {
+          if (resolved) return;
+          resolved = true;
+          const textarea = document.getElementById('audit-modal-textarea');
+          const value = textarea ? textarea.value : '';
+          mask.classList.remove('show');
+          mask.setAttribute('aria-hidden', 'true');
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+          mask.onclick = null;
+          document.onkeydown = null;
+          resolve({ confirmed, value });
+        };
+
+        confirmBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+        mask.onclick = (event) => {
+          if (event.target === mask && options.showCancel) close(false);
+        };
+        document.onkeydown = (event) => {
+          if (event.key === 'Escape' && options.showCancel) close(false);
+        };
+
+        mask.classList.add('show');
+        mask.setAttribute('aria-hidden', 'false');
+        setTimeout(() => {
+          const textarea = document.getElementById('audit-modal-textarea');
+          (textarea || confirmBtn).focus();
+        }, 30);
+      });
+    }
+
+    function auditAlert(message, title = '提示', type = 'info') {
+      return showAuditModal({
+        title,
+        type,
+        message: `<div>${escapeHtml(message)}</div>`,
+        confirmText: '知道了'
+      });
+    }
+
+    async function auditConfirm(message, title = '确认操作', type = 'warning') {
+      const result = await showAuditModal({
+        title,
+        type,
+        message: `<div>${escapeHtml(message)}</div>`,
+        confirmText: '确定',
+        cancelText: '取消',
+        showCancel: true
+      });
+      return result.confirmed;
+    }
+
+    async function openDeviceRejectModal(id, field, fieldText, newValue) {
+      const result = await showAuditModal({
+        title: `拒绝${fieldText}审核`,
+        type: 'warning',
+        danger: true,
+        message: `<div>请输入拒绝原因，提交后用户再次进入修改设备信息页会看到该原因。</div><div class="review-value"><strong>${escapeHtml(fieldText)}：</strong>${escapeHtml(newValue || '')}</div>`,
+        textarea: true,
+        defaultValue: '内容不适宜',
+        placeholder: '请输入拒绝理由',
+        confirmText: '确认拒绝',
+        cancelText: '取消',
+        showCancel: true
+      });
+      if (!result.confirmed) return;
+      const reason = (result.value || '').trim();
+      if (!reason) {
+        await auditAlert('请输入拒绝理由', '提示', 'warning');
+        return openDeviceRejectModal(id, field, fieldText, newValue);
+      }
+      await rejectDevice(id, field, reason);
+    }
+
     async function loadList() {
       const res = await fetch("https://open.rcwulian.cn/api/venue/get_audit_list.php");
       const result = await res.json();
@@ -229,15 +360,11 @@ table + table {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td data-label="字段">${fieldText}</td>
-          <td data-label="名称">${item.new}</td>
+          <td data-label="名称">${escapeHtml(item.new || '')}</td>
           <td data-label="提交时间" data-hide="true">${time}</td>
           <td data-label="操作">
-            <button onclick="approveDevice('${item.device_id}', '${item.field}')">通过</button>
-            <button class="danger" onclick="toggleRejectDevice('${item.device_id}', '${item.field}')">拒绝</button>
-            <div class="textarea-box" id="reject-box-${item.device_id}-${item.field}" style="display:none;">
-              <textarea id="reason-${item.device_id}-${item.field}" rows="2" placeholder="请输入拒绝理由"></textarea>
-              <button class="danger" onclick="rejectDevice('${item.device_id}', '${item.field}')" style="margin-top:8px;">确认拒绝</button>
-            </div>
+            <button onclick="approveDevice('${escapeJs(item.device_id)}', '${escapeJs(item.field)}')">通过</button>
+            <button class="danger" onclick="openDeviceRejectModal('${escapeJs(item.device_id)}', '${escapeJs(item.field)}', '${escapeJs(fieldText)}', '${escapeJs(item.new)}')">拒绝</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -305,31 +432,55 @@ table + table {
     }
 
     async function approveDevice(id, field) {
-      await fetch("https://open.rcwulian.cn/api/venue/reviewVehicleNameAudit.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_id: id, field, action: "approve" })
-      });
-      alert("设备审核通过");
-      loadDeviceList();
+      const fieldText = field === 'name' ? '设备名称' : '分享名称';
+      const confirmed = await auditConfirm(`确认通过该${fieldText}审核？`, '确认通过', 'warning');
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch("https://open.rcwulian.cn/api/venue/reviewVehicleNameAudit.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_id: id, field, action: "approve" })
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          await auditAlert(result.msg || '设备审核通过', '处理成功', 'success');
+          loadDeviceList();
+        } else {
+          await auditAlert(result.msg || '设备审核处理失败', '处理失败', 'error');
+        }
+      } catch (err) {
+        console.error('设备审核通过失败:', err);
+        await auditAlert('设备审核处理失败，请检查网络或接口', '处理失败', 'error');
+      }
     }
 
-    async function rejectDevice(id, field) {
-      const reason = document.getElementById(`reason-${id}-${field}`).value.trim();
-      if (!reason) return alert("请输入拒绝理由");
+    async function rejectDevice(id, field, reason) {
+      reason = (reason || '').trim();
+      if (!reason) return auditAlert('请输入拒绝理由', '提示', 'warning');
 
-      await fetch("https://open.rcwulian.cn/api/venue/reviewVehicleNameAudit.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_id: id, field, action: "reject", reason })
-      });
-      alert("设备已拒绝");
-      loadDeviceList();
+      try {
+        const res = await fetch("https://open.rcwulian.cn/api/venue/reviewVehicleNameAudit.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ device_id: id, field, action: "reject", reason })
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          await auditAlert(result.msg || '设备已拒绝', '处理成功', 'success');
+          loadDeviceList();
+        } else {
+          await auditAlert(result.msg || '设备拒绝处理失败', '处理失败', 'error');
+        }
+      } catch (err) {
+        console.error('设备审核拒绝失败:', err);
+        await auditAlert('设备审核处理失败，请检查网络或接口', '处理失败', 'error');
+      }
     }
 
     function toggleRejectDevice(id, field) {
-      const box = document.getElementById(`reject-box-${id}-${field}`);
-      box.style.display = box.style.display === "none" ? "block" : "none";
+      const fieldText = field === 'name' ? '设备名称' : '分享名称';
+      openDeviceRejectModal(id, field, fieldText, '');
     }
 
     async function approveDesc(id) {

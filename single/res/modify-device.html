@@ -145,6 +145,121 @@
       font-weight:600;
       word-break:break-all;
     }
+
+
+    /* 统一提示弹窗：替换原生 alert，兼容 PC / 手机端 */
+    .app-modal-mask {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(15, 23, 42, 0.48);
+      padding: 20px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-modal-mask.show {
+      display: flex;
+    }
+
+    .app-modal-card {
+      width: min(420px, 100%);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 18px 60px rgba(15, 23, 42, 0.24);
+      overflow: hidden;
+      transform: translateY(4px);
+      animation: appModalIn .16s ease forwards;
+    }
+
+    @keyframes appModalIn {
+      to { transform: translateY(0); }
+    }
+
+    .app-modal-head {
+      padding: 18px 20px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-modal-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 15px;
+      background: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .app-modal-icon.success { background: #22c55e; }
+    .app-modal-icon.warning { background: #f59e0b; }
+    .app-modal-icon.error { background: #ef4444; }
+
+    .app-modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #172033;
+    }
+
+    .app-modal-body {
+      padding: 8px 20px 18px;
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .app-modal-actions {
+      padding: 14px 20px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid #eef2ff;
+    }
+
+    .app-modal-btn {
+      width: auto;
+      min-width: 82px;
+      border: none;
+      border-radius: 9px;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .app-modal-btn.cancel {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .app-modal-btn.confirm {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .app-reject-item {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 8px;
+    }
+
+    .app-reject-item strong {
+      color: #9a3412;
+    }
+
+    @media (max-width: 520px) {
+      .app-modal-actions { flex-direction: column-reverse; }
+      .app-modal-btn { width: 100%; }
+    }
+
   </style>
 </head>
 
@@ -309,6 +424,21 @@
     </div>
   </div>
 
+
+  <div class="app-modal-mask" id="app-modal-mask" aria-hidden="true">
+    <div class="app-modal-card" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+      <div class="app-modal-head">
+        <div class="app-modal-icon" id="app-modal-icon">!</div>
+        <div class="app-modal-title" id="app-modal-title">提示</div>
+      </div>
+      <div class="app-modal-body" id="app-modal-body"></div>
+      <div class="app-modal-actions">
+        <button type="button" class="app-modal-btn cancel" id="app-modal-cancel">取消</button>
+        <button type="button" class="app-modal-btn confirm" id="app-modal-confirm">确定</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 const CAR_TYPE_TO_PHOTO = {
   1: "https://rcwulian.cn/img/m1282.jpg",        // 汽车
@@ -335,6 +465,125 @@ let userCanEditPhoto = false;
 let userCanEditStatus = false;
 let initialPhotoValue = '';
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function showAppModal(options = {}) {
+  const mask = document.getElementById('app-modal-mask');
+  const icon = document.getElementById('app-modal-icon');
+  const titleEl = document.getElementById('app-modal-title');
+  const bodyEl = document.getElementById('app-modal-body');
+  const confirmBtn = document.getElementById('app-modal-confirm');
+  const cancelBtn = document.getElementById('app-modal-cancel');
+  if (!mask || !titleEl || !bodyEl || !confirmBtn || !cancelBtn) {
+    return Promise.resolve(true);
+  }
+
+  const type = options.type || 'info';
+  titleEl.textContent = options.title || '提示';
+  bodyEl.innerHTML = options.message || '';
+  icon.className = 'app-modal-icon ' + type;
+  icon.textContent = type === 'success' ? '✓' : (type === 'error' ? '×' : (type === 'warning' ? '!' : 'i'));
+  confirmBtn.textContent = options.confirmText || '确定';
+  cancelBtn.textContent = options.cancelText || '取消';
+  cancelBtn.style.display = options.showCancel ? '' : 'none';
+
+  return new Promise(resolve => {
+    let resolved = false;
+    const close = (value) => {
+      if (resolved) return;
+      resolved = true;
+      mask.classList.remove('show');
+      mask.setAttribute('aria-hidden', 'true');
+      confirmBtn.onclick = null;
+      cancelBtn.onclick = null;
+      mask.onclick = null;
+      document.onkeydown = null;
+      resolve(value);
+    };
+
+    confirmBtn.onclick = () => close(true);
+    cancelBtn.onclick = () => close(false);
+    mask.onclick = (event) => {
+      if (event.target === mask && options.showCancel) close(false);
+    };
+    document.onkeydown = (event) => {
+      if (event.key === 'Escape' && options.showCancel) close(false);
+    };
+
+    mask.classList.add('show');
+    mask.setAttribute('aria-hidden', 'false');
+    setTimeout(() => confirmBtn.focus(), 30);
+  });
+}
+
+function appAlert(message, title = '提示', type = 'info') {
+  return showAppModal({
+    title,
+    type,
+    message: `<div>${escapeHtml(message)}</div>`,
+    confirmText: '知道了'
+  });
+}
+
+function appConfirm(message, title = '确认操作', type = 'warning') {
+  return showAppModal({
+    title,
+    type,
+    message: `<div>${escapeHtml(message)}</div>`,
+    confirmText: '确定',
+    cancelText: '取消',
+    showCancel: true
+  });
+}
+
+async function checkRejectedVehicleName(deviceId) {
+  deviceId = String(deviceId || '').trim();
+  if (!deviceId) return;
+
+  try {
+    const res = await fetch(`https://open.rcwulian.cn/api/venue/get_rejected_vehicle_name.php?device_id=${encodeURIComponent(deviceId)}`, {
+      credentials: 'include'
+    });
+    const result = await res.json();
+    const list = Array.isArray(result?.data) ? result.data : [];
+    if (!list.length) return;
+
+    const labelMap = { name: '设备名称', share_name: '设备分享名称' };
+    const itemsHtml = list.map(item => {
+      const field = labelMap[item.field] || item.field || '名称';
+      const reason = item.reason || '未填写拒绝原因';
+      return `<div class="app-reject-item"><strong>${escapeHtml(field)}未通过：</strong><br>${escapeHtml(reason)}</div>`;
+    }).join('');
+
+    await showAppModal({
+      title: '设备名称审核未通过',
+      type: 'warning',
+      message: `<div>以下审核结果已返回，请根据原因重新修改后再提交。</div>${itemsHtml}`,
+      confirmText: '我知道了'
+    });
+
+    const keys = list.map(item => item.redis_key).filter(Boolean);
+    if (keys.length) {
+      await fetch('https://open.rcwulian.cn/api/venue/acknowledge_vehicle_reject.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys })
+      });
+    }
+  } catch (err) {
+    console.warn('获取设备名称审核拒绝原因失败:', err);
+  }
+}
+
+
 function getTextLen(str) {
   return Array.from((str || '').trim()).length;
 }
@@ -352,7 +601,7 @@ function bindMaxLen(inputId, label, maxLen = 10) {
     const fixed = trimToMaxLen(current, maxLen);
     if (current !== fixed) {
       this.value = fixed;
-      alert(label + '不能超过' + maxLen + '个中文字');
+      appAlert(label + '不能超过' + maxLen + '个中文字', '输入提示', 'warning');
     }
   });
 }
@@ -365,25 +614,25 @@ function validateNameFields() {
   const shareName = (shareNameEl?.value || '').trim();
 
   if (!name) {
-    alert('请输入设备名称');
+    appAlert('请输入设备名称', '输入提示', 'warning');
     nameEl?.focus();
     return false;
   }
 
   if (!shareName) {
-    alert('请输入设备分享名称');
+    appAlert('请输入设备分享名称', '输入提示', 'warning');
     shareNameEl?.focus();
     return false;
   }
 
   if (getTextLen(name) > 10) {
-    alert('设备名称不能超过10个中文字');
+    appAlert('设备名称不能超过10个中文字', '输入提示', 'warning');
     nameEl?.focus();
     return false;
   }
 
   if (getTextLen(shareName) > 10) {
-    alert('设备分享名称不能超过10个中文字');
+    appAlert('设备分享名称不能超过10个中文字', '输入提示', 'warning');
     shareNameEl?.focus();
     return false;
   }
@@ -471,14 +720,14 @@ function initDevicePhotoUpload() {
       const url = result && result.url ? String(result.url).trim() : '';
 
       if (!url) {
-        alert('上传失败：接口未返回 url');
+        appAlert('上传失败：接口未返回 url', '上传失败', 'error');
         return;
       }
 
       setDevicePhotoValue(url, '📌 自定义上传图片');
     } catch (err) {
       console.error('设备图片上传失败:', err);
-      alert('设备图片上传失败，请重试');
+      appAlert('设备图片上传失败，请重试', '上传失败', 'error');
     } finally {
       uploadBtn.disabled = false;
       uploadBtn.innerHTML = '<i class="fas fa-upload"></i>上传自定义图片';
@@ -573,7 +822,7 @@ async function initClawSection(serialNumber) {
 
         const url = (up && up.url) ? String(up.url).trim() : '';
         if (!url) {
-          alert('上传失败：接口未返回 url');
+          appAlert('上传失败：接口未返回 url', '上传失败', 'error');
           return;
         }
 
@@ -581,7 +830,7 @@ async function initClawSection(serialNumber) {
         clawSetPreview(url);
       } catch (e) {
         console.error(e);
-        alert('上传失败，请重试');
+        appAlert('上传失败，请重试', '上传失败', 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-upload"></i>上传并填入';
@@ -719,8 +968,10 @@ bindMaxLen('share_name', '设备分享名称', 10);
       await initClawSection(device.serial_number);
     }
 
+    checkRejectedVehicleName(device.serial_number || device.device_id || '');
+
   } else {
-    alert('未获取到设备信息');
+    appAlert('未获取到设备信息', '加载失败', 'error');
   }
 });
 
@@ -773,37 +1024,37 @@ if (!userCanEditStatus) {
   .then(async (result) => {
     if (result.code === 0) {
       // ✅ 设备保存成功后：如果是娃娃机，再保存娃娃机记录
- const snUpper2 = String(serialNumber || '').trim().toUpperCase();
-const isClaw2 = (carType === 6) || CLAW_SN_SET.has(snUpper2);
+      const snUpper2 = String(serialNumber || '').trim().toUpperCase();
+      const isClaw2 = (carType === 6) || CLAW_SN_SET.has(snUpper2);
 
-if (isClaw2 && serialNumber) {
-  const clawRes = await updateClawRecord(serialNumber);
-  if (clawRes && clawRes.code !== 0) {
-    alert('设备信息已保存，但娃娃机信息保存失败：' + (clawRes.msg || '未知错误'));
-    return;
-  }
-}
+      if (isClaw2 && serialNumber) {
+        const clawRes = await updateClawRecord(serialNumber);
+        if (clawRes && clawRes.code !== 0) {
+          await appAlert('设备信息已保存，但娃娃机信息保存失败：' + (clawRes.msg || '未知错误'), '部分保存失败', 'warning');
+          return;
+        }
+      }
 
-      alert(result.msg || '保存成功');
+      await appAlert(result.msg || '保存成功', '保存成功', 'success');
       history.back();
       return;
     }
 
     if (result.code === 1008) {
-      alert(result.msg);
+      await appAlert(result.msg || '含敏感词，设备名称或分享名未修改，其它信息已保存', '提交提示', 'warning');
       window.location.reload();
       return;
     }
     if (result.code === 1009) {
-      alert(result.msg);
+      await appAlert(result.msg || '名称或分享名已提交人工审核，其它信息修改成功', '已提交审核', 'success');
       history.back();
       return;
     }
-    alert('修改失败：' + (result.msg || '未知错误'));
+    await appAlert('修改失败：' + (result.msg || '未知错误'), '修改失败', 'error');
   })
-  .catch(error => {
+  .catch(async error => {
     console.error('修改设备信息失败:', error);
-    alert('修改设备信息失败，请重试');
+    await appAlert('修改设备信息失败，请重试', '网络错误', 'error');
   })
   .finally(() => {
     submitBtn.disabled = false;
