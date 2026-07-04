@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<!--测试页面不用管-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>公共查询统计中心</title>
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --primary-dark: #4a77e4;
+      --secondary: #7f8fa4;
+      --background-gradient-start: #f8f9ff;
+      --background-gradient-end: #f0f3ff;
+      --card-bg: #ffffff;
+      --border-color: #dfe5f2;
+      --border-strong: #cfd8eb;
+      --text-color: #25324b;
+      --muted: #6b7280;
+      --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
+      --shadow-hover: 0 8px 32px rgba(91, 140, 255, 0.16);
+      --transition: all 0.22s ease;
+      --hover-bg: #f9fbff;
+      --highlight-bg: #eff4ff;
+      --success: #16a34a;
+      --success-bg: #dcfce7;
+      --warning: #d97706;
+      --warning-bg: #fef3c7;
+      --danger: #dc2626;
+      --danger-bg: #fee2e2;
+      --radius: 12px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, system-ui, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
+      color: var(--text-color);
+      padding: 20px;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .page {
+      width: min(1320px, 100%);
+      margin: 0 auto;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      display: grid;
+      gap: 6px;
+    }
+
+    .page-title h1 {
+      font-size: 26px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: var(--text-color);
+    }
+
+    .page-title p {
+      color: var(--secondary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .status-chip {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid rgba(91, 140, 255, .22);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--secondary);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: var(--shadow);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--warning);
+    }
+
+    .status-chip.ok .status-dot { background: var(--success); }
+    .status-chip.err .status-dot { background: var(--danger); }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-hover);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, .74);
+    }
+
+    .card-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .card-title strong {
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 800;
+    }
+
+    .card-title span {
+      color: var(--secondary);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 16px 18px;
+    }
+
+    .form-field {
+      display: grid;
+      gap: 6px;
+      min-width: 148px;
+    }
+
+    .form-field.grow {
+      flex: 1 1 220px;
+    }
+
+    .form-field label {
+      color: var(--secondary);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: #f8f9ff;
+      color: var(--text-color);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .form-field input:focus,
+    .form-field select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(91, 140, 255, .12);
+      background: #fff;
+    }
+
+    .check-line {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text-color);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .check-line input {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--primary);
+    }
+
+    .btn {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 14px;
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
+    .btn.light {
+      border-color: var(--border-color);
+      background: #fff;
+      color: #516173;
+    }
+
+    .btn.light:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--highlight-bg);
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px 18px 18px;
+    }
+
+    .metric-card {
+      min-height: 100px;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: #fff;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .metric-card:hover {
+      border-color: rgba(91, 140, 255, .45);
+      background: var(--highlight-bg);
+      transform: translateY(-1px);
+    }
+
+    .metric-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--secondary);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .metric-icon {
+      width: 30px;
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: var(--highlight-bg);
+      color: var(--primary);
+      font-size: 16px;
+      flex: 0 0 auto;
+    }
+
+    .metric-value {
+      color: var(--text-color);
+      font-size: 24px;
+      line-height: 1.1;
+      font-weight: 900;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .metric-note {
+      color: var(--secondary);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .quick-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 18px 0;
+    }
+
+    .tab-btn {
+      min-height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: #fff;
+      color: #516173;
+      font-size: 13px;
+      font-weight: 800;
+      transition: var(--transition);
+    }
+
+    .tab-btn:hover,
+    .tab-btn.active {
+      border-color: var(--primary);
+      background: var(--highlight-bg);
+      color: var(--primary);
+    }
+
+    .summary-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-color);
+      color: var(--secondary);
+      font-size: 13px;
+    }
+
+    .summary-items {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      min-height: 27px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: #f8f9ff;
+      color: #516173;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.primary {
+      border-color: rgba(91, 140, 255, .35);
+      background: var(--highlight-bg);
+      color: var(--primary);
+    }
+
+    .table-wrap {
+      margin: 0 18px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: auto;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 860px;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8f9ff;
+      color: #40506a;
+      font-weight: 900;
+    }
+
+    tbody tr:hover td {
+      background: var(--hover-bg);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .money-cell {
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .badge.ok { background: var(--success-bg); color: var(--success); }
+    .badge.warn { background: var(--warning-bg); color: var(--warning); }
+    .badge.danger { background: var(--danger-bg); color: var(--danger); }
+
+    .empty-state {
+      padding: 24px 18px;
+      color: var(--secondary);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 0 18px 16px;
+      color: var(--secondary);
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    .pager button {
+      min-width: 32px;
+      height: 28px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: #fff;
+      color: #516173;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .pager button:hover:not(:disabled),
+    .pager button.active {
+      border-color: var(--primary);
+      background: var(--highlight-bg);
+      color: var(--primary);
+    }
+
+    .pager button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .chart-box {
+      padding: 14px 18px 18px;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 90px minmax(0, 1fr) 82px;
+      align-items: center;
+      gap: 10px;
+      color: #40506a;
+      font-size: 12px;
+    }
+
+    .bar-track {
+      height: 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--primary);
+      min-width: 2px;
+    }
+
+    .rank-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .rank-row {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .rank-no {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--highlight-bg);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .rank-name {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .rank-name strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .rank-name span {
+      color: var(--secondary);
+      font-size: 12px;
+    }
+
+    .rank-value {
+      color: var(--primary);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pending-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 18px 16px;
+    }
+
+    .pending-item {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: #fff;
+      color: #516173;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .pending-item.warn {
+      border-color: rgba(220, 38, 38, .25);
+      background: #fff7f7;
+      color: var(--danger);
+    }
+
+    .request-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px 16px;
+      color: var(--secondary);
+      font-size: 12px;
+    }
+
+    .request-line code {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: #f8f9ff;
+      color: #40506a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: none;
+      min-width: 180px;
+      max-width: min(520px, calc(100vw - 32px));
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(17, 24, 39, .92);
+      color: #fff;
+      font-size: 13px;
+      text-align: center;
+      box-shadow: 0 10px 32px rgba(15, 23, 42, .18);
+    }
+
+    .toast.show { display: block; }
+
+    .loading {
+      opacity: .72;
+      pointer-events: none;
+    }
+
+    @media (max-width: 1024px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 12px 10px 26px;
+      }
+      .page-head {
+        display: grid;
+        gap: 10px;
+      }
+      .page-title h1 {
+        font-size: 22px;
+      }
+      .status-chip {
+        justify-self: start;
+      }
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 14px;
+      }
+      .form-field,
+      .form-field.grow {
+        min-width: 0;
+        width: 100%;
+      }
+      .form-field.grow,
+      .toolbar .full,
+      .toolbar .check-line,
+      .toolbar .btn {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 14px;
+        gap: 10px;
+      }
+      .metric-card {
+        min-height: 86px;
+        padding: 11px;
+      }
+      .metric-value {
+        font-size: 20px;
+      }
+      .card-head {
+        padding: 14px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .quick-tabs {
+        padding: 12px 14px 0;
+      }
+      .summary-bar,
+      .chart-box,
+      .pending-list,
+      .request-line {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .table-wrap {
+        margin-left: 14px;
+        margin-right: 14px;
+      }
+      .pager {
+        justify-content: space-between;
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .bar-row {
+        grid-template-columns: 72px minmax(0, 1fr) 70px;
+      }
+      .request-line {
+        display: grid;
+      }
+      table {
+        min-width: 760px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .metrics-grid {
+        gap: 8px;
+      }
+      .metric-value {
+        font-size: 18px;
+      }
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-head">
+      <div class="page-title">
+        <h1>公共查询统计中心</h1>
+        <p>统一调用 common_query_stats.php，适合调试公共列表、总览、趋势、排行和常用筛选口径。</p>
+      </div>
+      <div class="status-chip" id="apiStatus"><i class="status-dot"></i><span>接口检测中</span></div>
+    </div>
+
+    <section class="card" id="filterCard">
+      <div class="card-head">
+        <div class="card-title">
+          <strong>查询条件</strong>
+          <span>管理员可选择全部场地；加盟商会被接口自动限制到自己的场地范围。</span>
+        </div>
+        <button class="btn light" type="button" onclick="reloadAll()">刷新</button>
+      </div>
+      <div class="toolbar">
+        <div class="form-field">
+          <label for="modeSelect">统计周期</label>
+          <select id="modeSelect" onchange="onModeChange()">
+            <option value="day">今日</option>
+            <option value="yesterday">昨日</option>
+            <option value="week">本周</option>
+            <option value="month">本月</option>
+            <option value="year">本年</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+        <div class="form-field custom-date" style="display:none;">
+          <label for="startDate">开始日期</label>
+          <input id="startDate" type="date" />
+        </div>
+        <div class="form-field custom-date" style="display:none;">
+          <label for="endDate">结束日期</label>
+          <input id="endDate" type="date" />
+        </div>
+        <div class="form-field">
+          <label for="venueSelect">场地</label>
+          <select id="venueSelect">
+            <option value="">全部场地</option>
+          </select>
+        </div>
+        <div class="form-field grow">
+          <label for="keywordInput">关键词</label>
+          <input id="keywordInput" type="search" placeholder="订单号 / UID / 设备编号 / 场地ID / 昵称" onkeydown="if(event.key==='Enter') reloadList(1)" />
+        </div>
+        <label class="check-line" title="列表资源是否按当前时间范围过滤">
+          <input id="useDateCheckbox" type="checkbox" checked />
+          列表按时间筛选
+        </label>
+        <label class="check-line" title="仅订单资源有效，排除礼物、金币、能量、娃娃机">
+          <input id="driveOnlyCheckbox" type="checkbox" checked />
+          订单只看驾驶收入
+        </label>
+        <button class="btn full" type="button" onclick="reloadAll()">查询统计</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <strong>经营总览</strong>
+          <span id="rangeText">当前周期</span>
+        </div>
+        <button class="btn light" type="button" onclick="copyApiUrl('overview')">复制总览接口</button>
+      </div>
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="empty-state">总览加载中...</div>
+      </div>
+      <div class="pending-list" id="pendingList"></div>
+    </section>
+
+    <div class="two-col">
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <strong>趋势</strong>
+            <span>按天 / 月聚合，适合看收入和订单变化。</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="metricSelect" class="mini-select" onchange="reloadTrendAndRank()" style="height:32px;border:1px solid var(--border-color);border-radius:8px;padding:0 8px;background:#fff;">
+              <option value="drive_income">驾驶收入</option>
+            </select>
+            <select id="groupSelect" onchange="reloadTrendAndRank()" style="height:32px;border:1px solid var(--border-color);border-radius:8px;padding:0 8px;background:#fff;">
+              <option value="day">按天</option>
+              <option value="month">按月</option>
+            </select>
+          </div>
+        </div>
+        <div class="chart-box" id="trendBox"><div class="empty-state">趋势加载中...</div></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <strong>排行</strong>
+            <span>支持场地 / 设备 / 用户维度，按当前 metric 排序。</span>
+          </div>
+          <select id="dimensionSelect" onchange="reloadTrendAndRank()" style="height:32px;border:1px solid var(--border-color);border-radius:8px;padding:0 8px;background:#fff;">
+            <option value="venue">场地</option>
+            <option value="device">设备</option>
+            <option value="user">用户</option>
+          </select>
+        </div>
+        <div class="chart-box" id="rankBox"><div class="empty-state">排行加载中...</div></div>
+      </section>
+    </div>
+
+    <section class="card" id="listCard">
+      <div class="card-head">
+        <div class="card-title">
+          <strong>公共列表查询</strong>
+          <span>resource 白名单查询，不允许前端直接传表名或 SQL。</span>
+        </div>
+        <button class="btn light" type="button" onclick="copyApiUrl('list')">复制列表接口</button>
+      </div>
+
+      <div class="quick-tabs" id="resourceTabs"></div>
+
+      <div class="toolbar" style="padding-top:12px;">
+        <div class="form-field grow">
+          <label for="resourceSelect">资源 resource</label>
+          <select id="resourceSelect" onchange="changeResource(this.value)"></select>
+        </div>
+        <div class="form-field">
+          <label for="pageSizeSelect">每页</label>
+          <select id="pageSizeSelect" onchange="reloadList(1)">
+            <option value="10">10 条</option>
+            <option value="20" selected>20 条</option>
+            <option value="50">50 条</option>
+            <option value="100">100 条</option>
+            <option value="200">200 条</option>
+          </select>
+        </div>
+        <button class="btn" type="button" onclick="reloadList(1)">查询列表</button>
+        <button class="btn light" type="button" onclick="reloadSummary()">刷新汇总</button>
+      </div>
+
+      <div class="summary-bar">
+        <div class="summary-items" id="resourceSummary"><span class="pill">列表汇总加载中...</span></div>
+        <div id="pageInfo">-</div>
+      </div>
+
+      <div class="table-wrap" id="tableWrap">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"><tr><td>数据加载中...</td></tr></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="listEmpty" style="display:none;">暂无数据</div>
+      <div class="pager" id="pager"></div>
+      <div class="request-line">
+        <span>当前请求</span>
+        <code id="currentUrl">-</code>
+        <button class="btn light" type="button" onclick="copyCurrentUrl()">复制</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_CANDIDATES = [
+      '../api/common/common_query_stats.php',
+      '../api/admin_v2/common_query_stats.php'
+    ];
+
+    const DEFAULT_RESOURCES = {
+      orders: '订单',
+      vehicles: '设备',
+      venues: '场地',
+      users: '用户',
+      recharges: '充值',
+      refunds: '退款',
+      withdrawals: '提现',
+      reports: '投诉/举报',
+      appeals: '订单申诉',
+      device_bans: '设备违规',
+      venue_bans: '场地违规',
+      banned_users: '拉黑/禁言',
+      order_locks: '锁定订单',
+      gift_orders: '礼物订单',
+      energy_records: '能量记录',
+      doll_records: '娃娃机记录',
+      pricing_options: '资费套餐',
+      zones: '专区',
+      venue_funds: '场地资金',
+      feedback: '用户反馈',
+      official_notices: '官方通知',
+      anchor_realname_auth: '主播认证',
+      app_images: '轮播图',
+      balance_changes: '余额流水'
+    };
+
+    const RESOURCE_TABS = ['orders', 'vehicles', 'users', 'recharges', 'refunds', 'withdrawals', 'reports', 'appeals', 'device_bans', 'venue_funds'];
+
+    const METRIC_LABELS = {
+      drive_income: '驾驶收入',
+      drive_order_count: '驾驶订单数',
+      order_count: '全订单数',
+      recharge_amount: '充值金额',
+      recharge_count: '充值单数',
+      refund_amount: '退款金额',
+      refund_count: '退款单数',
+      gift_income: '礼物收益',
+      gift_count: '礼物单数',
+      doll_amount: '娃娃机金额',
+      doll_count: '娃娃机单数',
+      new_users: '新注册用户',
+      active_users: '活跃用户',
+      reports_count: '投诉数',
+      device_bans_count: '设备违规数',
+      venue_bans_count: '场地违规数'
+    };
+
+    const FIELD_LABELS = {
+      id: 'ID', uid: 'UID', user_id: '用户ID', admin_uid: '操作UID', banned_uid: '被处理UID',
+      username: '账号', nickname: '昵称', phone: '手机号', mobile: '手机号',
+      name: '名称', venue_name: '场地名称', venue_id: '场地ID', bind_site: '绑定场地', reservation_id: '场地ID', reservation_location: '场地名称',
+      serial_number: '设备编号', device_id: '设备ID', image_device_serial: '图传ID', room_id: '房间号', playing_stream_id: '推流ID', rtc_user_id: 'RTC用户',
+      order_id: '订单ID', order_number: '订单号', payment_amount: '支付金额', pay_money: '支付金额', payer_total: '充值金额', refund_amount: '退款金额', withdrawal_amount: '提现金额', actual_amount: '实际到账',
+      pays_type: '支付类型', pay_type: '支付类型', channel: '渠道', status: '状态', order_status: '订单状态', application_status: '审批状态', payout_status: '打款状态',
+      note: '备注', reason: '原因', content: '内容', title: '标题', remark: '备注', wallet: '钱包', gold: '金币', account_balance: '账户余额', available_balance: '可提现', frozen_amount: '冻结金额',
+      start_time: '开始时间', end_time: '结束时间', created_at: '创建时间', updated_at: '更新时间', application_time: '申请时间', publish_time: '发布时间', reservation_time: '预约时间', last_active_at: '活跃时间'
+    };
+
+    const PREFERRED_FIELDS = {
+      orders: ['id','order_number','uid','user_id','reservation_id','reservation_location','serial_number','payment_amount','pay_money','pays_type','pay_type','status','order_status','start_time','end_time','created_at','note'],
+      vehicles: ['id','serial_number','name','bind_site','status','vehicle_status','sharing_status','start_status','is_banned','image_device_serial','driver_id','driver','updated_at'],
+      venues: ['id','name','venue_name','uid','venue_status','status','is_banned','queue_length','venue_level','withdraw_ratio','created_at'],
+      users: ['uid','id','nickname','phone','mobile','username','wallet','gold','venue_id','is_mute','status','created_at','last_active_at'],
+      recharges: ['id','order_number','uid','payer_total','status','channel','created_at','updated_at'],
+      refunds: ['id','order_number','reservation_id','uid','refund_amount','status','is_reduced','created_at','updated_at'],
+      withdrawals: ['id','venue_id','uid','withdrawal_amount','actual_amount','application_status','payout_status','application_time','created_at'],
+      reports: ['id','order_number','uid','venue_id','status','reason','content','created_at','updated_at'],
+      appeals: ['id','order_number','uid','venue_id','status','reason','created_at','updated_at'],
+      device_bans: ['id','serial_number','venue_id','admin_uid','reason','status','start_time','end_time','created_at'],
+      venue_bans: ['id','venue_id','admin_uid','reason','status','start_time','end_time','created_at'],
+      venue_funds: ['id','venue_id','account_balance','available_balance','frozen_amount','created_at','updated_at'],
+      banned_users: ['id','admin_uid','venue_id','banned_uid','reason','start_time','end_time','created_at','updated_at']
+    };
+
+    const state = {
+      apiBase: '',
+      resources: Object.assign({}, DEFAULT_RESOURCES),
+      currentPage: 1,
+      total: 0,
+      lastListUrl: '',
+      lastOverviewUrl: '',
+      lastError: ''
+    };
+
+    function $(id) { return document.getElementById(id); }
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, function(s) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[s];
+      });
+    }
+
+    function toast(text) {
+      const el = $('toast');
+      el.textContent = text;
+      el.classList.add('show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(function() { el.classList.remove('show'); }, 1800);
+    }
+
+    function setStatus(type, text) {
+      const el = $('apiStatus');
+      el.classList.remove('ok', 'err');
+      if (type) el.classList.add(type);
+      el.querySelector('span').textContent = text;
+    }
+
+    function money(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n)) return '¥0.00';
+      return '¥' + n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function numberText(value) {
+      const n = Number(value || 0);
+      if (!Number.isFinite(n)) return '0';
+      return n.toLocaleString('zh-CN');
+    }
+
+    function isMoneyField(field) {
+      return /(amount|money|total|balance|income|revenue|payment|payer|wallet|gold|fee)/i.test(field);
+    }
+
+    function labelOf(field) {
+      return FIELD_LABELS[field] || field;
+    }
+
+    function resourceTitle(resource) {
+      return state.resources[resource] || DEFAULT_RESOURCES[resource] || resource;
+    }
+
+    function metricTitle(metric) {
+      return METRIC_LABELS[metric] || metric;
+    }
+
+    function rangeParams() {
+      const mode = $('modeSelect').value || 'day';
+      const params = {};
+      if (mode === 'custom') {
+        if ($('startDate').value) params.start_date = $('startDate').value;
+        if ($('endDate').value) params.end_date = $('endDate').value;
+      } else {
+        params.mode = mode;
+      }
+      const venueId = $('venueSelect').value;
+      if (venueId) params.venue_id = venueId;
+      return params;
+    }
+
+    function queryString(params) {
+      const qs = new URLSearchParams();
+      Object.keys(params).forEach(function(key) {
+        const value = params[key];
+        if (value !== undefined && value !== null && String(value) !== '') qs.set(key, value);
+      });
+      return qs.toString();
+    }
+
+    async function apiRequest(params) {
+      if (!state.apiBase) {
+        await detectApiBase();
+      }
+      const qs = queryString(params);
+      const url = state.apiBase + '?' + qs;
+      const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+      const text = await response.text();
+      let json;
+      try { json = JSON.parse(text); } catch (e) { throw new Error('接口返回不是 JSON：' + text.slice(0, 120)); }
+      if (Number(json.code) !== 0) throw new Error(json.msg || ('接口错误 code=' + json.code));
+      return { json, url };
+    }
+
+    async function detectApiBase() {
+      for (const base of API_CANDIDATES) {
+        try {
+          const response = await fetch(base + '?action=me', { credentials: 'include', cache: 'no-store' });
+          const text = await response.text();
+          const json = JSON.parse(text);
+          if (Number(json.code) === 0 || Number(json.code) === 1001 || Number(json.code) === 1002) {
+            state.apiBase = base;
+            setStatus(Number(json.code) === 0 ? 'ok' : 'err', Number(json.code) === 0 ? '已连接：' + base : '接口可达但未登录');
+            return base;
+          }
+        } catch (e) {}
+      }
+      state.apiBase = API_CANDIDATES[0];
+      setStatus('err', '接口检测失败');
+      return state.apiBase;
+    }
+
+    function onModeChange() {
+      const custom = $('modeSelect').value === 'custom';
+      document.querySelectorAll('.custom-date').forEach(function(el) {
+        el.style.display = custom ? '' : 'none';
+      });
+    }
+
+    function initDates() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const today = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+      const tomorrowDate = new Date(now.getTime() + 86400000);
+      const tomorrow = tomorrowDate.getFullYear() + '-' + pad(tomorrowDate.getMonth() + 1) + '-' + pad(tomorrowDate.getDate());
+      $('startDate').value = today;
+      $('endDate').value = tomorrow;
+    }
+
+    async function loadMeta() {
+      try {
+        const result = await apiRequest({ action: 'meta' });
+        const data = result.json.data || {};
+        const resources = data.resources || {};
+        const nextResources = {};
+        Object.keys(resources).forEach(function(key) {
+          if (Number(resources[key].exists || 0) === 1) {
+            nextResources[key] = resources[key].title || DEFAULT_RESOURCES[key] || key;
+          }
+        });
+        if (Object.keys(nextResources).length) state.resources = nextResources;
+
+        const metrics = Array.isArray(data.metrics) ? data.metrics : Object.keys(METRIC_LABELS);
+        $('metricSelect').innerHTML = metrics.map(function(m) {
+          return '<option value="' + esc(m) + '">' + esc(metricTitle(m)) + '</option>';
+        }).join('');
+        if (metrics.includes('drive_income')) $('metricSelect').value = 'drive_income';
+      } catch (e) {
+        state.lastError = e.message;
+        setStatus('err', e.message);
+      }
+      renderResourceControls();
+    }
+
+    function renderResourceControls() {
+      const keys = Object.keys(state.resources);
+      $('resourceSelect').innerHTML = keys.map(function(key) {
+        return '<option value="' + esc(key) + '">' + esc(resourceTitle(key)) + '（' + esc(key) + '）</option>';
+      }).join('');
+      if (keys.includes('orders')) $('resourceSelect').value = 'orders';
+
+      $('resourceTabs').innerHTML = RESOURCE_TABS.filter(function(key) {
+        return state.resources[key];
+      }).map(function(key) {
+        return '<button class="tab-btn" type="button" data-resource="' + esc(key) + '" onclick="changeResource(\'' + esc(key) + '\')">' + esc(resourceTitle(key)) + '</button>';
+      }).join('');
+      syncTabs();
+    }
+
+    function syncTabs() {
+      const current = $('resourceSelect').value;
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.resource === current);
+      });
+    }
+
+    async function loadVenues() {
+      try {
+        const result = await apiRequest({ action: 'venues' });
+        const list = Array.isArray(result.json.data) ? result.json.data : [];
+        $('venueSelect').innerHTML = '<option value="">全部场地</option>' + list.map(function(v) {
+          const name = v.venue_name || v.name || ('场地 ' + v.id);
+          return '<option value="' + esc(v.id) + '">' + esc(v.id + ' - ' + name) + '</option>';
+        }).join('');
+      } catch (e) {
+        $('venueSelect').innerHTML = '<option value="">全部场地</option>';
+      }
+    }
+
+    function overviewParams() {
+      return Object.assign({ action: 'overview' }, rangeParams());
+    }
+
+    function listParams(page) {
+      const resource = $('resourceSelect').value || 'orders';
+      const params = Object.assign({
+        action: 'list',
+        resource: resource,
+        page: String(page || state.currentPage || 1),
+        page_size: $('pageSizeSelect').value || '20',
+        use_date: $('useDateCheckbox').checked ? '1' : '0'
+      }, rangeParams());
+
+      const kw = $('keywordInput').value.trim();
+      if (kw) params.keyword = kw;
+      if (resource === 'orders' && $('driveOnlyCheckbox').checked) params.drive_only = '1';
+      return params;
+    }
+
+    function trendParams() {
+      return Object.assign({
+        action: 'trend',
+        metric: $('metricSelect').value || 'drive_income',
+        group: $('groupSelect').value || 'day'
+      }, rangeParams());
+    }
+
+    function rankParams() {
+      return Object.assign({
+        action: 'rank',
+        metric: $('metricSelect').value || 'drive_income',
+        dimension: $('dimensionSelect').value || 'venue',
+        limit: '10'
+      }, rangeParams());
+    }
+
+    async function reloadAll() {
+      await Promise.allSettled([
+        loadOverview(),
+        reloadList(1),
+        reloadTrendAndRank()
+      ]);
+    }
+
+    async function loadOverview() {
+      $('metricsGrid').classList.add('loading');
+      try {
+        const result = await apiRequest(overviewParams());
+        state.lastOverviewUrl = result.url;
+        const data = result.json.data || {};
+        renderOverview(data);
+        setStatus('ok', '已连接：' + state.apiBase);
+      } catch (e) {
+        $('metricsGrid').innerHTML = '<div class="empty-state">总览加载失败：' + esc(e.message) + '</div>';
+        $('pendingList').innerHTML = '';
+        setStatus('err', e.message);
+      } finally {
+        $('metricsGrid').classList.remove('loading');
+      }
+    }
+
+    function renderOverview(data) {
+      const cards = data.cards || {};
+      const range = data.range || {};
+      $('rangeText').textContent = range.start && range.end ? ('范围：' + range.start + ' ~ ' + range.end) : '当前周期';
+
+      const config = [
+        ['drive_income', '驾驶收入', money(cards.drive_income), '订单驾驶收入', '¥', 'orders', 'drive_income'],
+        ['drive_order_count', '驾驶订单', numberText(cards.drive_order_count) + ' 单', '排除非驾驶订单', '单', 'orders', 'drive_order_count'],
+        ['recharge_amount', '充值金额', money(cards.recharge_amount), '支付成功充值', '充', 'recharges', 'recharge_amount'],
+        ['refund_amount', '退款金额', money(cards.refund_amount), '当前周期退款', '退', 'refunds', 'refund_amount'],
+        ['new_users', '新注册', numberText(cards.new_users) + ' 人', '当前周期新增用户', '人', 'users', 'new_users'],
+        ['active_users', '活跃用户', numberText(cards.active_users) + ' 人', '按 last_active_at', '活', 'users', 'active_users'],
+        ['device_online', '设备在线', numberText(cards.device_online) + '/' + numberText(cards.device_total), '在线 / 总设备', '设', 'vehicles', 'drive_income'],
+        ['pending_total', '待处理', numberText((data.pending || []).reduce((s, i) => s + Number(i.count || 0), 0)) + ' 项', '投诉 / 申诉 / 提现等', '待', 'reports', 'reports_count']
+      ];
+
+      $('metricsGrid').innerHTML = config.map(function(item) {
+        return '<article class="metric-card" onclick="openMetricResource(\'' + item[5] + '\',\'' + item[6] + '\')">' +
+          '<div class="metric-label"><span>' + esc(item[1]) + '</span><i class="metric-icon">' + esc(item[4]) + '</i></div>' +
+          '<div class="metric-value">' + esc(item[2]) + '</div>' +
+          '<div class="metric-note">' + esc(item[3]) + '</div>' +
+        '</article>';
+      }).join('');
+
+      const pending = Array.isArray(data.pending) ? data.pending : [];
+      $('pendingList').innerHTML = pending.length ? pending.map(function(item) {
+        const cls = Number(item.count || 0) > 0 ? ' warn' : '';
+        return '<button class="pending-item' + cls + '" type="button" onclick="jumpPending(\'' + esc(item.key || '') + '\')">' +
+          esc(item.title || item.key || '-') + '<span>' + esc(item.count || 0) + '</span>' +
+        '</button>';
+      }).join('') : '';
+    }
+
+    function openMetricResource(resource, metric) {
+      if (state.resources[resource]) {
+        $('resourceSelect').value = resource;
+        syncTabs();
+      }
+      if (metric && Array.from($('metricSelect').options).some(o => o.value === metric)) {
+        $('metricSelect').value = metric;
+      }
+      reloadList(1);
+      reloadTrendAndRank();
+      document.getElementById('listCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function jumpPending(key) {
+      const map = { reports: 'reports', appeals: 'appeals', withdrawals: 'withdrawals', feedback: 'feedback', device_bans: 'device_bans' };
+      const resource = map[key] || key;
+      if (state.resources[resource]) changeResource(resource);
+    }
+
+    function changeResource(resource) {
+      if (!resource) return;
+      $('resourceSelect').value = resource;
+      syncTabs();
+      $('driveOnlyCheckbox').disabled = resource !== 'orders';
+      reloadList(1);
+      reloadSummary();
+    }
+
+    async function reloadList(page) {
+      state.currentPage = page || 1;
+      $('tableBody').innerHTML = '<tr><td>数据加载中...</td></tr>';
+      $('listEmpty').style.display = 'none';
+      $('tableWrap').style.display = '';
+      try {
+        const params = listParams(state.currentPage);
+        const result = await apiRequest(params);
+        state.lastListUrl = result.url;
+        $('currentUrl').textContent = result.url;
+        renderList(result.json.data || {});
+      } catch (e) {
+        $('tableHead').innerHTML = '';
+        $('tableBody').innerHTML = '';
+        $('tableWrap').style.display = 'none';
+        $('listEmpty').style.display = 'block';
+        $('listEmpty').textContent = '列表加载失败：' + e.message;
+        $('pager').innerHTML = '';
+        $('currentUrl').textContent = state.apiBase + '?' + queryString(listParams(state.currentPage));
+      }
+    }
+
+    async function reloadSummary() {
+      try {
+        const params = listParams(1);
+        params.action = 'summary';
+        delete params.page;
+        delete params.page_size;
+        const result = await apiRequest(params);
+        renderResourceSummary(result.json.data || {});
+      } catch (e) {
+        $('resourceSummary').innerHTML = '<span class="pill">汇总失败：' + esc(e.message) + '</span>';
+      }
+    }
+
+    function renderList(data) {
+      const rows = Array.isArray(data.list) ? data.list : [];
+      const fields = orderFields(data.resource || $('resourceSelect').value, data.fields || Object.keys(rows[0] || {}));
+      state.total = Number(data.total || 0);
+      state.currentPage = Number(data.page || state.currentPage || 1);
+      const pageSize = Number(data.page_size || $('pageSizeSelect').value || 20);
+      const pages = Math.max(1, Math.ceil(state.total / pageSize));
+      $('pageInfo').textContent = '第 ' + state.currentPage + ' / ' + pages + ' 页，共 ' + numberText(state.total) + ' 条';
+
+      renderResourceSummary(data);
+
+      if (!rows.length) {
+        $('tableHead').innerHTML = '';
+        $('tableBody').innerHTML = '';
+        $('tableWrap').style.display = 'none';
+        $('listEmpty').style.display = 'block';
+        $('listEmpty').textContent = '暂无数据';
+        renderPager(pages);
+        return;
+      }
+
+      $('tableWrap').style.display = '';
+      $('listEmpty').style.display = 'none';
+      $('tableHead').innerHTML = '<tr>' + fields.map(function(f) {
+        return '<th>' + esc(labelOf(f)) + '<br><span class="mono" style="font-size:11px;color:#94a3b8;">' + esc(f) + '</span></th>';
+      }).join('') + '</tr>';
+      $('tableBody').innerHTML = rows.map(function(row) {
+        return '<tr>' + fields.map(function(f) {
+          return '<td class="' + (isMoneyField(f) ? 'money-cell' : '') + '">' + formatCell(f, row[f]) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+      renderPager(pages);
+    }
+
+    function renderResourceSummary(data) {
+      const resource = data.resource || $('resourceSelect').value;
+      const items = ['<span class="pill primary">' + esc(resourceTitle(resource)) + '</span>'];
+      if (data.total !== undefined) items.push('<span class="pill">总数：' + esc(numberText(data.total)) + '</span>');
+      const sum = data.sum || {};
+      Object.keys(sum).forEach(function(k) {
+        items.push('<span class="pill">' + esc(labelOf(k)) + '：' + esc(money(sum[k])) + '</span>');
+      });
+      const range = data.range || null;
+      if (range && range.start && range.end) items.push('<span class="pill">' + esc(range.start_date || range.start) + ' ~ ' + esc(range.end_date || range.end) + '</span>');
+      $('resourceSummary').innerHTML = items.join('');
+    }
+
+    function orderFields(resource, fields) {
+      const exists = new Set(fields || []);
+      const preferred = PREFERRED_FIELDS[resource] || [];
+      const ordered = preferred.filter(f => exists.has(f));
+      fields.forEach(function(f) { if (!ordered.includes(f)) ordered.push(f); });
+      return ordered;
+    }
+
+    function formatCell(field, value) {
+      if (value === null || value === undefined || value === '') return '<span style="color:#94a3b8;">-</span>';
+      const str = String(value);
+      if (isMoneyField(field) && !/[年月日]/.test(str) && !isNaN(Number(str))) return esc(money(str));
+      if (/status|状态|is_banned|is_mute|start_status|sharing_status/i.test(field)) return statusBadge(str);
+      if (/order_number|serial_number|image_device_serial|room_id|uid|user_id|device_id|venue_id|reservation_id|id$/i.test(field)) return '<span class="mono">' + esc(str) + '</span>';
+      if (str.length > 60) return '<span title="' + esc(str) + '">' + esc(str.slice(0, 60)) + '...</span>';
+      return esc(str);
+    }
+
+    function statusBadge(value) {
+      const text = String(value);
+      let cls = '';
+      if (/成功|完成|正常|在线|已处理|已打款|success|paid|1/i.test(text)) cls = 'ok';
+      if (/待|审核|处理中|占有|冻结|pending|0/i.test(text)) cls = 'warn';
+      if (/失败|拒绝|封禁|离线|异常|删除|danger|-1/i.test(text)) cls = 'danger';
+      return '<span class="badge ' + cls + '">' + esc(text) + '</span>';
+    }
+
+    function renderPager(pages) {
+      const page = state.currentPage;
+      const html = [];
+      html.push('<button type="button" ' + (page <= 1 ? 'disabled' : '') + ' onclick="reloadList(1)">首页</button>');
+      html.push('<button type="button" ' + (page <= 1 ? 'disabled' : '') + ' onclick="reloadList(' + (page - 1) + ')">上一页</button>');
+      const start = Math.max(1, page - 2);
+      const end = Math.min(pages, page + 2);
+      for (let i = start; i <= end; i++) {
+        html.push('<button type="button" class="' + (i === page ? 'active' : '') + '" onclick="reloadList(' + i + ')">' + i + '</button>');
+      }
+      html.push('<button type="button" ' + (page >= pages ? 'disabled' : '') + ' onclick="reloadList(' + (page + 1) + ')">下一页</button>');
+      html.push('<button type="button" ' + (page >= pages ? 'disabled' : '') + ' onclick="reloadList(' + pages + ')">末页</button>');
+      $('pager').innerHTML = html.join('');
+    }
+
+    async function reloadTrendAndRank() {
+      await Promise.allSettled([loadTrend(), loadRank()]);
+    }
+
+    async function loadTrend() {
+      $('trendBox').innerHTML = '<div class="empty-state">趋势加载中...</div>';
+      try {
+        const result = await apiRequest(trendParams());
+        const data = result.json.data || {};
+        const list = Array.isArray(data.list) ? data.list : [];
+        if (!list.length) {
+          $('trendBox').innerHTML = '<div class="empty-state">暂无趋势数据</div>';
+          return;
+        }
+        const max = Math.max.apply(null, list.map(item => Number(item.value || 0)).concat([1]));
+        $('trendBox').innerHTML = '<div class="bar-list">' + list.map(function(item) {
+          const value = Number(item.value || 0);
+          const width = Math.max(2, Math.round(value / max * 100));
+          const label = /income|amount/i.test(data.metric || $('metricSelect').value) ? money(value) : numberText(value);
+          return '<div class="bar-row"><span class="mono">' + esc(item.stat_key || '-') + '</span><div class="bar-track"><span class="bar-fill" style="width:' + width + '%"></span></div><strong>' + esc(label) + '</strong></div>';
+        }).join('') + '</div>';
+      } catch (e) {
+        $('trendBox').innerHTML = '<div class="empty-state">趋势加载失败：' + esc(e.message) + '</div>';
+      }
+    }
+
+    async function loadRank() {
+      $('rankBox').innerHTML = '<div class="empty-state">排行加载中...</div>';
+      try {
+        const result = await apiRequest(rankParams());
+        const data = result.json.data || {};
+        const list = Array.isArray(data.list) ? data.list : [];
+        if (!list.length) {
+          $('rankBox').innerHTML = '<div class="empty-state">暂无排行数据</div>';
+          return;
+        }
+        const metric = data.metric || $('metricSelect').value;
+        $('rankBox').innerHTML = '<div class="rank-list">' + list.map(function(item, index) {
+          const label = /income|amount/i.test(metric) ? money(item.value) : numberText(item.value);
+          return '<div class="rank-row"><span class="rank-no">' + (index + 1) + '</span><div class="rank-name"><strong>' + esc(item.group_name || item.group_id || '-') + '</strong><span>ID：' + esc(item.group_id || '-') + '，记录：' + esc(numberText(item.row_count || 0)) + '</span></div><div class="rank-value">' + esc(label) + '</div></div>';
+        }).join('') + '</div>';
+      } catch (e) {
+        $('rankBox').innerHTML = '<div class="empty-state">排行加载失败：' + esc(e.message) + '</div>';
+      }
+    }
+
+    function copyApiUrl(type) {
+      let params = overviewParams();
+      if (type === 'list') params = listParams(state.currentPage || 1);
+      const url = state.apiBase + '?' + queryString(params);
+      copyText(url);
+    }
+
+    function copyCurrentUrl() {
+      copyText($('currentUrl').textContent || state.lastListUrl || '');
+    }
+
+    function copyText(text) {
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => toast('已复制接口地址')).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const input = document.createElement('textarea');
+      input.value = text;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      toast('已复制接口地址');
+    }
+
+    window.reloadList = reloadList;
+    window.reloadSummary = reloadSummary;
+    window.reloadAll = reloadAll;
+    window.reloadTrendAndRank = reloadTrendAndRank;
+    window.changeResource = changeResource;
+    window.openMetricResource = openMetricResource;
+    window.jumpPending = jumpPending;
+    window.copyApiUrl = copyApiUrl;
+    window.copyCurrentUrl = copyCurrentUrl;
+    window.onModeChange = onModeChange;
+
+    async function boot() {
+      initDates();
+      onModeChange();
+      await detectApiBase();
+      await loadMeta();
+      await loadVenues();
+      changeResource($('resourceSelect').value || 'orders');
+      await reloadAll();
+    }
+
+    boot();
+  </script>
+</body>
+</html>

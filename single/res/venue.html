@@ -454,10 +454,11 @@
         flex:0 0 auto !important;
       }
 
+      /* role_id=3 也必须保留封面容器比例，不能让竖图按原始比例撑高 */
       body.role-3 .venue-cover-card .cover-box{
-        flex:1 1 auto !important;
-        aspect-ratio:auto !important;
-        max-height:none !important;
+        flex:none !important;
+        aspect-ratio:16/7.2 !important;
+        max-height:330px !important;
         min-height:240px !important;
       }
     }
@@ -876,41 +877,50 @@ function syncRole3TopCardHeight() {
   const coverBox = document.querySelector('.venue-cover-card .cover-box');
   if (!coverCard || !basicCard || !coverBox) return;
 
-  // 非 role_id=3 或移动端：清理动态高度，避免影响管理员/手机端
-  if (ROLE_ID !== 3 || window.innerWidth <= 920) {
+  function resetCoverSync() {
+    coverCard.style.removeProperty('height');
     coverCard.style.removeProperty('min-height');
     coverCard.style.removeProperty('display');
     coverCard.style.removeProperty('flex-direction');
-    coverBox.style.removeProperty('flex');
-    coverBox.style.removeProperty('aspect-ratio');
-    coverBox.style.removeProperty('max-height');
+
     coverBox.style.removeProperty('height');
-    return;
+    coverBox.style.removeProperty('min-height');
+    coverBox.style.removeProperty('max-height');
+    coverBox.style.removeProperty('aspect-ratio');
+    coverBox.style.removeProperty('flex');
   }
 
-  // 先恢复一次，避免重复计算越撑越高
-  coverCard.style.removeProperty('min-height');
-  coverBox.style.removeProperty('flex');
-  coverBox.style.removeProperty('aspect-ratio');
-  coverBox.style.removeProperty('max-height');
-  coverBox.style.removeProperty('height');
+  // 先恢复到 CSS 默认比例，测量时不能让竖图的原始比例参与撑高
+  resetCoverSync();
+
+  // 非 role_id=3 或移动端：只保留默认自适应，不做高度同步
+  if (ROLE_ID !== 3 || window.innerWidth <= 920) return;
 
   requestAnimationFrame(() => {
-    const coverH = coverCard.getBoundingClientRect().height;
-    const basicH = basicCard.getBoundingClientRect().height;
+    const basicH = Math.ceil(basicCard.getBoundingClientRect().height);
+    const coverH = Math.ceil(coverCard.getBoundingClientRect().height);
+    const boxH = Math.ceil(coverBox.getBoundingClientRect().height);
+    if (!basicH || !coverH || !boxH) return;
 
-    // 只在封面卡片比基本信息矮时补齐；封面更高时不拉高基本信息
-    if (coverH + 2 < basicH) {
-      coverCard.style.setProperty('min-height', `${Math.ceil(basicH)}px`, 'important');
-      coverCard.style.setProperty('display', 'flex', 'important');
-      coverCard.style.setProperty('flex-direction', 'column', 'important');
+    // 封面卡片里除了图片以外的高度：标题、状态条、padding、gap 等
+    const otherH = coverH - boxH;
+    let targetBoxH = basicH - otherH;
 
-      // 必须带 important，否则会被 .cover-box 的 flex:none!important / max-height:330px!important 压住
-      coverBox.style.setProperty('flex', '1 1 auto', 'important');
-      coverBox.style.setProperty('aspect-ratio', 'auto', 'important');
-      coverBox.style.setProperty('max-height', 'none', 'important');
-      coverBox.style.setProperty('height', 'auto', 'important');
-    }
+    // 防止右侧过矮时把图片压成一条；正常情况下会和右侧基本信息等高
+    if (targetBoxH < 220) targetBoxH = 220;
+
+    const targetCardH = otherH + targetBoxH;
+
+    coverCard.style.setProperty('height', `${targetCardH}px`, 'important');
+    coverCard.style.setProperty('display', 'flex', 'important');
+    coverCard.style.setProperty('flex-direction', 'column', 'important');
+
+    // 关键：给 cover-box 一个明确高度，让 img 的 object-fit: cover 生效，避免竖图撑开容器
+    coverBox.style.setProperty('height', `${targetBoxH}px`, 'important');
+    coverBox.style.setProperty('min-height', `${targetBoxH}px`, 'important');
+    coverBox.style.setProperty('max-height', `${targetBoxH}px`, 'important');
+    coverBox.style.setProperty('aspect-ratio', 'auto', 'important');
+    coverBox.style.setProperty('flex', '0 0 auto', 'important');
   });
 }
 
