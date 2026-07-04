@@ -6,7 +6,12 @@
   <title>冻结记录</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif; color: #172126; background: #f4f8f9; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: #172126;
+      background: #f4f8f9;
+    }
     .page { max-width: 1180px; margin: 0 auto; padding: 18px; }
     .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
     .crumb { font-size: 12px; color: #7a8a93; margin-bottom: 4px; }
@@ -17,7 +22,7 @@
     .card-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #eef3f5; }
     .card-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 9px; }
     .card-title::before { content: ""; width: 7px; height: 20px; border-radius: 20px; background: #5b8cff; display: inline-block; }
-    .toolbar { display: grid; grid-template-columns: minmax(220px, 320px) minmax(160px, 1fr) 110px 110px 1fr; gap: 10px; padding: 16px 18px; align-items: center; }
+    .toolbar { display: grid; grid-template-columns: minmax(220px, 320px) minmax(180px, 1fr) 120px 110px; gap: 10px; padding: 16px 18px; align-items: center; }
     select, input { width: 100%; height: 38px; border: 1px solid #d8e6e9; background: #fff; border-radius: 10px; padding: 0 12px; color: #172126; outline: none; font-size: 14px; }
     select:focus, input:focus { border-color: #5b8cff; box-shadow: 0 0 0 3px rgba(20, 155, 155, .12); }
     .btn { border: 1px solid #b9e2e2; background: #e9fbfb; color: #087d7d; border-radius: 10px; height: 38px; padding: 0 14px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: .15s ease; }
@@ -37,7 +42,13 @@
     .tag.other { background: #f5f5f5; color: #595959; }
     .money { color: #cf6b00; font-weight: 900; }
     .key { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #50616a; background: #f3f7f8; padding: 4px 7px; border-radius: 8px; word-break: break-all; display: inline-block; max-width: 260px; }
+    .hide-redis-key .redis-key-col { display: none !important; }
     .empty { padding: 36px 16px; text-align: center; color: #81919a; border-top: 1px solid #eef3f5; }
+    .pager { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding: 14px 18px 16px; border-top: 1px solid #eef3f5; flex-wrap: wrap; }
+    .page-info { margin-right: 8px; color: #7a8a93; font-size: 12px; }
+    .page-btn { min-width: 32px; height: 32px; border: 1px solid #d8e6e9; background: #fff; color: #51636d; border-radius: 8px; padding: 0 10px; cursor: pointer; font-weight: 700; }
+    .page-btn.active { background: #5b8cff; border-color: #5b8cff; color: #fff; }
+    .page-btn:disabled { opacity: .45; cursor: not-allowed; }
     .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 9999; background: rgba(23, 33, 38, .92); color: #fff; border-radius: 999px; padding: 10px 16px; font-size: 14px; display: none; max-width: min(92vw, 620px); }
     .loading { opacity: .65; pointer-events: none; }
     @media (max-width: 720px) {
@@ -55,6 +66,8 @@
       td { border: 0; padding: 6px 0; display: flex; justify-content: space-between; gap: 12px; }
       td::before { content: attr(data-label); color: #73848d; flex: 0 0 92px; font-weight: 700; }
       .key { max-width: 210px; text-align: right; }
+      .pager { justify-content: center; padding: 12px; }
+      .page-info { width: 100%; text-align: center; margin: 0 0 4px; }
     }
   </style>
 </head>
@@ -64,11 +77,11 @@
       <div>
         <div class="crumb">Menu / venue_frozen_logs</div>
         <h1>冻结记录</h1>
-        <div class="desc">直接读取接口目录下的 frozen_log.txt，用于回看历史冻结和手动解除冻结记录。</div>
+        <div class="desc">用于回看历史冻结和手动解除冻结记录。</div>
       </div>
       <div class="header-actions">
         <button class="btn ghost" onclick="goList()">返回正在冻结</button>
-        <button class="btn primary" onclick="loadLogs()">刷新</button>
+        <button class="btn primary" onclick="searchLogs()">刷新</button>
       </div>
     </div>
 
@@ -79,10 +92,14 @@
       </div>
       <div class="toolbar">
         <select id="venueSelect" style="display:none;"></select>
-        <input id="keyword" placeholder="搜索：ban_id / redisKey / 关键词" />
-        <input id="limit" type="number" min="1" max="1000" value="300" />
-        <button class="btn primary" onclick="loadLogs()">查询</button>
-        <div class="muted" id="logPath"></div>
+        <input id="keyword" placeholder="搜索：封禁ID / 关键词" onkeydown="if(event.key==='Enter') searchLogs()" />
+        <select id="pageSize" onchange="searchLogs()">
+          <option value="10">10条/页</option>
+          <option value="20" selected>20条/页</option>
+          <option value="50">50条/页</option>
+          <option value="100">100条/页</option>
+        </select>
+        <button class="btn primary" onclick="searchLogs()">查询</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -94,13 +111,14 @@
               <th>封禁ID</th>
               <th>金额</th>
               <th>时长/TTL</th>
-              <th>Redis Key</th>
+              <th class="redis-key-col">Redis Key</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
         </table>
         <div class="empty" id="empty" style="display:none;">暂无冻结日志</div>
       </div>
+      <div class="pager" id="pager"></div>
     </div>
   </div>
   <div class="toast" id="toast"></div>
@@ -108,21 +126,28 @@
 const API = '../api/operat/venue_frozen_funds_api.php';
 let pageData = null;
 let loading = false;
+let currentPage = 1;
+
 function qs(name) { return new URLSearchParams(location.search).get(name) || ''; }
 function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 function toast(msg) { const el = document.getElementById('toast'); el.textContent = msg; el.style.display = 'block'; clearTimeout(el._timer); el._timer = setTimeout(() => el.style.display = 'none', 2200); }
 function setLoading(flag) { loading = flag; document.getElementById('page').classList.toggle('loading', flag); }
 function selectedVenueId() { const select = document.getElementById('venueSelect'); if (!select || select.style.display === 'none') return ''; return select.value || ''; }
+function getPageSize() { return Number(document.getElementById('pageSize').value || 20); }
+
 function renderVenueSelect(data) {
   const user = data.user || {};
   const select = document.getElementById('venueSelect');
   const scopeTip = document.getElementById('scopeTip');
   const canSelect = !!user.can_select_venue;
+  document.body.classList.toggle('hide-redis-key', !canSelect);
+
   if (!canSelect) {
     select.style.display = 'none';
-    scopeTip.textContent = `role_id=3，仅展示自己场地：${user.venue_id || '-'}`;
+    scopeTip.textContent = `仅展示自己场地：${user.venue_id || '-'}`;
     return;
   }
+
   select.style.display = '';
   const current = String(data.selected_venue_id || qs('venue_id') || '');
   const venues = data.venues || [];
@@ -131,20 +156,28 @@ function renderVenueSelect(data) {
     const name = v.venue_name ? ` - ${v.venue_name}` : '';
     return `<option value="${escapeHtml(id)}" ${current === id ? 'selected' : ''}>${escapeHtml(id + name)}</option>`;
   }).join('');
-  scopeTip.textContent = 'role_id=1/2，可查看全场地，也可按场地筛选';
+  scopeTip.textContent = '可查看全场地，也可按场地筛选';
 }
-async function loadLogs(initialVenueId) {
+
+function searchLogs() {
+  currentPage = 1;
+  loadLogs();
+}
+
+async function loadLogs(initialVenueId, page) {
   if (loading) return;
   setLoading(true);
   try {
+    if (page) currentPage = Number(page) || 1;
     const url = new URL(API, location.href);
     url.searchParams.set('action', 'logs');
     const vid = initialVenueId !== undefined ? initialVenueId : selectedVenueId();
     if (vid) url.searchParams.set('venue_id', vid);
     const keyword = document.getElementById('keyword').value.trim();
     if (keyword) url.searchParams.set('keyword', keyword);
-    const limit = document.getElementById('limit').value || '300';
-    url.searchParams.set('limit', limit);
+    url.searchParams.set('page', currentPage);
+    url.searchParams.set('page_size', getPageSize());
+
     const res = await fetch(url.toString(), { credentials: 'include' });
     const json = await res.json();
     if (Number(json.code) !== 0) throw new Error(json.msg || '加载失败');
@@ -156,18 +189,28 @@ async function loadLogs(initialVenueId) {
     setLoading(false);
   }
 }
+
 function renderLogs(data) {
   renderVenueSelect(data);
   const logs = data.logs || {};
   const rows = logs.records || [];
-  document.getElementById('logPath').textContent = logs.exists ? `文件：${logs.path || ''}` : (logs.message || '未找到日志文件');
+  const pagination = logs.pagination || {
+    total: rows.length,
+    page: currentPage,
+    page_size: getPageSize(),
+    total_pages: Math.max(1, Math.ceil(rows.length / getPageSize()))
+  };
+  currentPage = Number(pagination.page || 1);
+
   const tbody = document.getElementById('tbody');
   const empty = document.getElementById('empty');
   if (!rows.length) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
+    renderPager(pagination);
     return;
   }
+
   empty.style.display = 'none';
   tbody.innerHTML = rows.map(row => {
     const venueTitle = `${row.venue_id || '-'}${row.venue_name ? ' - ' + row.venue_name : ''}`;
@@ -181,19 +224,53 @@ function renderLogs(data) {
         <td data-label="封禁ID">${escapeHtml(row.ban_id || '-')}</td>
         <td data-label="金额" class="money">${row.amount_text === '-' ? '-' : '¥' + escapeHtml(row.amount_text)}</td>
         <td data-label="时长/TTL">${escapeHtml(ttlText || '-')}</td>
-        <td data-label="Redis Key"><span class="key">${escapeHtml(row.key || '-')}</span></td>
+        <td class="redis-key-col" data-label="Redis Key"><span class="key">${escapeHtml(row.key || '-')}</span></td>
       </tr>
     `;
   }).join('');
+
+  renderPager(pagination);
 }
+
+function renderPager(pagination) {
+  const pager = document.getElementById('pager');
+  const total = Number(pagination.total || 0);
+  const page = Number(pagination.page || 1);
+  const totalPages = Math.max(1, Number(pagination.total_pages || 1));
+  const start = Math.max(1, page - 2);
+  const end = Math.min(totalPages, page + 2);
+  const buttons = [];
+
+  buttons.push(`<button class="page-btn" ${page <= 1 ? 'disabled' : ''} onclick="gotoPage(1)">首页</button>`);
+  buttons.push(`<button class="page-btn" ${page <= 1 ? 'disabled' : ''} onclick="gotoPage(${page - 1})">上一页</button>`);
+  for (let i = start; i <= end; i++) {
+    buttons.push(`<button class="page-btn ${i === page ? 'active' : ''}" onclick="gotoPage(${i})">${i}</button>`);
+  }
+  buttons.push(`<button class="page-btn" ${page >= totalPages ? 'disabled' : ''} onclick="gotoPage(${page + 1})">下一页</button>`);
+  buttons.push(`<button class="page-btn" ${page >= totalPages ? 'disabled' : ''} onclick="gotoPage(${totalPages})">末页</button>`);
+
+  pager.innerHTML = `<span class="page-info">共 ${total} 条，第 ${page}/${totalPages} 页</span>` + buttons.join('');
+}
+
+function gotoPage(page) {
+  currentPage = Math.max(1, Number(page) || 1);
+  loadLogs();
+}
+
 function goList() {
   const url = new URL('venue_frozen_funds.html', location.href);
   const vid = selectedVenueId() || qs('venue_id');
   if (vid) url.searchParams.set('venue_id', vid);
   location.href = url.toString();
 }
+
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('keyword').value = qs('keyword');
+  const qsPageSize = Number(qs('page_size') || 20);
+  if ([10, 20, 50, 100].includes(qsPageSize)) {
+    document.getElementById('pageSize').value = String(qsPageSize);
+  }
+  currentPage = Math.max(1, Number(qs('page') || 1));
   loadLogs(qs('venue_id'));
 });
 </script>

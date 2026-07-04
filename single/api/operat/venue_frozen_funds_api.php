@@ -234,11 +234,11 @@ function get_frozen_records(Database $database, array $scope, int $venueId = 0):
 }
 
 function resolve_frozen_log_path(): string {
-    // devMgtV2.php 里 logMessage_frozen 使用 __DIR__ . '/frozen_log.txt'。
-    // 如果本接口放在 /api/operat，旧日志通常在 /api/vehicle/frozen_log.txt 或 /api/devMgr/frozen_log.txt。
+    // 统一优先读取 /single/api/devMgr/frozen_log.txt。
+    // 当前接口在 /single/api/operat 下，dirname(__DIR__) 即 /single/api。
     $candidates = [
-        dirname(__DIR__) . '/vehicle/frozen_log.txt',
         dirname(__DIR__) . '/devMgr/frozen_log.txt',
+        dirname(__DIR__) . '/vehicle/frozen_log.txt',
         __DIR__ . '/frozen_log.txt',
         dirname(__DIR__) . '/frozen_log.txt',
     ];
@@ -249,7 +249,7 @@ function resolve_frozen_log_path(): string {
         }
     }
 
-    return dirname(__DIR__) . '/vehicle/frozen_log.txt';
+    return dirname(__DIR__) . '/devMgr/frozen_log.txt';
 }
 
 function parse_frozen_log_line(string $line): ?array {
@@ -324,20 +324,27 @@ function parse_frozen_log_line(string $line): ?array {
     ];
 }
 
-function read_frozen_logs(Database $database, array $scope, int $venueId = 0, string $keyword = '', int $limit = 300): array {
+function read_frozen_logs(Database $database, array $scope, int $venueId = 0, string $keyword = '', int $page = 1, int $pageSize = 20): array {
     $path = resolve_frozen_log_path();
+    $page = max(1, $page);
+    $pageSize = max(10, min(100, $pageSize));
+
     if (!is_file($path)) {
         return [
-            'path' => $path,
             'exists' => false,
             'records' => [],
             'count' => 0,
+            'pagination' => [
+                'total' => 0,
+                'page' => 1,
+                'page_size' => $pageSize,
+                'total_pages' => 1
+            ],
             'message' => '未找到 frozen_log.txt'
         ];
     }
 
-    $limit = max(1, min(1000, $limit));
-    $maxReadLines = 5000;
+    $maxReadLines = 10000;
     $lines = @file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     if (!is_array($lines)) {
         $lines = [];
@@ -377,18 +384,26 @@ function read_frozen_logs(Database $database, array $scope, int $venueId = 0, st
 
         $item['venue_name'] = $venueMap[$itemVenueId] ?? '';
         $records[] = $item;
-
-        if (count($records) >= $limit) {
-            break;
-        }
     }
 
+    $total = count($records);
+    $totalPages = max(1, (int)ceil($total / $pageSize));
+    if ($page > $totalPages) {
+        $page = $totalPages;
+    }
+    $offset = ($page - 1) * $pageSize;
+    $pageRecords = array_slice($records, $offset, $pageSize);
+
     return [
-        'path' => $path,
         'exists' => true,
-        'records' => $records,
-        'count' => count($records),
-        'limit' => $limit
+        'records' => $pageRecords,
+        'count' => count($pageRecords),
+        'pagination' => [
+            'total' => $total,
+            'page' => $page,
+            'page_size' => $pageSize,
+            'total_pages' => $totalPages
+        ]
     ];
 }
 
@@ -433,9 +448,10 @@ try {
     if ($action === 'logs') {
         $venueId = resolve_requested_venue_id($scope, $_GET['venue_id'] ?? 0);
         $keyword = trim((string)($_GET['keyword'] ?? ''));
-        $limit = (int)($_GET['limit'] ?? 300);
+        $page = (int)($_GET['page'] ?? 1);
+        $pageSize = (int)($_GET['page_size'] ?? ($_GET['limit'] ?? 20));
         $venues = get_venues($database, $scope);
-        $logs = read_frozen_logs($database, $scope, $venueId, $keyword, $limit);
+        $logs = read_frozen_logs($database, $scope, $venueId, $keyword, $page, $pageSize);
 
         json_out(0, '成功', [
             'user' => [

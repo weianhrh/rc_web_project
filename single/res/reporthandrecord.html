@@ -2,95 +2,325 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Report Hand Record</title>
+  <title>投诉处理历史记录</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* 你的主题 CSS 完整保留 */
     :root {
       --primary: #5b8cff;
+      --primary-dark: #4c6ef5;
       --secondary: #7f8fa4;
       --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
       --background-gradient-start: #f8f9ff;
       --background-gradient-end: #f0f3ff;
       --card-bg: #ffffff;
-      --border-color: #ddd;
+      --border-color: #e7eaf3;
       --text-color: #333;
+      --muted: #8b95a7;
       --hover-bg: #f9f9f9;
       --highlight-bg: #eff4ff;
-      --transition: all 0.3s ease;
+      --transition: all 0.2s ease;
     }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: "PingFang SC", system-ui;
+      font-family: "PingFang SC", "Helvetica Neue", Arial, system-ui, sans-serif;
     }
+
     body {
       background: linear-gradient(135deg, var(--background-gradient-start), var(--background-gradient-end));
       min-height: 100vh;
       padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      color: var(--text-color);
     }
+
     .container {
-      max-width: 800px;
+      max-width: 1080px;
       width: 100%;
+      margin: 0 auto;
     }
+
     .card {
       background: var(--card-bg);
       border-radius: 12px;
       padding: 20px;
       box-shadow: var(--shadow);
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       transition: var(--transition);
     }
+
+    .page-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
     .card-title {
       font-size: 20px;
       font-weight: 600;
       color: var(--primary);
-      margin-bottom: 10px;
     }
-    .report-item {
-  background-color: #fff;
-  border-radius: 12px;
-  padding: 16px 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
 
-.report-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
+    .sub-title {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
 
-.report-row:last-child {
-  border-bottom: none;
-}
+    .filter-card {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr auto auto;
+      gap: 12px;
+      align-items: end;
+    }
 
-.report-label {
-  color: #999;
-  width: 35%;
-}
+    .form-item label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
 
-.report-value {
-  color: #333;
-  font-weight: 500;
-  width: 65%;
-  text-align: right;
-  word-break: break-word;
-}
-
-    select {
-      padding: 10px;
-      margin-bottom: 20px;
+    select,
+    input[type="date"] {
+      width: 100%;
+      height: 38px;
+      padding: 0 10px;
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      font-size: 16px;
-      width: 100%;
+      font-size: 14px;
+      color: var(--text-color);
+      background: #fff;
+      outline: none;
     }
+
+    select:focus,
+    input[type="date"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+    }
+
+    .btn {
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .btn-light {
+      background: #fff;
+      color: var(--secondary);
+      border-color: var(--border-color);
+    }
+
+    .btn-light:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .toolbar-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .report-item {
+      background-color: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    .report-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 10px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .report-device {
+      font-weight: 700;
+      color: #263247;
+      word-break: break-all;
+    }
+
+    .report-time {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .report-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 7px 0;
+      border-bottom: 1px solid #f5f6fa;
+    }
+
+    .report-row:last-child {
+      border-bottom: none;
+    }
+
+    .report-label {
+      color: #999;
+      width: 35%;
+      flex-shrink: 0;
+    }
+
+    .report-value {
+      color: #333;
+      font-weight: 500;
+      width: 65%;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .report-img-row {
+      display: block;
+    }
+
+    .report-img-row .report-label,
+    .report-img-row .report-value {
+      width: 100%;
+      text-align: left;
+    }
+
+    .report-img-row .report-value {
+      margin-top: 8px;
+    }
+
+    .report-img-row img {
+      width: auto;
+      max-width: min(100%, 420px);
+      max-height: 220px;
+      object-fit: contain;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: #f8fafc;
+      cursor: zoom-in;
+    }
+
+    .report-img-tip {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .image-preview-mask {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.66);
+    }
+
+    .image-preview-mask.show {
+      display: flex;
+    }
+
+    .image-preview-box {
+      position: relative;
+      max-width: 92vw;
+      max-height: 92vh;
+    }
+
+    .image-preview-box img {
+      max-width: 92vw;
+      max-height: 88vh;
+      display: block;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .image-preview-close {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 50%;
+      background: #fff;
+      color: #333;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      font-size: 18px;
+      line-height: 30px;
+    }
+
+    .empty,
+    .loading,
+    .error {
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .error {
+      color: #e74c3c;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .pagination .page-info {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .pagination select {
+      width: 92px;
+      height: 34px;
+      font-size: 13px;
+    }
+
+    .pagination .btn {
+      height: 34px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .pagination .btn[disabled] {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     .back-button {
       background-color: var(--primary);
       color: white;
@@ -100,132 +330,431 @@
       cursor: pointer;
       transition: background-color 0.3s;
     }
+
     .back-button:hover {
-      background-color: #4c6ef5;
+      background-color: var(--primary-dark);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      .card {
+        padding: 14px;
+      }
+
+      .page-title {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .filter-card {
+        grid-template-columns: 1fr;
+      }
+
+      .report-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .report-time {
+        white-space: normal;
+      }
+
+      .report-row {
+        display: block;
+      }
+
+      .report-label,
+      .report-value {
+        width: 100%;
+        text-align: left;
+      }
+
+      .report-value {
+        margin-top: 4px;
+      }
+
+      .report-img-row img {
+        max-width: 100%;
+        max-height: 180px;
+      }
+
+      .toolbar-info,
+      .pagination {
+        justify-content: flex-start;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2 class="card-title">选择场地</h2>
-<div id="select-container">
-  <select id="venue_id">
-    <option value="10">默认场地 10</option>
-  </select>
-</div>
-
-    <div id="report-list" class="card">
-      <div class="card-title">报告列表</div>
-      <div id="report-content">
-        加载中...
+    <div class="page-title">
+      <div>
+        <h2 class="card-title">投诉处理历史记录</h2>
+        <div class="sub-title">默认展示全场地，最新记录排在最上面，可按场地和时间筛选。</div>
       </div>
+      <button class="back-button" onclick="window.history.back()">返回上一页</button>
     </div>
 
-    <button class="back-button" onclick="window.history.back()">返回上一页</button>
-  
+    <div class="card filter-card">
+      <div class="form-item" id="select-container">
+        <label for="venue_id">场地</label>
+        <select id="venue_id">
+          <option value="">全部场地</option>
+        </select>
+      </div>
+
+      <div class="form-item">
+        <label for="start_date">开始日期</label>
+        <input type="date" id="start_date">
+      </div>
+
+      <div class="form-item">
+        <label for="end_date">结束日期</label>
+        <input type="date" id="end_date">
+      </div>
+
+      <button class="btn btn-primary" id="btn-search">查询</button>
+      <button class="btn btn-light" id="btn-reset">重置</button>
+    </div>
+
+    <div id="report-list" class="card">
+      <div class="toolbar-info">
+        <span id="total-info">共 0 条记录</span>
+        <span id="filter-note"></span>
+      </div>
+      <div id="report-content" class="loading">加载中...</div>
+      <div class="pagination" id="pagination" style="display:none;">
+        <span class="page-info" id="page-info">第 1 / 1 页</span>
+        <select id="page_size">
+          <option value="10">10条/页</option>
+          <option value="20">20条/页</option>
+          <option value="50">50条/页</option>
+        </select>
+        <button class="btn btn-light" id="prev-page">上一页</button>
+        <button class="btn btn-light" id="next-page">下一页</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="image-preview-mask" id="imagePreviewMask">
+    <div class="image-preview-box">
+      <button type="button" class="image-preview-close" id="imagePreviewClose">×</button>
+      <img id="imagePreviewImg" src="" alt="截图预览">
+    </div>
+  </div>
 
   <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const venueSelect = document.getElementById('venue_id');
-    const reportContent = document.getElementById('report-content');
-    const selectContainer = document.getElementById('select-container');  // ✅ 重点改这里
+    document.addEventListener('DOMContentLoaded', function () {
+      const API = {
+        currentUser: '/api/operat/get_current_user.php',
+        venues: '/api/operat/EnergyGift.php',
+        reports: '/api/operat/ReporthandRecord.php'
+      };
 
-    // 获取当前登录用户角色
-    fetch('https://open.rcwulian.cn/api/operat/get_current_user.php')
-      .then(response => response.json())
-      .then(userResp => {
-        if (userResp.code !== 0) {
-          reportContent.innerHTML = '<p>未登录，请重新登录</p>';
+      const venueSelect = document.getElementById('venue_id');
+      const selectContainer = document.getElementById('select-container');
+      const startDateInput = document.getElementById('start_date');
+      const endDateInput = document.getElementById('end_date');
+      const btnSearch = document.getElementById('btn-search');
+      const btnReset = document.getElementById('btn-reset');
+      const reportContent = document.getElementById('report-content');
+      const totalInfo = document.getElementById('total-info');
+      const filterNote = document.getElementById('filter-note');
+      const pagination = document.getElementById('pagination');
+      const pageInfo = document.getElementById('page-info');
+      const pageSizeSelect = document.getElementById('page_size');
+      const prevPageBtn = document.getElementById('prev-page');
+      const nextPageBtn = document.getElementById('next-page');
+      const imagePreviewMask = document.getElementById('imagePreviewMask');
+      const imagePreviewImg = document.getElementById('imagePreviewImg');
+      const imagePreviewClose = document.getElementById('imagePreviewClose');
+
+      const state = {
+        roleId: 0,
+        userVenueId: '',
+        isAdmin: false,
+        page: 1,
+        pageSize: Number(pageSizeSelect.value) || 10,
+        total: 0,
+        totalPages: 1
+      };
+
+      function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function setLoading() {
+        reportContent.className = 'loading';
+        reportContent.innerHTML = '加载中...';
+      }
+
+      function setError(msg) {
+        reportContent.className = 'error';
+        reportContent.innerHTML = escapeHtml(msg || '加载失败');
+      }
+
+      function normalizeImageUrl(url) {
+        if (!url) return '';
+        return String(url).trim();
+      }
+
+      function showImagePreview(url) {
+        if (!url || !imagePreviewMask || !imagePreviewImg) return;
+        imagePreviewImg.src = url;
+        imagePreviewMask.classList.add('show');
+      }
+
+      function hideImagePreview() {
+        if (!imagePreviewMask || !imagePreviewImg) return;
+        imagePreviewMask.classList.remove('show');
+        imagePreviewImg.src = '';
+      }
+
+      async function getJson(url, options) {
+        const resp = await fetch(url, Object.assign({ credentials: 'include' }, options || {}));
+        const text = await resp.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          throw new Error('接口返回不是 JSON：' + text.slice(0, 80));
+        }
+      }
+
+      async function loadVenues() {
+        const formData = new URLSearchParams();
+        formData.append('action', 'get_venues');
+
+        const resp = await getJson(API.venues, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString()
+        });
+
+        if (resp.code !== 0) {
+          throw new Error(resp.msg || '场地列表加载失败');
+        }
+
+        venueSelect.innerHTML = '<option value="">全部场地</option>';
+        (resp.data || []).forEach(function (venue) {
+          const option = document.createElement('option');
+          option.value = venue.id;
+          option.textContent = `${venue.id} - ${venue.venue_name || venue.name || ''}`;
+          venueSelect.appendChild(option);
+        });
+      }
+
+      function buildReportUrl(page) {
+        const params = new URLSearchParams();
+        params.set('page', page || state.page);
+        params.set('page_size', state.pageSize);
+
+        if (state.isAdmin) {
+          if (venueSelect.value) {
+            params.set('venue_id', venueSelect.value);
+          }
+        } else if (state.userVenueId) {
+          params.set('venue_id', state.userVenueId);
+        }
+
+        if (startDateInput.value) params.set('start_date', startDateInput.value);
+        if (endDateInput.value) params.set('end_date', endDateInput.value);
+
+        return API.reports + '?' + params.toString();
+      }
+
+      async function loadReports(page) {
+        state.page = page || 1;
+        setLoading();
+        pagination.style.display = 'none';
+
+        try {
+          const resp = await getJson(buildReportUrl(state.page));
+          if (resp.code !== 0) {
+            setError(resp.msg || '加载失败');
+            return;
+          }
+
+          const pageData = resp.pagination || {};
+          state.page = Number(pageData.page || state.page || 1);
+          state.pageSize = Number(pageData.page_size || state.pageSize || 10);
+          state.total = Number(pageData.total || 0);
+          state.totalPages = Number(pageData.total_pages || 1);
+
+          renderReports(resp.data || []);
+          renderPagination();
+          renderFilterNote(resp.visible_from || '');
+        } catch (e) {
+          setError(e.message || '网络异常，加载失败');
+        }
+      }
+
+      function renderReports(reports) {
+        reportContent.className = '';
+        totalInfo.textContent = `共 ${state.total} 条记录`;
+
+        if (!reports.length) {
+          reportContent.className = 'empty';
+          reportContent.innerHTML = '暂无投诉处理记录';
           return;
         }
 
-        const roleId = userResp.data.role_id;
-        const userVenueId = userResp.data.venue_id;
+        reportContent.innerHTML = reports.map(function (report) {
+          const imgUrl = normalizeImageUrl(report.image_url);
+          const venueText = report.venue_id
+            ? `${escapeHtml(report.venue_id)}${report.venue_name ? ' - ' + escapeHtml(report.venue_name) : ''}`
+            : '暂无';
 
-        if (roleId === 1 || roleId=== 2) {
-          // 管理员：加载下拉场地列表
-          selectContainer.style.display = 'block';
+          return `
+            <div class="report-item">
+              <div class="report-head">
+                <div class="report-device">设备编号：${escapeHtml(report.device_id || '暂无')}</div>
+                <div class="report-time">${escapeHtml(report.insert_time || '')}</div>
+              </div>
+              <div class="report-row"><div class="report-label">场地</div><div class="report-value">${venueText}</div></div>
+              <div class="report-row"><div class="report-label">上报人</div><div class="report-value">${escapeHtml(report.reporter_uid || '暂无')}</div></div>
+              <div class="report-row"><div class="report-label">类型</div><div class="report-value">${escapeHtml(report.report_type || '暂无')}</div></div>
+              ${report.notes ? `<div class="report-row"><div class="report-label">备注</div><div class="report-value">${escapeHtml(report.notes)}</div></div>` : ''}
+              ${report.handler_uid ? `<div class="report-row"><div class="report-label">处理人</div><div class="report-value">${escapeHtml(report.handler_uid)}</div></div>` : ''}
+              ${imgUrl ? `
+                <div class="report-row report-img-row">
+                  <div class="report-label">截图</div>
+                  <div class="report-value">
+                    <img class="report-img-thumb" src="${escapeHtml(imgUrl)}" alt="截图" title="点击查看大图" onerror="this.style.display='none'">
+                    <div class="report-img-tip">点击截图查看大图</div>
+                  </div>
+                </div>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
 
-          const xhrVenue = new XMLHttpRequest();
-          xhrVenue.open('POST', 'https://open.rcwulian.cn/api/operat/EnergyGift.php', true);
-          xhrVenue.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-          xhrVenue.onreadystatechange = function () {
-            if (xhrVenue.readyState === 4 && xhrVenue.status === 200) {
-              const response = JSON.parse(xhrVenue.responseText);
-              if (response.code === 0) {
-                venueSelect.innerHTML = '';
-                response.data.forEach(venue => {
-                  const option = document.createElement('option');
-                  option.value = venue.id;
-                  option.textContent = `${venue.id} - ${venue.venue_name}`;
-                  if (venue.id == 10) option.selected = true;
-                  venueSelect.appendChild(option);
-                });
-                loadReports(10);
-              }
-            }
-          };
-          xhrVenue.send('action=get_venues');
+      function renderPagination() {
+        pageSizeSelect.value = String(state.pageSize);
+        pageInfo.textContent = `第 ${state.page} / ${state.totalPages} 页`;
+        prevPageBtn.disabled = state.page <= 1;
+        nextPageBtn.disabled = state.page >= state.totalPages;
+        pagination.style.display = 'flex';
+      }
 
-          // 场地切换事件
-          venueSelect.addEventListener('change', function () {
-            loadReports(this.value);
-          });
-        } else {
-          // 普通用户：隐藏下拉框，使用自己绑定场地
-          document.getElementById('select-container').style.display = 'none';
+      function renderFilterNote(visibleFrom) {
+        const parts = [];
+        if (state.isAdmin && venueSelect.value) {
+          parts.push('当前场地：' + venueSelect.options[venueSelect.selectedIndex].textContent);
+        } else if (state.isAdmin) {
+          parts.push('当前场地：全部场地');
+        }
+        if (startDateInput.value || endDateInput.value) {
+          parts.push(`时间：${startDateInput.value || '不限'} 至 ${endDateInput.value || '不限'}`);
+        }
+        if (visibleFrom) {
+          parts.push('当前账号仅展示 ' + visibleFrom + ' 之后数据');
+        }
+        filterNote.textContent = parts.join('；');
+      }
 
-          loadReports(Number(userVenueId));
+      async function init() {
+        setLoading();
+        try {
+          const userResp = await getJson(API.currentUser);
+          if (userResp.code !== 0) {
+            setError('未登录，请重新登录');
+            return;
+          }
 
+          state.roleId = Number(userResp.data.role_id || 0);
+          state.userVenueId = userResp.data.venue_id || '';
+          state.isAdmin = state.roleId === 1 || state.roleId === 2;
+
+          if (state.isAdmin) {
+            selectContainer.classList.remove('hidden');
+            await loadVenues();
+          } else {
+            selectContainer.classList.add('hidden');
+          }
+
+          await loadReports(1);
+        } catch (e) {
+          setError(e.message || '初始化失败');
+        }
+      }
+
+      btnSearch.addEventListener('click', function () {
+        loadReports(1);
+      });
+
+      btnReset.addEventListener('click', function () {
+        venueSelect.value = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+        loadReports(1);
+      });
+
+      venueSelect.addEventListener('change', function () {
+        loadReports(1);
+      });
+
+      startDateInput.addEventListener('change', function () {
+        if (endDateInput.value && startDateInput.value > endDateInput.value) {
+          endDateInput.value = startDateInput.value;
         }
       });
-    /*   <div class="report-row"><div class="report-label">处理人</div><div class="report-value">${report.handler_uid || '暂无'}</div></div>*/
-    // 加载报告数据
-    function loadReports(venueId) {
-      reportContent.innerHTML = '加载中...';
-      const xhrReport = new XMLHttpRequest();
-      xhrReport.open('GET', `https://open.rcwulian.cn/api/operat/ReporthandRecord.php?venue_id=${venueId}`, true);
-      xhrReport.onreadystatechange = function () {
-        if (xhrReport.readyState === 4 && xhrReport.status === 200) {
-          const response = JSON.parse(xhrReport.responseText);
-          if (response.code === 0) {
-            const reports = response.data;
-            if (!reports.length) {
-              reportContent.innerHTML = '<p>暂无报告数据</p>';
-              return;
-            }
-            reportContent.innerHTML = reports.map(report => {
-              return `
-                <div class="report-item">
-                  <div class="report-row"><div class="report-label">设备编号</div><div class="report-value">${report.device_id}</div></div>
-                  <div class="report-row"><div class="report-label">上报人</div><div class="report-value">${report.reporter_uid}</div></div>
-                  <div class="report-row"><div class="report-label">类型</div><div class="report-value">${report.report_type}</div></div>
-                  ${report.notes ? `<div class="report-row"><div class="report-label">备注</div><div class="report-value">${report.notes}</div></div>` : ''}
-               
-                  <div class="report-row"><div class="report-label">时间</div><div class="report-value">${report.insert_time}</div></div>
-                  ${report.image_url ? `
-  <div class="report-row" style="flex-direction: column; gap: 6px;">
-    <div class="report-label">截图</div>
-    <div class="report-value" style="text-align: left;">
-      <img src="${report.image_url}" 
-           alt="截图" 
-           style="max-width: 100%; border-radius: 8px;" 
-           onerror="this.style.display='none'" />
-    </div>
-  </div>` : ''}
 
-                </div>
-              `;
-            }).join('');
-          } else {
-            reportContent.innerHTML = '<p>加载失败：' + response.msg + '</p>';
-          }
+      endDateInput.addEventListener('change', function () {
+        if (startDateInput.value && endDateInput.value < startDateInput.value) {
+          startDateInput.value = endDateInput.value;
         }
-      };
-      xhrReport.send();
-    }
-  });
-</script>
+      });
 
+      pageSizeSelect.addEventListener('change', function () {
+        state.pageSize = Number(this.value) || 10;
+        loadReports(1);
+      });
+
+      prevPageBtn.addEventListener('click', function () {
+        if (state.page > 1) loadReports(state.page - 1);
+      });
+
+      nextPageBtn.addEventListener('click', function () {
+        if (state.page < state.totalPages) loadReports(state.page + 1);
+      });
+
+      reportContent.addEventListener('click', function (event) {
+        const target = event.target;
+        if (target && target.classList && target.classList.contains('report-img-thumb')) {
+          showImagePreview(target.getAttribute('src'));
+        }
+      });
+
+      if (imagePreviewClose) {
+        imagePreviewClose.addEventListener('click', hideImagePreview);
+      }
+
+      if (imagePreviewMask) {
+        imagePreviewMask.addEventListener('click', function (event) {
+          if (event.target === imagePreviewMask) hideImagePreview();
+        });
+      }
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') hideImagePreview();
+      });
+
+      init();
+    });
+  </script>
 </body>
 </html>

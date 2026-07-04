@@ -41,6 +41,7 @@
     th { color: #60727b; font-weight: 800; background: #fbfdfe; }
     .money { color: #cf6b00; font-weight: 900; }
     .key { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #50616a; background: #f3f7f8; padding: 4px 7px; border-radius: 8px; word-break: break-all; display: inline-block; max-width: 260px; }
+    .hide-redis-key .redis-key-col { display: none !important; }
     .venue-name { font-weight: 800; margin-bottom: 3px; }
     .muted { color: #7a8a93; font-size: 12px; line-height: 1.5; }
     .reason { max-width: 180px; color: #51636d; line-height: 1.5; }
@@ -91,7 +92,6 @@
         <select id="venueSelect" style="display:none;"></select>
         <button class="btn primary" onclick="loadData()">查询</button>
         <button class="btn ghost" onclick="resetFilter()" id="resetBtn">全部场地</button>
-        <div class="muted">数据来源：Redis DB1，key 格式 venue:{场地ID}:frozen:{封禁ID}</div>
       </div>
 
       <div class="stats">
@@ -118,7 +118,7 @@
               <th>冻结金额</th>
               <th>剩余时间</th>
               <th>封禁信息</th>
-              <th>Redis Key</th>
+              <th class="redis-key-col">Redis Key</th>
               <th>操作</th>
             </tr>
           </thead>
@@ -190,7 +190,7 @@ function renderVenueSelect(data) {
   if (!canSelect) {
     select.style.display = 'none';
     resetBtn.style.display = 'none';
-    scopeTip.textContent = `role_id=3，仅展示自己场地：${user.venue_id || '-'}`;
+    scopeTip.textContent = `仅展示自己场地：${user.venue_id || '-'}`;
     return;
   }
 
@@ -203,9 +203,11 @@ function renderVenueSelect(data) {
     const name = v.venue_name ? ` - ${v.venue_name}` : '';
     return `<option value="${escapeHtml(id)}" ${current === id ? 'selected' : ''}>${escapeHtml(id + name)}</option>`;
   }).join('');
-  scopeTip.textContent = 'role_id=1/2，可查看全场地，也可按场地筛选';
+  scopeTip.textContent = '可查看全场地，也可按场地筛选';
 }
 function renderPage(data) {
+  const user = data.user || {};
+  document.body.classList.toggle('hide-redis-key', !user.can_select_venue);
   renderVenueSelect(data);
   const freeze = data.freeze || {};
   const rows = freeze.records || [];
@@ -247,7 +249,7 @@ function renderPage(data) {
         <td data-label="冻结金额" class="money">¥${escapeHtml(row.amount_text || '0.00')}</td>
         <td data-label="剩余时间">${escapeHtml(row.ttl_text || '-')}</td>
         <td data-label="封禁信息"><div class="reason">${banInfo}</div></td>
-        <td data-label="Redis Key"><span class="key">${escapeHtml(row.key || '')}</span></td>
+        <td class="redis-key-col" data-label="Redis Key"><span class="key">${escapeHtml(row.key || '')}</span></td>
         <td data-label="操作"><button class="btn danger" onclick='unfreezeKey(${keyJson})'>解除冻结</button></td>
       </tr>
     `;
@@ -260,7 +262,9 @@ function resetFilter() {
 }
 async function unfreezeKey(key) {
   if (!key) return toast('缺少 Redis Key');
-  if (!confirm(`确认解除这条冻结记录？\n${key}`)) return;
+  const showKey = !document.body.classList.contains('hide-redis-key');
+  const confirmText = showKey ? `确认解除这条冻结记录？\n${key}` : '确认解除这条冻结记录？';
+  if (!confirm(confirmText)) return;
   if (loading) return;
   setLoading(true);
   try {
