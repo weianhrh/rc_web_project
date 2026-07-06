@@ -17,6 +17,28 @@ function isValidDateStr($date) {
     return is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date);
 }
 
+function isAdminRole($roleId) {
+    return (int)$roleId === 1 || (int)$roleId === 2;
+}
+
+function appendDateWhere(&$where, &$params, $field, $startDate, $endDate, $isDateLimitedUser, $visibleFrom) {
+    if ($startDate !== '') {
+        $where[] = $field . ' >= ?';
+        $params[] = $startDate . ' 00:00:00';
+    }
+
+    if ($endDate !== '') {
+        $endExclusive = date('Y-m-d H:i:s', strtotime($endDate . ' +1 day'));
+        $where[] = $field . ' < ?';
+        $params[] = $endExclusive;
+    }
+
+    if ($isDateLimitedUser) {
+        $where[] = $field . ' >= ?';
+        $params[] = $visibleFrom;
+    }
+}
+
 // 获取当前用户
 $session_token = $_COOKIE['session_token'] ?? null;
 if (!$session_token) {
@@ -49,62 +71,203 @@ $offset = ($page - 1) * $pageSize;
 $venue_id  = trim($_GET['venue_id'] ?? '');
 $startDate = trim($_GET['start_date'] ?? '');
 $endDate   = trim($_GET['end_date'] ?? '');
+$source    = trim($_GET['source'] ?? ($_GET['type'] ?? 'all'));
 
-$where = ['1=1'];
-$params = [];
+$allowedSources = ['all', 'drive', 'voice_room', 'voice_comment'];
+if (!in_array($source, $allowedSources, true)) {
+    jsonRet(1006, '无效的举报类型');
+}
 
-if ($role_id == 1 || $role_id == 2) {
-    // 管理员/运营：默认全场地；传 venue_id 时才按场地筛选
-    if ($venue_id !== '' && strtolower($venue_id) !== 'all') {
-        if (!is_numeric($venue_id)) {
-            jsonRet(1002, '无效的场地ID');
-        }
-        $where[] = 'v.bind_site = ?';
-        $params[] = (string)intval($venue_id);
-    }
-} else {
-    // 普通用户：强制只能看自己绑定场地
+if ($startDate !== '' && !isValidDateStr($startDate)) {
+    jsonRet(1004, '开始日期格式错误');
+}
+
+if ($endDate !== '' && !isValidDateStr($endDate)) {
+    jsonRet(1005, '结束日期格式错误');
+}
+
+$useVenueFilter = $venue_id !== '' && strtolower($venue_id) !== 'all';
+if (isAdminRole($role_id) && $useVenueFilter && !is_numeric($venue_id)) {
+    jsonRet(1002, '无效的场地ID');
+}
+
+$userVenueId = '';
+if (!isAdminRole($role_id)) {
     $userVenueId = $user['venue_id'] ?? '';
     if (!$userVenueId) {
         jsonRet(1003, '用户未绑定场地');
     }
-    $where[] = 'v.bind_site = ?';
-    $params[] = (string)intval($userVenueId);
 }
 
-if ($startDate !== '') {
-    if (!isValidDateStr($startDate)) {
-        jsonRet(1004, '开始日期格式错误');
+$parts = [];
+$params = [];
+
+// 1) 普通驾驶投诉 Reports
+if ($source === 'all' || $source === 'drive') {
+    $where = ['1=1'];
+    $partParams = [];
+
+    if (isAdminRole($role_id)) {
+        // 管理员/运营：默认全场地；传 venue_id 时才按场地筛选
+        if ($useVenueFilter) {
+            $where[] = 'v.bind_site = ?';
+            $partParams[] = (string)intval($venue_id);
+        }
+    } else {
+        // 普通用户：强制只能看自己绑定场地
+        $where[] = 'v.bind_site = ?';
+        $partParams[] = (string)intval($userVenueId);
     }
-    $where[] = 'r.insert_time >= ?';
-    $params[] = $startDate . ' 00:00:00';
+
+    appendDateWhere($where, $partParams, 'r.insert_time', $startDate, $endDate, $isDateLimitedUser, $visibleFrom);
+
+    $whereSql = implode(' AND ', $where);
+    $parts[] = "
+        SELECT
+            'drive' AS record_source,
+            'Reports' AS source_table,
+            '普通驾驶投诉' AS source_label,
+            r.id,
+            r.device_id,
+            r.reporter_uid,
+            '' AS reporter_name,
+            r.report_type,
+            '普通驾驶投诉' AS report_type_text,
+            r.status,
+            r.notes,
+            r.handler_uid,
+            r.insert_time,
+            r.image_url,
+            CAST(v.bind_site AS CHAR) AS venue_id,
+            COALESCE(ve.venue_name, '') AS venue_name,
+            CAST(v.name AS CHAR) AS vehicle_name,
+            CAST(r.report_type AS CHAR) AS report_content,
+            'device' AS target_kind,
+            r.device_id AS target_id,
+            CAST(v.name AS CHAR) AS target_name
+        FROM Reports r
+        JOIN vehicles v ON r.device_id = v.serial_number
+        LEFT JOIN venues ve ON ve.id = v.bind_site
+        WHERE {$whereSql}
+    ";
+    $params = array_merge($params, $partParams);
 }
 
-if ($endDate !== '') {
-    if (!isValidDateStr($endDate)) {
-        jsonRet(1005, '结束日期格式错误');
+// 2) 语音房举报 / 评论举报 voice_reports
+if ($source === 'all' || $source === 'voice_room' || $source === 'voice_comment') {
+    $where = ['1=1'];
+    $partParams = [];
+
+    if ($source === 'voice_room') {
+        $where[] = 'vr.report_type = 0';
+    } elseif ($source === 'voice_comment') {
+        $where[] = 'vr.report_type = 1';
     }
-    $endExclusive = date('Y-m-d H:i:s', strtotime($endDate . ' +1 day'));
-    $where[] = 'r.insert_time < ?';
-    $params[] = $endExclusive;
+
+    if (isAdminRole($role_id)) {
+        if ($useVenueFilter) {
+            // 房间举报：handler_uid=场地ID
+            // 评论/弹幕举报：handler_uid=被举报用户UID，尽量按被举报用户 users.streamer_venue 归属场地过滤
+            $where[] = "(
+                (vr.report_type = 0 AND CAST(vr.handler_uid AS CHAR) = ?)
+                OR
+                (vr.report_type = 1 AND CAST(uu.streamer_venue AS CHAR) = ?)
+            )";
+            $partParams[] = (string)intval($venue_id);
+            $partParams[] = (string)intval($venue_id);
+        }
+    } else {
+        $where[] = "(
+            (vr.report_type = 0 AND CAST(vr.handler_uid AS CHAR) = ?)
+            OR
+            (vr.report_type = 1 AND CAST(uu.streamer_venue AS CHAR) = ?)
+        )";
+        $partParams[] = (string)intval($userVenueId);
+        $partParams[] = (string)intval($userVenueId);
+    }
+
+    appendDateWhere($where, $partParams, 'vr.insert_time', $startDate, $endDate, $isDateLimitedUser, $visibleFrom);
+
+    $whereSql = implode(' AND ', $where);
+    $parts[] = "
+        SELECT
+            CASE
+                WHEN vr.report_type = 0 THEN 'voice_room'
+                WHEN vr.report_type = 1 THEN 'voice_comment'
+                ELSE 'voice_other'
+            END AS record_source,
+            'voice_reports' AS source_table,
+            CASE
+                WHEN vr.report_type = 0 THEN '语音房举报'
+                WHEN vr.report_type = 1 THEN '评论/弹幕举报'
+                ELSE '语音房举报'
+            END AS source_label,
+            vr.id,
+            '' AS device_id,
+            vr.reporter_uid,
+            COALESCE(ru.nickname, '') AS reporter_name,
+            vr.report_type,
+            CASE
+                WHEN vr.report_type = 0 THEN '房间举报'
+                WHEN vr.report_type = 1 THEN '评论/弹幕举报'
+                ELSE '未知举报'
+            END AS report_type_text,
+            vr.status,
+            vr.notes,
+            vr.handler_uid,
+            vr.insert_time,
+            vr.image_url,
+            CASE
+                WHEN vr.report_type = 0 THEN CAST(vv.id AS CHAR)
+                WHEN vr.report_type = 1 THEN CAST(uv.id AS CHAR)
+                ELSE ''
+            END AS venue_id,
+            CASE
+                WHEN vr.report_type = 0 THEN COALESCE(vv.venue_name, '')
+                WHEN vr.report_type = 1 THEN COALESCE(uv.venue_name, '')
+                ELSE ''
+            END AS venue_name,
+            '' AS vehicle_name,
+            vr.report_content,
+            CASE
+                WHEN vr.report_type = 0 THEN 'venue'
+                WHEN vr.report_type = 1 THEN 'user'
+                ELSE 'unknown'
+            END AS target_kind,
+            vr.handler_uid AS target_id,
+            CASE
+                WHEN vr.report_type = 0 THEN COALESCE(vv.venue_name, '')
+                WHEN vr.report_type = 1 THEN COALESCE(uu.nickname, '')
+                ELSE ''
+            END AS target_name
+        FROM voice_reports vr
+        LEFT JOIN users ru
+            ON CAST(vr.reporter_uid AS UNSIGNED) = ru.uid
+        LEFT JOIN venues vv
+            ON vr.report_type = 0 AND CAST(vr.handler_uid AS UNSIGNED) = vv.id
+        LEFT JOIN users uu
+            ON vr.report_type = 1 AND CAST(vr.handler_uid AS UNSIGNED) = uu.uid
+        LEFT JOIN venues uv
+            ON vr.report_type = 1 AND CAST(uu.streamer_venue AS UNSIGNED) = uv.id
+        WHERE {$whereSql}
+    ";
+    $params = array_merge($params, $partParams);
 }
 
-// 指定账号只能看 2026-07-01 之后的投诉处理记录
-if ($isDateLimitedUser) {
-    $where[] = 'r.insert_time >= ?';
-    $params[] = $visibleFrom;
+if (empty($parts)) {
+    jsonRet(0, '获取成功', [], [
+        'pagination' => [
+            'page'        => 1,
+            'page_size'   => $pageSize,
+            'total'       => 0,
+            'total_pages' => 1
+        ]
+    ]);
 }
 
-$whereSql = implode(' AND ', $where);
+$unionSql = implode("\nUNION ALL\n", $parts);
 
-$fromSql = "
-    FROM Reports r
-    JOIN vehicles v ON r.device_id = v.serial_number
-    LEFT JOIN venues ve ON ve.id = v.bind_site
-    WHERE {$whereSql}
-";
-
-$countSql = "SELECT COUNT(*) AS total {$fromSql}";
+$countSql = "SELECT COUNT(*) AS total FROM ({$unionSql}) x";
 $countRows = $database->query($countSql, $params) ?: [];
 $total = isset($countRows[0]['total']) ? intval($countRows[0]['total']) : 0;
 $totalPages = $total > 0 ? (int)ceil($total / $pageSize) : 1;
@@ -116,12 +279,9 @@ if ($total > 0 && $page > $totalPages) {
 }
 
 $dataSql = "
-    SELECT
-        r.*,
-        v.bind_site AS venue_id,
-        ve.venue_name
-    {$fromSql}
-    ORDER BY r.insert_time DESC
+    SELECT *
+    FROM ({$unionSql}) x
+    ORDER BY x.insert_time DESC, x.id DESC
     LIMIT {$pageSize} OFFSET {$offset}
 ";
 
@@ -139,7 +299,8 @@ jsonRet(0, '获取成功', $reports, [
     'filters' => [
         'venue_id'   => ($venue_id === '' ? 'all' : $venue_id),
         'start_date' => $startDate,
-        'end_date'   => $endDate
+        'end_date'   => $endDate,
+        'source'     => $source
     ],
     'visible_from' => $isDateLimitedUser ? $visibleFrom : ''
 ]);

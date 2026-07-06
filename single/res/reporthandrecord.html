@@ -19,6 +19,16 @@
       --hover-bg: #f9f9f9;
       --highlight-bg: #eff4ff;
       --transition: all 0.2s ease;
+      --green-bg: #eefbf3;
+      --green: #16a34a;
+      --orange-bg: #fff7ed;
+      --orange: #ea580c;
+      --red-bg: #fff1f2;
+      --red: #e11d48;
+      --blue-bg: #eef4ff;
+      --blue: #2f6bff;
+      --purple-bg: #f5f3ff;
+      --purple: #7c3aed;
     }
 
     * {
@@ -68,6 +78,44 @@
       color: var(--muted);
       font-size: 13px;
       margin-top: 6px;
+      line-height: 1.6;
+    }
+
+    .source-card {
+      padding: 12px;
+    }
+
+    .source-tabs {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .source-tab {
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: #fff;
+      color: #5d6b82;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .source-tab:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: #f8fbff;
+    }
+
+    .source-tab.active {
+      color: #fff;
+      border-color: var(--primary);
+      background: var(--primary);
+      box-shadow: 0 8px 18px rgba(91, 140, 255, 0.18);
     }
 
     .filter-card {
@@ -112,6 +160,7 @@
       transition: var(--transition);
       font-size: 14px;
       white-space: nowrap;
+      background: #fff;
     }
 
     .btn-primary {
@@ -142,6 +191,7 @@
       margin-bottom: 14px;
       color: var(--muted);
       font-size: 13px;
+      flex-wrap: wrap;
     }
 
     .report-item {
@@ -163,6 +213,14 @@
       border-bottom: 1px solid #f0f0f0;
     }
 
+    .report-head-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
     .report-device {
       font-weight: 700;
       color: #263247;
@@ -173,6 +231,49 @@
       color: var(--muted);
       font-size: 13px;
       white-space: nowrap;
+    }
+
+    .source-badge,
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .source-drive {
+      color: var(--blue);
+      background: var(--blue-bg);
+    }
+
+    .source-voice-room {
+      color: var(--green);
+      background: var(--green-bg);
+    }
+
+    .source-voice-comment {
+      color: var(--purple);
+      background: var(--purple-bg);
+    }
+
+    .status-pending {
+      color: var(--red);
+      background: var(--red-bg);
+    }
+
+    .status-processing {
+      color: var(--orange);
+      background: var(--orange-bg);
+    }
+
+    .status-done {
+      color: var(--green);
+      background: var(--green-bg);
     }
 
     .report-row {
@@ -353,6 +454,20 @@
         flex-direction: column;
       }
 
+      .source-card {
+        padding: 10px;
+      }
+
+      .source-tabs {
+        gap: 8px;
+      }
+
+      .source-tab {
+        height: 34px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+
       .filter-card {
         grid-template-columns: 1fr;
       }
@@ -398,9 +513,18 @@
     <div class="page-title">
       <div>
         <h2 class="card-title">投诉处理历史记录</h2>
-        <div class="sub-title">默认展示全场地，最新记录排在最上面，可按场地和时间筛选。</div>
+        <div class="sub-title">默认展示全部举报记录，最新记录排在最上面，可按普通驾驶投诉、语音房举报、评论/弹幕举报切换查看。</div>
       </div>
       <button class="back-button" onclick="window.history.back()">返回上一页</button>
+    </div>
+
+    <div class="card source-card">
+      <div class="source-tabs" id="source-tabs">
+        <button type="button" class="source-tab active" data-source="all">全部举报</button>
+        <button type="button" class="source-tab" data-source="drive">普通驾驶投诉</button>
+        <button type="button" class="source-tab" data-source="voice_room">语音房举报</button>
+        <button type="button" class="source-tab" data-source="voice_comment">评论/弹幕举报</button>
+      </div>
     </div>
 
     <div class="card filter-card">
@@ -473,19 +597,34 @@
       const pageSizeSelect = document.getElementById('page_size');
       const prevPageBtn = document.getElementById('prev-page');
       const nextPageBtn = document.getElementById('next-page');
+      const sourceTabs = Array.from(document.querySelectorAll('.source-tab'));
       const imagePreviewMask = document.getElementById('imagePreviewMask');
       const imagePreviewImg = document.getElementById('imagePreviewImg');
       const imagePreviewClose = document.getElementById('imagePreviewClose');
+
+      const SOURCE_LABELS = {
+        all: '全部举报',
+        drive: '普通驾驶投诉',
+        voice_room: '语音房举报',
+        voice_comment: '评论/弹幕举报'
+      };
 
       const state = {
         roleId: 0,
         userVenueId: '',
         isAdmin: false,
+        source: getInitialSource(),
         page: 1,
         pageSize: Number(pageSizeSelect.value) || 10,
         total: 0,
         totalPages: 1
       };
+
+      function getInitialSource() {
+        const params = new URLSearchParams(window.location.search || '');
+        const source = params.get('source') || 'all';
+        return SOURCE_LABELS[source] ? source : 'all';
+      }
 
       function escapeHtml(value) {
         if (value === null || value === undefined) return '';
@@ -557,10 +696,18 @@
         });
       }
 
+      function setSource(source) {
+        state.source = SOURCE_LABELS[source] ? source : 'all';
+        sourceTabs.forEach(function (tab) {
+          tab.classList.toggle('active', tab.dataset.source === state.source);
+        });
+      }
+
       function buildReportUrl(page) {
         const params = new URLSearchParams();
         params.set('page', page || state.page);
         params.set('page_size', state.pageSize);
+        params.set('source', state.source);
 
         if (state.isAdmin) {
           if (venueSelect.value) {
@@ -602,6 +749,97 @@
         }
       }
 
+      function getSourceBadge(record) {
+        const source = record.record_source || 'drive';
+        const label = record.source_label || SOURCE_LABELS[source] || '举报记录';
+        let cls = 'source-drive';
+        if (source === 'voice_room') cls = 'source-voice-room';
+        if (source === 'voice_comment') cls = 'source-voice-comment';
+        return `<span class="source-badge ${cls}">${escapeHtml(label)}</span>`;
+      }
+
+      function getStatusBadge(status) {
+        const text = status || '未知';
+        let cls = 'status-done';
+        if (text === '未处理') cls = 'status-pending';
+        if (text === '处理中') cls = 'status-processing';
+        return `<span class="status-badge ${cls}">${escapeHtml(text)}</span>`;
+      }
+
+      function row(label, value) {
+        const text = value === null || value === undefined || value === '' ? '暂无' : value;
+        return `<div class="report-row"><div class="report-label">${escapeHtml(label)}</div><div class="report-value">${escapeHtml(text)}</div></div>`;
+      }
+
+      function imgRow(imgUrl) {
+        if (!imgUrl) return '';
+        return `
+          <div class="report-row report-img-row">
+            <div class="report-label">截图</div>
+            <div class="report-value">
+              <img class="report-img-thumb" src="${escapeHtml(imgUrl)}" alt="截图" title="点击查看大图" onerror="this.style.display='none'">
+              <div class="report-img-tip">点击截图查看大图</div>
+            </div>
+          </div>`;
+      }
+
+      function getVenueText(report) {
+        if (report.venue_id) {
+          return `${report.venue_id}${report.venue_name ? ' - ' + report.venue_name : ''}`;
+        }
+        return '暂无';
+      }
+
+      function renderDriveReport(report) {
+        const imgUrl = normalizeImageUrl(report.image_url);
+        const typeText = report.report_content || report.report_type || '普通驾驶投诉';
+        return `
+          <div class="report-item">
+            <div class="report-head">
+              <div class="report-head-left">
+                ${getSourceBadge(report)}
+                ${getStatusBadge(report.status)}
+                <div class="report-device">设备编号：${escapeHtml(report.device_id || '暂无')}</div>
+              </div>
+              <div class="report-time">${escapeHtml(report.insert_time || '')}</div>
+            </div>
+            ${row('场地', getVenueText(report))}
+            ${row('设备名称', report.vehicle_name || '')}
+            ${row('上报人', report.reporter_uid || '')}
+            ${row('类型/内容', typeText)}
+            ${report.notes ? row('备注', report.notes) : ''}
+            ${report.handler_uid ? row('处理人', report.handler_uid) : ''}
+            ${imgRow(imgUrl)}
+          </div>
+        `;
+      }
+
+      function renderVoiceReport(report) {
+        const imgUrl = normalizeImageUrl(report.image_url);
+        const isRoom = String(report.record_source) === 'voice_room' || String(report.report_type) === '0';
+        const targetLabel = isRoom ? '被举报场地' : '被举报用户';
+        return `
+          <div class="report-item">
+            <div class="report-head">
+              <div class="report-head-left">
+                ${getSourceBadge(report)}
+                ${getStatusBadge(report.status)}
+                <div class="report-device">${escapeHtml(report.report_type_text || report.source_label || '语音房举报')}</div>
+              </div>
+              <div class="report-time">${escapeHtml(report.insert_time || '')}</div>
+            </div>
+            ${row('场地', getVenueText(report))}
+            ${row('举报人 UID', report.reporter_uid || '')}
+            ${report.reporter_name ? row('举报人昵称', report.reporter_name) : ''}
+            ${row(targetLabel + ' ID', report.target_id || report.handler_uid || '')}
+            ${row(targetLabel + '名称', report.target_name || '')}
+            ${row('举报内容', report.report_content || '')}
+            ${report.notes ? row('备注', report.notes) : ''}
+            ${imgRow(imgUrl)}
+          </div>
+        `;
+      }
+
       function renderReports(reports) {
         reportContent.className = '';
         totalInfo.textContent = `共 ${state.total} 条记录`;
@@ -613,32 +851,10 @@
         }
 
         reportContent.innerHTML = reports.map(function (report) {
-          const imgUrl = normalizeImageUrl(report.image_url);
-          const venueText = report.venue_id
-            ? `${escapeHtml(report.venue_id)}${report.venue_name ? ' - ' + escapeHtml(report.venue_name) : ''}`
-            : '暂无';
-
-          return `
-            <div class="report-item">
-              <div class="report-head">
-                <div class="report-device">设备编号：${escapeHtml(report.device_id || '暂无')}</div>
-                <div class="report-time">${escapeHtml(report.insert_time || '')}</div>
-              </div>
-              <div class="report-row"><div class="report-label">场地</div><div class="report-value">${venueText}</div></div>
-              <div class="report-row"><div class="report-label">上报人</div><div class="report-value">${escapeHtml(report.reporter_uid || '暂无')}</div></div>
-              <div class="report-row"><div class="report-label">类型</div><div class="report-value">${escapeHtml(report.report_type || '暂无')}</div></div>
-              ${report.notes ? `<div class="report-row"><div class="report-label">备注</div><div class="report-value">${escapeHtml(report.notes)}</div></div>` : ''}
-              ${report.handler_uid ? `<div class="report-row"><div class="report-label">处理人</div><div class="report-value">${escapeHtml(report.handler_uid)}</div></div>` : ''}
-              ${imgUrl ? `
-                <div class="report-row report-img-row">
-                  <div class="report-label">截图</div>
-                  <div class="report-value">
-                    <img class="report-img-thumb" src="${escapeHtml(imgUrl)}" alt="截图" title="点击查看大图" onerror="this.style.display='none'">
-                    <div class="report-img-tip">点击截图查看大图</div>
-                  </div>
-                </div>` : ''}
-            </div>
-          `;
+          if (report.source_table === 'voice_reports') {
+            return renderVoiceReport(report);
+          }
+          return renderDriveReport(report);
         }).join('');
       }
 
@@ -652,6 +868,7 @@
 
       function renderFilterNote(visibleFrom) {
         const parts = [];
+        parts.push('当前类型：' + (SOURCE_LABELS[state.source] || '全部举报'));
         if (state.isAdmin && venueSelect.value) {
           parts.push('当前场地：' + venueSelect.options[venueSelect.selectedIndex].textContent);
         } else if (state.isAdmin) {
@@ -668,6 +885,7 @@
 
       async function init() {
         setLoading();
+        setSource(state.source);
         try {
           const userResp = await getJson(API.currentUser);
           if (userResp.code !== 0) {
@@ -692,6 +910,13 @@
         }
       }
 
+      sourceTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          setSource(tab.dataset.source || 'all');
+          loadReports(1);
+        });
+      });
+
       btnSearch.addEventListener('click', function () {
         loadReports(1);
       });
@@ -700,6 +925,7 @@
         venueSelect.value = '';
         startDateInput.value = '';
         endDateInput.value = '';
+        setSource('all');
         loadReports(1);
       });
 
