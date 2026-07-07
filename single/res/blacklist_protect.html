@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>拉黑保护名单</title>
+  <style>
+    :root{
+      --primary:#5b8cff;
+      --secondary:#7f8fa4;
+      --bg1:#f8f9ff;
+      --bg2:#f0f3ff;
+      --card:#fff;
+      --border:#ddd;
+      --text:#333;
+      --muted:#64748b;
+      --danger:#ef4444;
+      --shadow:0 4px 24px rgba(91,140,255,.08);
+      --hover:#f9f9f9;
+      --transition:all .25s ease;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:"PingFang SC",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    body{min-height:100vh;background:linear-gradient(135deg,var(--bg1) 0%,var(--bg2) 100%);padding:20px;display:flex;justify-content:center;align-items:flex-start;color:var(--text);}
+    .container{width:100%;max-width:1200px;}
+    .card{background:var(--card);border-radius:12px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px;}
+    .card-title{font-size:24px;font-weight:600;margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px;text-align:left;}
+    .page-tabs{display:flex;gap:10px;margin:-6px 0 16px;padding-bottom:12px;border-bottom:1px solid #eef2f7;flex-wrap:wrap;}
+    .page-tabs a{display:inline-flex;align-items:center;justify-content:center;min-width:96px;height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--secondary);font-size:14px;font-weight:600;text-decoration:none;transition:var(--transition);}
+    .page-tabs a:hover{border-color:var(--primary);color:var(--primary);background:rgba(91,140,255,.06);}
+    .page-tabs a.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+    .tip{font-size:13px;color:var(--muted);line-height:1.7;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+    .form-card{display:grid;grid-template-columns:minmax(180px,260px) minmax(180px,1fr) auto;gap:10px;align-items:start;margin-bottom:14px;}
+    .field{position:relative;}
+    .input{width:100%;height:40px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:14px;outline:none;transition:var(--transition);}
+    .input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(91,140,255,.12);}
+    .input.invalid{border-color:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.15);}
+    .btn{appearance:none;border:0;border-radius:8px;height:40px;padding:0 14px;font-size:14px;cursor:pointer;transition:var(--transition);white-space:nowrap;}
+    .btn-primary{background:var(--primary);color:#fff;}
+    .btn-primary:hover{filter:brightness(.95);}
+    .btn-outline{background:#fff;color:var(--primary);border:1px solid var(--primary);}
+    .btn-outline:hover{background:rgba(91,140,255,.06);}
+    .btn-danger{background:var(--danger);color:#fff;}
+    .btn-danger:hover{filter:brightness(.95);}
+    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+    .toolbar .input{max-width:320px;}
+    .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:stretch;}
+    .item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;min-height:128px;}
+    .item:hover{background:var(--hover);}
+    .item-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .tag{display:inline-block;padding:4px 9px;border-radius:999px;font-size:12px;background:#eef2ff;color:#4f46e5;border:1px solid #e0e7ff;font-weight:600;}
+    .remark{font-size:14px;line-height:1.6;word-break:break-word;color:var(--text);min-height:44px;}
+    .remark.empty{color:#94a3b8;}
+    .actions{margin-top:auto;display:flex;justify-content:flex-end;gap:8px;}
+    .empty{grid-column:1/-1;color:var(--muted);font-size:13px;text-align:center;padding:24px;border:1px dashed #cbd5e1;border-radius:12px;background:#fff;}
+    .loading{grid-column:1/-1;text-align:center;color:var(--primary);padding:20px;}
+    .suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);max-height:260px;overflow:auto;padding:6px 0;z-index:20;}
+    .s-item{padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+    .s-item:hover{background:var(--hover);}
+    .s-item .nick{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .s-item .meta{margin-left:auto;font-size:12px;color:var(--secondary);}
+    .modal{display:none;position:fixed;z-index:999;inset:0;background:rgba(0,0,0,.6);justify-content:center;align-items:center;padding:18px;}
+    .modal-content{width:420px;max-width:100%;background:#fff;border-radius:12px;padding:22px;box-shadow:0 4px 20px rgba(0,0,0,.25);display:flex;flex-direction:column;gap:14px;}
+    .modal-title{font-size:18px;font-weight:600;color:#0f172a;}
+    .modal-text{font-size:14px;color:var(--muted);line-height:1.7;}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;padding-top:4px;}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:.25s;z-index:1000;max-width:80vw;}
+    .toast.show{opacity:1;transform:translateY(0);}
+    @media(max-width:720px){
+      body{padding:12px;}
+      .card{padding:14px;}
+      .card-title{font-size:20px;margin-bottom:16px;}
+      .form-card{grid-template-columns:1fr;}
+      .toolbar{flex-direction:column;align-items:stretch;}
+      .toolbar .input,.toolbar .btn{max-width:none;width:100%;}
+      .btn,.input{height:38px;}
+      .modal-actions{flex-direction:column-reverse;}
+      .modal-actions .btn{width:100%;}
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="card-title">拉黑保护名单</div>
+    <div class="page-tabs">
+      <a href="black_user_gmt.html">拉黑用户</a>
+      <a href="venue_mute_records.html">禁言用户</a>
+      <a href="blacklist_protect.html" class="active">拉黑保护</a>
+    </div>
+
+    <div class="tip" id="tipText">
+      这里维护的是“禁止被拉黑”的 UID 名单。名单写在后端 txt 中，拉黑弹窗和拉黑接口都会读取同一个配置，避免前端改了但后端没拦住。
+    </div>
+
+    <div class="form-card" id="addArea">
+      <div class="field">
+        <input id="uidInput" class="input" type="number" inputmode="numeric" autocomplete="off" placeholder="输入用户 UID" />
+        <div id="uidSuggest" class="suggest" hidden></div>
+      </div>
+      <input id="remarkInput" class="input" maxlength="80" placeholder="备注，例如：官方巡查 / 系统账号，可留空" />
+      <button id="btnAdd" class="btn btn-primary">添加保护</button>
+    </div>
+
+    <div class="toolbar">
+      <input id="kw" class="input" placeholder="搜索 UID 或备注…" />
+      <button id="btnRefresh" class="btn btn-outline">刷新</button>
+    </div>
+
+    <div id="list" class="list">
+      <div class="loading">加载中…</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="deleteModal" aria-hidden="true" role="dialog">
+  <div class="modal-content" role="document">
+    <div class="modal-title">确认移除保护？</div>
+    <div class="modal-text" id="deleteText">移除后，该 UID 可以被正常拉黑。</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" data-close>取消</button>
+      <button class="btn btn-danger" id="confirmDelete">确认移除</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_BASE = '/api/operat';
+  const API = {
+    PROTECT: API_BASE + '/blacklist_protect.php',
+    SEARCH_USER: API_BASE + '/search_user.php'
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  const escapeHTML = (s='') => String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+
+  let state = {
+    list: [],
+    kw: '',
+    canWrite: false,
+    pendingDeleteUid: 0
+  };
+
+  let TOAST_TIMER = null;
+  function toast(msg, ok=true){
+    const el = $('#toast');
+    el.textContent = msg;
+    el.style.background = ok ? '#111827' : '#ef4444';
+    el.classList.add('show');
+    clearTimeout(TOAST_TIMER);
+    TOAST_TIMER = setTimeout(()=> el.classList.remove('show'), 2200);
+  }
+
+  function openModal(sel){
+    const el = $(sel);
+    if(!el) return;
+    el.style.display = 'flex';
+    el.setAttribute('aria-hidden','false');
+  }
+
+  function closeModal(sel){
+    const el = $(sel);
+    if(!el) return;
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden','true');
+  }
+
+  async function apiPost(action, data){
+    const resp = await fetch(API.PROTECT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(Object.assign({ action }, data || {}))
+    });
+    const json = await resp.json();
+    if(json.code !== 0) throw new Error(json.msg || '操作失败');
+    return json;
+  }
+
+  async function loadList(){
+    $('#list').innerHTML = '<div class="loading">加载中…</div>';
+    try{
+      const resp = await fetch(API.PROTECT + '?action=list', { credentials: 'include' });
+      const json = await resp.json();
+      if(json.code !== 0) throw new Error(json.msg || '加载失败');
+      const data = json.data || {};
+      state.list = Array.isArray(data.list) ? data.list : [];
+      state.canWrite = Number(data.can_write || 0) === 1;
+      renderPermission();
+      renderList();
+    }catch(e){
+      $('#list').innerHTML = `<div class="empty">${escapeHTML(e.message || '加载失败')}</div>`;
+      toast(e.message || '加载失败', false);
+    }
+  }
+
+  function renderPermission(){
+    $('#addArea').style.display = state.canWrite ? 'grid' : 'none';
+    if(!state.canWrite){
+      $('#tipText').textContent = '当前账号只能查看拉黑保护名单，不能修改。拉黑接口仍会按这个名单自动拦截。';
+    }
+  }
+
+  function renderList(){
+    const wrap = $('#list');
+    const kw = state.kw.trim().toLowerCase();
+    let list = state.list;
+    if(kw){
+      list = list.filter(item => {
+        const uid = String(item.uid || '');
+        const remark = String(item.remark || '').toLowerCase();
+        return uid.includes(kw) || remark.includes(kw);
+      });
+    }
+
+    if(!list.length){
+      wrap.innerHTML = '<div class="empty">暂无拉黑保护 UID</div>';
+      return;
+    }
+
+    wrap.innerHTML = list.map(item => {
+      const uid = Number(item.uid || 0);
+      const remark = String(item.remark || '').trim();
+      return `
+        <div class="item">
+          <div class="item-top">
+            <span class="tag">UID ${uid}</span>
+          </div>
+          <div class="remark ${remark ? '' : 'empty'}">${remark ? '备注：' + escapeHTML(remark) : '暂无备注'}</div>
+          <div class="actions">
+            ${state.canWrite ? `<button class="btn btn-danger" data-delete="${uid}">移除保护</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    $$('[data-delete]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.pendingDeleteUid = Number(btn.getAttribute('data-delete'));
+        $('#deleteText').textContent = `确定把 UID ${state.pendingDeleteUid} 从拉黑保护名单移除吗？移除后该用户可以被正常拉黑。`;
+        openModal('#deleteModal');
+      });
+    });
+  }
+
+  async function addProtect(){
+    const uidEl = $('#uidInput');
+    const remarkEl = $('#remarkInput');
+    const uid = Number(uidEl.value.trim());
+    const remark = remarkEl.value.trim();
+
+    if(!uid || uid < 1){
+      uidEl.classList.add('invalid');
+      toast('请输入正确的 UID', false);
+      uidEl.focus();
+      return;
+    }
+
+    uidEl.classList.remove('invalid');
+    try{
+      const json = await apiPost('add', { uid, remark });
+      toast(json.msg || '已添加');
+      uidEl.value = '';
+      remarkEl.value = '';
+      await loadList();
+    }catch(e){
+      toast(e.message || '添加失败', false);
+    }
+  }
+
+  async function deleteProtect(){
+    const uid = Number(state.pendingDeleteUid || 0);
+    if(!uid){ closeModal('#deleteModal'); return; }
+    try{
+      const json = await apiPost('delete', { uid });
+      toast(json.msg || '已移除');
+      closeModal('#deleteModal');
+      state.pendingDeleteUid = 0;
+      await loadList();
+    }catch(e){
+      toast(e.message || '移除失败', false);
+    }
+  }
+
+  function attachUidSuggest(input, panel){
+    if(!input || !panel) return;
+    let timer = null;
+    function hide(){ panel.hidden = true; panel.innerHTML = ''; }
+    function render(list){
+      if(!list || !list.length){ hide(); return; }
+      panel.innerHTML = list.map(u => `
+        <div class="s-item" data-uid="${u.uid}" data-nick="${escapeHTML(u.nickname || '')}">
+          <span class="nick">${escapeHTML(u.nickname || '(无昵称)')}</span>
+          <span class="meta">UID: ${u.uid}</span>
+        </div>
+      `).join('');
+      panel.hidden = false;
+    }
+    async function query(q){
+      if(!q){ hide(); return; }
+      try{
+        const resp = await fetch(`${API.SEARCH_USER}?kw=${encodeURIComponent(q)}`, { credentials: 'include' });
+        const json = await resp.json();
+        if(json.code !== 0) throw new Error(json.msg || '');
+        render(json.data || []);
+      }catch(e){ hide(); }
+    }
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      clearTimeout(timer);
+      input.classList.remove('invalid');
+      if(!q){ hide(); return; }
+      timer = setTimeout(() => query(q), 200);
+    });
+    panel.addEventListener('click', e => {
+      const item = e.target.closest('.s-item');
+      if(!item) return;
+      input.value = item.getAttribute('data-uid') || '';
+      const nick = item.getAttribute('data-nick') || '';
+      if(nick && !$('#remarkInput').value.trim()){
+        $('#remarkInput').value = nick;
+      }
+      hide();
+    });
+    document.addEventListener('click', e => {
+      if(!input.parentElement.contains(e.target)) hide();
+    });
+  }
+
+  $('#btnAdd').addEventListener('click', addProtect);
+  $('#uidInput').addEventListener('keydown', e => { if(e.key === 'Enter') addProtect(); });
+  $('#remarkInput').addEventListener('keydown', e => { if(e.key === 'Enter') addProtect(); });
+  $('#kw').addEventListener('input', e => { state.kw = e.target.value || ''; renderList(); });
+  $('#btnRefresh').addEventListener('click', loadList);
+  $('#confirmDelete').addEventListener('click', deleteProtect);
+  $$('[data-close]').forEach(btn => btn.addEventListener('click', () => closeModal('#deleteModal')));
+  $('#deleteModal').addEventListener('click', e => { if(e.target.id === 'deleteModal') closeModal('#deleteModal'); });
+
+  attachUidSuggest($('#uidInput'), $('#uidSuggest'));
+  loadList();
+</script>
+</body>
+</html>

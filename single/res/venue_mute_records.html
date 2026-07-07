@@ -202,6 +202,12 @@
       .modal-actions { flex-direction: column-reverse; }
       .pagination { justify-content: center; flex-wrap: wrap; }
     }
+  
+    /* 管理员专用 tab，默认强制隐藏，避免 role_3 页面闪现 */
+    .page-tabs a[hidden],
+    .page-tabs .admin-only-tab[hidden]{
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -212,6 +218,7 @@
       <div class="page-tabs">
           <a href="black_user_gmt.html">拉黑用户</a>
           <a href="venue_mute_records.html" class="active">禁言用户</a>
+          <a href="blacklist_protect.html" id="protectTab" class="admin-only-tab" hidden style="display:none;">拉黑保护</a>
         </div>
 <div class="tip" id="tipText">默认展示全部场地，可按被禁言 UID 和场地筛选；解除禁言会把 end_time 改为当前时间。</div>
     </div>
@@ -294,6 +301,15 @@
 </div>
 
 <script>
+
+    function setAdminOnlyTabsVisible(show){
+      document.querySelectorAll('.admin-only-tab, #protectTab').forEach(el => {
+        el.hidden = !show;
+        el.style.display = show ? 'inline-flex' : 'none';
+      });
+    }
+    setAdminOnlyTabsVisible(false);
+
   const VENUE_API = '/api/operat/EnergyGift.php';
   const LIST_API  = '/api/operat/venue_mute_records_api.php';
 
@@ -531,6 +547,7 @@ resetBtn.addEventListener('click', function () {
 
   const venueField = document.getElementById('venueField');
   const tipText = document.getElementById('tipText');
+  setAdminOnlyTabsVisible(loginRoleId === 1 || loginRoleId === 2);
 
   addMuteBtn.style.display = canAddMute ? '' : 'none';
   addVenueField.style.display = loginRoleId === 1 ? '' : 'none';

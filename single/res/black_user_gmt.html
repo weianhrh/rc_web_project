@@ -167,6 +167,12 @@
       .s-item .nick{ color: #e5e7eb; }
       .s-item .meta{ color: #9ca3af; }
     }
+  
+    /* 管理员专用 tab，默认强制隐藏，避免 role_3 页面闪现 */
+    .page-tabs a[hidden],
+    .page-tabs .admin-only-tab[hidden]{
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -176,6 +182,7 @@
 <div class="page-tabs">
   <a href="black_user_gmt.html" class="active">拉黑用户</a>
   <a href="venue_mute_records.html">禁言用户</a>
+  <a href="blacklist_protect.html" id="protectTab" class="admin-only-tab" hidden style="display:none;">拉黑保护</a>
 </div>
       <div class="toolbar">
         <input id="kw" class="input" placeholder="按 UID 精确 / 按原因模糊搜索…" />
@@ -297,16 +304,45 @@
       UNBLOCK: API_BASE + '/unblock_user.php',
       SEARCH_USER: API_BASE + '/search_user.php',
       GET_CUR_USER: API_BASE + '/get_current_user.php',
-      BLOCK_FOR_VENUE: API_BASE + '/block_user_for_venue.php'
+      BLOCK_FOR_VENUE: API_BASE + '/block_user_for_venue.php',
+      PROTECT: API_BASE + '/blacklist_protect.php'
     };
 
-    // 禁止拉黑 UID（示例）
-    const DENY_UIDS = new Set([10001, 10107, 10130]);
+    // 受保护 UID：从 /api/operat/blacklist_protect.php 读取同一个 txt，前端只做提示，后端仍会强制拦截。
+    let DENY_UIDS = new Set();
     const isDenyUid = (uid) => DENY_UIDS.has(Number(uid));
+
+    async function loadProtectedUids(){
+      try{
+        const resp = await fetch(API.PROTECT + '?action=list', { credentials: 'include' });
+        const json = await resp.json();
+        if(json.code !== 0) throw new Error(json.msg || '保护名单加载失败');
+
+        const data = json.data || {};
+        const uids = Array.isArray(data.uids)
+          ? data.uids
+          : (Array.isArray(data.list) ? data.list.map(item => item.uid) : []);
+
+        DENY_UIDS = new Set(
+          uids.map(v => Number(v)).filter(v => Number.isInteger(v) && v > 0)
+        );
+      }catch(e){
+        console.warn('loadProtectedUids failed:', e);
+      }
+    }
 
     // 工具
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    function setAdminOnlyTabsVisible(show){
+      document.querySelectorAll('.admin-only-tab, #protectTab').forEach(el => {
+        el.hidden = !show;
+        el.style.display = show ? 'inline-flex' : 'none';
+      });
+    }
+    setAdminOnlyTabsVisible(false);
+
     const escapeHTML = (s='') => String(s).replace(/[&<>"']/g, m => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'
     }[m]));
@@ -680,6 +716,7 @@ $('#confirmAssign').addEventListener('click', async ()=>{
           state.venueId = Number(json.data.venue_id || 0);
         // role_id === 1 或 2 显示“指定添加”“场地筛选”“一键拉黑”
          const admin = isPlatformAdmin();
+         setAdminOnlyTabsVisible(admin);
          $('#btnAssign').hidden = !admin;
          $('#venueFilter').hidden = !admin;
          $('#confirmAddAll').hidden = !admin;
@@ -759,6 +796,7 @@ $('#confirmAssign').addEventListener('click', async ()=>{
 
     // 初始
     (async function init(){
+      await loadProtectedUids();
       await fetchCurUser();
       await loadList();
     })();

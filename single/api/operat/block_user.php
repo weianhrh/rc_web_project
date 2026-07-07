@@ -1,5 +1,6 @@
 <?php // api/operat/block_user.php
 require_once __DIR__.'/_bootstrap.php';
+require_once __DIR__.'/blacklist_protect.php';
 define('OPEN_INTERNAL_KEY', 'open_send_zego_internal_20260529_xxxxxxxx');
 $db   = new Database();
 $user = auth_or_die($db);
@@ -15,6 +16,12 @@ $remove_voice_room = intval($req['remove_voice_room'] ?? 0);
 
 
 if ($target_uid <= 0) json_err('参数错误：uid 必填且为正整数', 1002);
+if (blacklist_protect_is_uid($target_uid)) {
+    json_err("UID {$target_uid} 为受保护账号，禁止拉黑", 1006, [
+        'uid' => $target_uid,
+        'protected' => 1
+    ]);
+}
 if ($reason === '')   $reason = '未填写原因';
 
 // === 新增：一键拉黑所有场地，仅管理员（role_id == 1）可用 ===

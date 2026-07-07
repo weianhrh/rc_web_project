@@ -242,7 +242,7 @@ body {
     padding: 16px;
     margin-bottom: 16px;
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr) 230px;
+    grid-template-columns: 112px minmax(0, 1fr) 230px;
     gap: 16px;
     align-items: start;
     transition: var(--transition);
@@ -251,6 +251,16 @@ body {
 .device-card:hover {
     border-color: #cfdcff;
     box-shadow: 0 8px 24px rgba(91, 140, 255, 0.08);
+}
+
+.device-media {
+    width: 112px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
 }
 
 .device-img {
@@ -274,23 +284,38 @@ body {
 }
 
 .device-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 8px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
     line-height: 1.2;
 }
 
-.device-name {
-    display: block;
+.device-title-main {
     min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.device-name {
+    display: inline-block;
+    flex: 0 1 auto;
+    min-width: 64px;
+    max-width: 100%;
     font-weight: 700;
     color: var(--primary);
-    word-break: break-word;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
     line-height: 1.35;
 }
 
 .device-status-badges {
+    flex: 0 0 auto;
     max-width: 255px;
     display: flex;
     align-items: center;
@@ -431,6 +456,73 @@ body {
     color: var(--primary);
     font-size: 11px;
     line-height: 1;
+}
+
+.device-type-pill {
+    width: 108px;
+    max-width: 108px;
+    min-height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+    padding: 4px 10px;
+    border: 1px solid #d8e3ff;
+    border-radius: 999px;
+    background: #f8fbff;
+    color: #355780;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: var(--transition);
+}
+
+.device-type-select {
+    height: 26px;
+    display: block;
+    text-align: center;
+    text-align-last: center;
+    padding: 0 22px 0 10px;
+    outline: none;
+}
+
+.device-type-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+}
+
+.device-type-pill:hover {
+    border-color: var(--primary);
+    color: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(91, 140, 255, 0.12);
+}
+
+.device-type-pill::after {
+    content: "▾";
+    margin-left: 6px;
+    color: var(--primary);
+    font-size: 10px;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.device-type-confirm-box {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 152, 0, .26);
+    border-radius: 10px;
+    background: rgba(255, 152, 0, .08);
+    color: #7a4f00;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.device-type-confirm-box b {
+    color: #222;
 }
 
 .device-image-row {
@@ -1049,7 +1141,7 @@ body {
 ========================= */
 @media (max-width: 980px) {
     .device-card {
-        grid-template-columns: 84px minmax(0, 1fr);
+        grid-template-columns: 112px minmax(0, 1fr);
     }
 
     .button-group {
@@ -1112,6 +1204,12 @@ body {
         padding: 14px;
     }
 
+    .device-media {
+        width: 100%;
+        align-items: flex-start;
+        gap: 7px;
+    }
+
     .device-img {
         width: 76px;
         height: 76px;
@@ -1126,8 +1224,29 @@ body {
     }
 
     .device-head {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
         gap: 5px;
+    }
+
+    .device-title-main {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 7px;
+    }
+
+    .device-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .device-type-pill {
+        width: 96px;
+        max-width: 96px;
+        min-height: 24px;
+        padding: 4px 8px;
+        font-size: 11px;
     }
 
     .device-status-badges {
@@ -1382,6 +1501,29 @@ body {
         <div class="modal-actions">
             <button type="button" class="ghost-modal-btn" onclick="closeDeviceFieldModal()">取消</button>
             <button type="button" class="modify-btn" id="deviceFieldSaveBtn" onclick="submitDeviceFieldEdit()">保存修改</button>
+        </div>
+    </div>
+</div>
+
+<!-- 小弹窗：修改车辆类型 -->
+<div id="deviceCarTypeModal" class="modal">
+    <div class="modal-content mini-modal-content">
+        <span class="field-modal-close" onclick="closeDeviceCarTypeModal()">&times;</span>
+        <h2>确认切换车辆类型</h2>
+        <div class="device-field-meta">
+            <div>设备序列号：<b id="deviceCarTypeSerialText">-</b></div>
+            <div>设备名称：<b id="deviceCarTypeNameText">-</b></div>
+            <div>当前类型：<b id="deviceCarTypeCurrentText">-</b></div>
+            <div>新的类型：<b id="deviceCarTypeNextText">-</b></div>
+        </div>
+        <input type="hidden" id="deviceCarTypeSerial">
+        <input type="hidden" id="deviceCarTypeCurrentValue">
+        <input type="hidden" id="deviceCarTypeNextValue">
+        <div id="deviceCarTypeConfirmBox" class="device-type-confirm-box"></div>
+        <div id="deviceCarTypeMessage" class="modal-message"></div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-modal-btn" onclick="closeDeviceCarTypeModal()">取消</button>
+            <button type="button" class="modify-btn" id="deviceCarTypeSaveBtn" onclick="submitDeviceCarTypeEdit()">确认提交</button>
         </div>
     </div>
 </div>
@@ -1652,6 +1794,44 @@ function formatImagePillText(imageId, roomId) {
     if (!id && !room) return '图传 未设置';
     if (id && room) return `图传 ${id}/${room}`;
     return `图传 ${id || room}`;
+}
+
+
+const CAR_TYPE_OPTIONS = [
+    { value: '1', label: '汽车' },
+    { value: '2', label: '坦克' },
+    { value: '3', label: '挖掘机' },
+    { value: '4', label: '推土机' },
+    { value: '5', label: '翻斗车' },
+    { value: '6', label: '娃娃机' },
+    { value: '7', label: '液压推土机' },
+    { value: '8', label: '液压翻斗' },
+    { value: '9', label: '液压挖掘机' }
+];
+
+const CAR_TYPE_MAP = CAR_TYPE_OPTIONS.reduce(function (map, item) {
+    map[item.value] = item.label;
+    return map;
+}, {});
+
+let currentCarTypeEdit = null;
+
+function normalizeCarTypeValue(value) {
+    const type = String(value ?? '').trim();
+    return CAR_TYPE_MAP[type] ? type : '';
+}
+
+function getCarTypeLabel(value) {
+    const type = normalizeCarTypeValue(value);
+    return type ? CAR_TYPE_MAP[type] : '未设置';
+}
+
+function buildCarTypeOptionsHtml(selectedValue) {
+    const selected = normalizeCarTypeValue(selectedValue);
+    const emptyOption = `<option value="" ${selected ? '' : 'selected'}>未设置</option>`;
+    return emptyOption + CAR_TYPE_OPTIONS.map(function (item) {
+        return `<option value="${item.value}" ${item.value === selected ? 'selected' : ''}>${item.label}</option>`;
+    }).join('');
 }
         let currentPage = 1; 
         const limit = 10; 
@@ -1934,13 +2114,25 @@ function displayDevices(devices) {
         const frontRoomId = cleanMetaText(device.image_device_room_id);
         const backImageId = cleanMetaText(device.bk_image_device_serial);
         const imagePillText = formatImagePillText(frontImageId, frontRoomId);
+        const carTypeValue = normalizeCarTypeValue(device.car_type);
 
         card.innerHTML = `
-            <img class="device-img" src="${device.photo_url || ''}" alt="设备图片">
+            <div class="device-media">
+                <img class="device-img" src="${device.photo_url || ''}" alt="设备图片">
+                <select class="device-type-pill device-type-select"
+                        data-serial="${escapeHtml(device.serial_number || '')}"
+                        data-device-name="${escapeHtml(device.name || '')}"
+                        data-value="${escapeHtml(carTypeValue)}"
+                        title="切换车辆类型">
+                    ${buildCarTypeOptionsHtml(carTypeValue)}
+                </select>
+            </div>
 
             <div class="device-info">
                 <div class="device-head">
-                    <span class="device-name">${device.name || '-'}</span>
+                    <div class="device-title-main">
+                        <span class="device-name" title="${escapeHtml(device.name || '-')}">${escapeHtml(device.name || '-')}</span>
+                    </div>
                     <div class="device-status-badges">
                         <span class="device-badge ${statusClass}">${device.status || '未知'}</span>
                         <span class="device-badge ${banClass}">${device.is_banned ? '已封禁' : '未封禁'}</span>
@@ -2043,6 +2235,13 @@ function displayDevices(devices) {
                     e.preventDefault();
                     openDeviceImageModal(this);
                 }
+            });
+        }
+
+        const carTypeSelect = card.querySelector('.device-type-select');
+        if (carTypeSelect) {
+            carTypeSelect.addEventListener('change', function () {
+                openDeviceCarTypeModal(this);
             });
         }
 
@@ -2268,6 +2467,10 @@ function goToConfig(btn) {
             if (event.target === this) closeDeviceImageModal();
         });
 
+        document.getElementById('deviceCarTypeModal').addEventListener('click', function (event) {
+            if (event.target === this) closeDeviceCarTypeModal();
+        });
+
         document.getElementById('streamStatusModal').addEventListener('click', function (event) {
             if (event.target === this) closeStreamStatusModal();
         });
@@ -2280,6 +2483,7 @@ function goToConfig(btn) {
             if (event.key === 'Escape') {
                 closeDeviceFieldModal();
                 closeDeviceImageModal();
+                closeDeviceCarTypeModal();
                 closeStreamStatusModal();
                 closeDeviceControlModal();
                 document.getElementById('banModal').style.display = 'none';
@@ -3123,6 +3327,175 @@ function updateDeviceImageStatic(state, frontValue, backValue, responseData) {
             controlBtn.dataset.imageId = resolvedFrontId;
         }
 
+        deviceCard.querySelectorAll('[data-device]').forEach(function (el) {
+            el.dataset.device = JSON.stringify(deviceInfo);
+        });
+    }
+}
+
+        // 修改车辆类型：图片下方直接展示小胶囊下拉框，切换时弹出自定义二次确认弹窗
+function setDeviceCarTypeMessage(message, type = '') {
+    const msg = document.getElementById('deviceCarTypeMessage');
+    if (!msg) return;
+    msg.className = 'modal-message' + (type ? ' ' + type : '');
+    msg.textContent = message || '';
+}
+
+function openDeviceCarTypeModal(selectEl) {
+    if (!selectEl) return;
+
+    const deviceCard = selectEl.closest('.device-card');
+    let deviceInfo = {};
+    try {
+        deviceInfo = JSON.parse(deviceCard ? (deviceCard.getAttribute('data-device') || '{}') : '{}');
+    } catch (e) {
+        deviceInfo = {};
+    }
+
+    const serialNumber = cleanMetaText(selectEl.dataset.serial || deviceInfo.serial_number || '');
+    const deviceName = cleanMetaText(selectEl.dataset.deviceName || deviceInfo.name || '');
+    const currentValue = normalizeCarTypeValue(selectEl.dataset.value || deviceInfo.car_type || '');
+    const nextValue = normalizeCarTypeValue(selectEl.value || '');
+
+    if (!serialNumber || !nextValue) {
+        selectEl.value = currentValue || '';
+        return;
+    }
+
+    if (nextValue === currentValue) {
+        return;
+    }
+
+    currentCarTypeEdit = {
+        selectEl,
+        deviceCard,
+        serialNumber,
+        deviceName,
+        currentValue,
+        nextValue
+    };
+
+    const oldLabel = getCarTypeLabel(currentValue);
+    const newLabel = getCarTypeLabel(nextValue);
+
+    document.getElementById('deviceCarTypeSerialText').textContent = serialNumber || '-';
+    document.getElementById('deviceCarTypeNameText').textContent = deviceName || '-';
+    document.getElementById('deviceCarTypeCurrentText').textContent = oldLabel;
+    document.getElementById('deviceCarTypeNextText').textContent = newLabel;
+    document.getElementById('deviceCarTypeSerial').value = serialNumber;
+    document.getElementById('deviceCarTypeCurrentValue').value = currentValue;
+    document.getElementById('deviceCarTypeNextValue').value = nextValue;
+
+    const confirmBox = document.getElementById('deviceCarTypeConfirmBox');
+    if (confirmBox) {
+        confirmBox.innerHTML = `请再次确认：是否将车辆类型从 <b>${escapeHtml(oldLabel)}</b> 切换为 <b>${escapeHtml(newLabel)}</b>？<br>确认后会直接写入设备配置。`;
+    }
+
+    const saveBtn = document.getElementById('deviceCarTypeSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '确认提交';
+    }
+
+    setDeviceCarTypeMessage('这是二次确认弹窗，取消会自动恢复原来的下拉选项。');
+    document.getElementById('deviceCarTypeModal').style.display = 'block';
+}
+
+function closeDeviceCarTypeModal(keepSelected = false) {
+    const state = currentCarTypeEdit;
+    if (!keepSelected && state && state.selectEl) {
+        state.selectEl.value = state.currentValue || '';
+    }
+
+    const modal = document.getElementById('deviceCarTypeModal');
+    if (modal) modal.style.display = 'none';
+    currentCarTypeEdit = null;
+}
+
+function submitDeviceCarTypeEdit() {
+    const state = currentCarTypeEdit;
+    const serialNumber = cleanMetaText(document.getElementById('deviceCarTypeSerial').value || (state && state.serialNumber));
+    const nextValue = normalizeCarTypeValue(document.getElementById('deviceCarTypeNextValue').value || (state && state.nextValue));
+    const saveBtn = document.getElementById('deviceCarTypeSaveBtn');
+
+    if (!serialNumber || !nextValue) {
+        setDeviceCarTypeMessage('缺少必要参数，无法提交。', 'error');
+        return;
+    }
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '提交中...';
+    }
+    setDeviceCarTypeMessage('正在保存车辆类型...');
+
+    fetch('https://open.rcwulian.cn/api/vehicle/modifDevicecfg_safe_transaction.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify({
+            action: 'save',
+            device_id: serialNumber,
+            car_type: Number(nextValue)
+        })
+    })
+        .then(response => response.json())
+        .then(response => {
+            if (response.code === 200) {
+                updateDeviceCarTypeStatic(serialNumber, nextValue);
+                setDeviceCarTypeMessage('车辆类型修改成功，当前卡片已更新。', 'success');
+                setTimeout(function () {
+                    closeDeviceCarTypeModal(true);
+                }, 650);
+            } else {
+                setDeviceCarTypeMessage('修改失败：' + (response.msg || '未知错误'), 'error');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '确认提交';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('车辆类型修改失败:', error);
+            setDeviceCarTypeMessage('请求失败，请稍后重试。', 'error');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '确认提交';
+            }
+        });
+}
+
+function updateDeviceCarTypeStatic(serialNumber, newValue) {
+    const nextValue = normalizeCarTypeValue(newValue);
+    const nextLabel = getCarTypeLabel(nextValue);
+    const selectEl = Array.from(document.querySelectorAll('.device-type-select'))
+        .find(el => String(el.dataset.serial) === String(serialNumber));
+    const deviceCard = selectEl ? selectEl.closest('.device-card') : (currentCarTypeEdit && currentCarTypeEdit.deviceCard);
+
+    if (selectEl) {
+        selectEl.dataset.value = nextValue;
+        selectEl.value = nextValue;
+        selectEl.title = '切换车辆类型';
+    }
+
+    const deviceIndex = allDevices.findIndex(device => String(device.serial_number) === String(serialNumber));
+    if (deviceIndex !== -1) {
+        allDevices[deviceIndex].car_type = Number(nextValue);
+    }
+
+    if (deviceCard) {
+        let deviceInfo = {};
+        try {
+            deviceInfo = JSON.parse(deviceCard.getAttribute('data-device') || '{}');
+        } catch (e) {
+            deviceInfo = {};
+        }
+        deviceInfo.car_type = Number(nextValue);
+        deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
+
+        // 修改配置/修改信息按钮里也有 data-device，顺手同步，避免点进去还是旧车辆类型。
         deviceCard.querySelectorAll('[data-device]').forEach(function (el) {
             el.dataset.device = JSON.stringify(deviceInfo);
         });

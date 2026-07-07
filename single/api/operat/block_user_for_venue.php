@@ -4,6 +4,7 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache');
 
 require_once '../Database.php';
+require_once __DIR__ . '/blacklist_protect.php';
 session_start();
 
 define('OPEN_INTERNAL_KEY', 'open_send_zego_internal_20260529_xxxxxxxx');
@@ -63,9 +64,6 @@ function call_open_send_zego_custom_msg($target_uid, $venue_id) {
     ];
 }
 
-/* ===== 受保护 UID ===== */
-$DENY_UIDS = [10001, 10107, 10130];
-
 /* ===== 登录校验 ===== */
 $session_token = $_COOKIE['session_token'] ?? null;
 
@@ -111,8 +109,12 @@ if ($uid < 1 || $venue_id < 1) {
     out(['code' => 1, 'msg' => '参数不完整']);
 }
 
-if (in_array($uid, $DENY_UIDS, true)) {
-    out(['code' => 1, 'msg' => "UID {$uid} 为受保护账号，禁止拉黑"]);
+if (blacklist_protect_is_uid($uid)) {
+    out([
+        'code' => 1,
+        'msg' => "UID {$uid} 为受保护账号，禁止拉黑",
+        'data' => ['uid' => $uid, 'protected' => 1]
+    ]);
 }
 
 if ($reason === '') {
