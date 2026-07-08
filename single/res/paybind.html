@@ -3,179 +3,655 @@
 <head>
   <meta charset="UTF-8">
   <title>绑定收款账号</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <style>
     :root {
-        --primary: #5b8cff;
-        --secondary: #7f8fa4;
-        --background-gradient-start: #f8f9ff;
-        --background-gradient-end: #f0f3ff;
-        --card-bg: #ffffff;
-        --border-color: #ddd;
-        --text-color: #333;
-        --shadow: 0 4px 24px rgba(91, 140, 255, 0.08);
-        --transition: all 0.3s ease;
+      --primary: #5b8cff;
+      --primary-dark: #3f73f5;
+      --primary-soft: #eef4ff;
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --line: #dfe7f3;
+      --line-strong: #c6d6ef;
+      --text: #152238;
+      --muted: #71809a;
+      --muted-light: #9aa8bd;
+      --success: #19a464;
+      --success-bg: #effaf4;
+      --success-line: #bfe9d1;
+      --warning: #b7791f;
+      --warning-bg: #fff8e8;
+      --warning-line: #ffe3a8;
+      --danger: #d92d20;
+      --danger-bg: #fff4f2;
+      --danger-line: #ffcfc8;
+      --shadow: 0 14px 36px rgba(20, 39, 76, 0.08);
+      --shadow-soft: 0 8px 20px rgba(32, 58, 102, 0.06);
+      --radius: 16px;
     }
 
     * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: "PingFang SC", system-ui;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     body {
-        background: linear-gradient(135deg, var(--background-gradient-start) 0%, var(--background-gradient-end) 100%);
-        padding: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        min-height: 100vh;
+      min-height: 100vh;
+      padding: 26px 16px calc(28px + env(safe-area-inset-bottom));
+      color: var(--text);
+      background: var(--bg);
     }
 
-    .container {
-        max-width: 800px;
-        width: 100%;
+    .page {
+      width: min(820px, 100%);
+      margin: 0 auto;
     }
 
     .card {
-        background: var(--card-bg);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: var(--shadow);
-        margin-bottom: 20px;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
     }
 
-    .card-title {
-        font-size: 24px;
-        color: var(--text-color);
-        font-weight: 600;
-        margin-bottom: 20px;
-        border-bottom: 2px solid var(--primary);
-        padding-bottom: 10px;
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid #edf1f7;
+      background: #fff;
+    }
+
+    .head-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .head-icon {
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-dark);
+      background: var(--primary-soft);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    h1 {
+      font-size: 23px;
+      line-height: 1.25;
+      font-weight: 800;
+      color: #10204a;
+      letter-spacing: -0.02em;
+    }
+
+    .sub-title {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .head-pill {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: var(--primary-dark);
+      background: #f4f7ff;
+      border: 1px solid #dce7ff;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .card-body {
+      padding: 22px 24px 24px;
+    }
+
+    .account-status {
+      display: none;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 13px 14px;
+      margin-bottom: 20px;
+      border-radius: 13px;
+      border: 1px solid transparent;
+    }
+
+    .account-status.show {
+      display: flex;
+    }
+
+    .status-icon {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 900;
+      margin-top: 1px;
+    }
+
+    .status-title {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .status-desc {
+      color: inherit;
+      font-size: 13px;
+      line-height: 1.55;
+      opacity: 0.9;
+    }
+
+    .account-status--bound {
+      color: #0d7043;
+      background: var(--success-bg);
+      border-color: var(--success-line);
+    }
+
+    .account-status--bound .status-icon {
+      color: #fff;
+      background: var(--success);
+    }
+
+    .account-status--empty {
+      color: #755015;
+      background: var(--warning-bg);
+      border-color: var(--warning-line);
+    }
+
+    .account-status--empty .status-icon {
+      color: var(--warning);
+      background: #fff0cc;
+    }
+
+    .account-status--error {
+      color: #991d15;
+      background: var(--danger-bg);
+      border-color: var(--danger-line);
+    }
+
+    .account-status--error .status-icon {
+      color: #fff;
+      background: var(--danger);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 17px 18px;
     }
 
     .field {
-        display: flex;
-        flex-direction: column;
-        margin-bottom: 16px;
-        font-size: 14px;
+      min-width: 0;
+    }
+
+    .field--full {
+      grid-column: 1 / -1;
     }
 
     .field label {
-        margin-bottom: 6px;
-        color: var(--secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: #34425f;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .optional {
+      color: var(--muted-light);
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .field input {
+      width: 100%;
+      height: 44px;
+      padding: 0 13px;
+      border: 1px solid var(--line-strong);
+      border-radius: 11px;
+      outline: none;
+      color: var(--text);
+      background: #fff;
+      font-size: 14px;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    .field input::placeholder {
+      color: #a8b3c7;
+    }
+
+    .field input:focus {
+      border-color: rgba(91, 140, 255, 0.8);
+      box-shadow: 0 0 0 4px rgba(91, 140, 255, 0.12);
+    }
+
+    .field input[readonly] {
+      cursor: default;
+    }
+
+    .field input.is-locked {
+      color: #4d5e79;
+      background: #f7f9fd;
+      border-color: #d5deed;
+    }
+
+    .form-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid #edf1f7;
+    }
+
+    .tips {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .submit-btn {
+      flex: 0 0 auto;
+      min-width: 146px;
+      height: 42px;
+      border: none;
+      border-radius: 11px;
+      color: #fff;
+      background: var(--primary);
+      box-shadow: var(--shadow-soft);
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease, background .16s ease, opacity .16s ease;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: var(--primary-dark);
+      box-shadow: 0 10px 22px rgba(91, 140, 255, 0.2);
+    }
+
+    .submit-btn:disabled {
+      cursor: not-allowed;
+      color: #7b879f;
+      background: #e7edf6;
+      box-shadow: none;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      right: 18px;
+      top: 18px;
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      box-shadow: 0 14px 34px rgba(16, 34, 77, 0.16);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+      transform: translateY(-8px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all .2s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      color: #0d7043;
+      background: #f4fff8;
+      border-color: var(--success-line);
+    }
+
+    .toast.error {
+      color: #a51e17;
+      background: #fff7f6;
+      border-color: var(--danger-line);
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 12px 10px calc(16px + env(safe-area-inset-bottom));
+        background: #f5f7fb;
+      }
+
+      .card {
+        border-radius: 15px;
+        box-shadow: 0 10px 26px rgba(20, 39, 76, 0.07);
+      }
+
+      .card-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 18px 16px 15px;
+      }
+
+      .head-left {
+        gap: 10px;
+      }
+
+      .head-icon {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+        border-radius: 11px;
+        font-size: 18px;
+      }
+
+      h1 {
+        font-size: 21px;
+      }
+
+      .sub-title {
+        font-size: 12px;
+      }
+
+      .head-pill {
+        width: fit-content;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      .card-body {
+        padding: 16px;
+      }
+
+      .account-status {
+        padding: 12px;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .status-icon {
+        width: 26px;
+        height: 26px;
+        flex-basis: 26px;
+      }
+
+      .status-title {
+        font-size: 13px;
+      }
+
+      .status-desc {
+        font-size: 12px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .field label {
+        font-size: 13px;
+      }
+
+      .field input {
+        height: 44px;
+        font-size: 14px;
+        border-radius: 10px;
+      }
+
+      .form-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-top: 18px;
+        padding-top: 16px;
+      }
+
+      .tips {
+        order: 2;
+        font-size: 12px;
+      }
+
+      .submit-btn {
+        order: 1;
         width: 100%;
-        padding: 8px;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-    }
+        min-width: 0;
+        height: 45px;
+      }
 
-    .field button {
-        background-color: var(--primary);
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-
-    .field button:hover {
-        background-color: #4a7bff;
-    }
-
-    .field button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
+      .toast {
+        top: auto;
+        right: 10px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        max-width: calc(100vw - 20px);
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="page">
     <div class="card">
-      <div class="card-title">绑定收款账号</div>
-      <form id="bindForm">
-        <div class="field">
-          <label>账号类型</label>
-          <input type="text" id="account_type" name="account_type" value="银行卡" readonly>
+      <div class="card-head">
+        <div class="head-left">
+          <div class="head-icon">¥</div>
+          <div>
+            <h1>绑定收款账号</h1>
+            <div class="sub-title">用于提现打款，绑定后仅展示，不能重复提交。</div>
+          </div>
         </div>
-        <div class="field">
-          <label>账户姓名</label>
-          <input type="text" id="account_name" name="account_name" required>
+        <div class="head-pill">银行卡收款</div>
+      </div>
+
+      <div class="card-body">
+        <div id="accountStatus" class="account-status">
+          <div class="status-icon" id="statusIcon">!</div>
+          <div>
+            <div class="status-title" id="statusTitle"></div>
+            <div class="status-desc" id="statusDesc"></div>
+          </div>
         </div>
-        <div class="field">
-          <label>提现卡号</label>
-          <input type="text" id="withdrawal_account" name="withdrawal_account" required>
-        </div>
-        <div class="field">
-          <label>银行名称</label>
-          <input type="text" id="bank_name" name="bank_name" required>
-        </div>
-        <div class="field">
-          <label>银行行号（可选）</label>
-          <input type="text" id="bank_number" name="bank_number">
-        </div>
-        <div class="field">
-          <label>备注（可选）</label>
-          <input type="text" id="remarks" name="remarks">
-        </div>
-        <div class="field">
-          <button type="submit" id="submitBtn">提交绑定</button>
-        </div>
-      </form>
+
+        <form id="bindForm" autocomplete="off">
+          <div class="form-grid">
+            <div class="field">
+              <label for="account_type">账号类型</label>
+              <input type="text" id="account_type" name="account_type" value="银行卡" readonly>
+            </div>
+
+            <div class="field">
+              <label for="account_name">账户姓名</label>
+              <input type="text" id="account_name" name="account_name" placeholder="请输入银行卡开户姓名" required>
+            </div>
+
+            <div class="field field--full">
+              <label for="withdrawal_account">提现卡号</label>
+              <input type="text" id="withdrawal_account" name="withdrawal_account" placeholder="请输入银行卡号" inputmode="numeric" required>
+            </div>
+
+            <div class="field">
+              <label for="bank_name">银行名称</label>
+              <input type="text" id="bank_name" name="bank_name" placeholder="例如：中国工商银行" required>
+            </div>
+
+            <div class="field">
+              <label for="bank_number">银行行号 <span class="optional">可选</span></label>
+              <input type="text" id="bank_number" name="bank_number" placeholder="不清楚可留空" inputmode="numeric">
+            </div>
+
+            <div class="field field--full">
+              <label for="remarks">备注 <span class="optional">可选</span></label>
+              <input type="text" id="remarks" name="remarks" placeholder="可填写开户支行或其他备注">
+            </div>
+          </div>
+
+          <div class="form-footer">
+            <div class="tips">提交前请核对账户姓名、卡号和银行名称。已绑定时页面会直接展示信息，不再弹出确认框。</div>
+            <button type="submit" id="submitBtn" class="submit-btn">提交绑定</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
+  <div id="toast" class="toast"></div>
+
   <script>
+    const API_URL = 'https://open.rcwulian.cn/api/pay/BindPaymentAccount.php';
     const form = document.getElementById('bindForm');
     const submitBtn = document.getElementById('submitBtn');
+    const statusBox = document.getElementById('accountStatus');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusTitle = document.getElementById('statusTitle');
+    const statusDesc = document.getElementById('statusDesc');
+    const toast = document.getElementById('toast');
 
-    // 页面加载时检查是否已绑定
-    fetch('https://open.rcwulian.cn/api/pay/BindPaymentAccount.php')
-      .then(res => res.json())
-      .then(data => {
+    const fields = {
+      account_type: document.getElementById('account_type'),
+      account_name: document.getElementById('account_name'),
+      withdrawal_account: document.getElementById('withdrawal_account'),
+      bank_name: document.getElementById('bank_name'),
+      bank_number: document.getElementById('bank_number'),
+      remarks: document.getElementById('remarks')
+    };
+
+    let isBound = false;
+    let toastTimer = null;
+
+    function showStatus(type, title, desc) {
+      statusBox.className = `account-status account-status--${type} show`;
+      statusIcon.textContent = type === 'bound' ? '✓' : (type === 'error' ? '!' : 'i');
+      statusTitle.textContent = title || '';
+      statusDesc.textContent = desc || '';
+    }
+
+    function showToast(message, type = 'success') {
+      if (!message) return;
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      toastTimer = setTimeout(() => {
+        toast.className = `toast ${type}`;
+      }, 2200);
+    }
+
+    function setFormReadonly(readonly) {
+      Object.keys(fields).forEach(key => {
+        fields[key].readOnly = key === 'account_type' ? true : readonly;
+        fields[key].classList.toggle('is-locked', readonly || key === 'account_type');
+      });
+
+      submitBtn.disabled = readonly;
+      submitBtn.textContent = readonly ? '已绑定，不可重复提交' : '提交绑定';
+    }
+
+    function fillForm(record) {
+      record = record || {};
+      fields.account_type.value = record.account_type || '银行卡';
+      fields.account_name.value = record.account_name || '';
+      fields.withdrawal_account.value = record.withdrawal_account || '';
+      fields.bank_name.value = record.bank_name || '';
+      fields.bank_number.value = record.bank_number || '';
+      fields.remarks.value = record.remarks || '';
+    }
+
+    async function loadBinding() {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '正在读取...';
+
+      try {
+        const res = await fetch(API_URL, { credentials: 'include' });
+        const data = await res.json();
+
         if (data.code === 0 && data.data) {
-          // 自动填充字段
-          document.getElementById('account_type').value = data.data.account_type || '银行卡';
-          document.getElementById('account_name').value = data.data.account_name || '';
-          document.getElementById('withdrawal_account').value = data.data.withdrawal_account || '';
-          document.getElementById('bank_name').value = data.data.bank_name || '';
-          document.getElementById('bank_number').value = data.data.bank_number || '';
-          document.getElementById('remarks').value = data.data.remarks || '';
-
-          // 禁用表单
-          document.querySelectorAll('#bindForm input').forEach(el => el.disabled = true);
-          submitBtn.disabled = true;
-
-          alert('已绑定账号，不能再次绑定');
+          isBound = true;
+          fillForm(data.data);
+          setFormReadonly(true);
+          showStatus('bound', '已绑定收款账号', '当前收款信息已自动展示，仅供查看。');
+          return;
         }
-      });
 
-    // 首次提交绑定
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      const formData = new FormData(form);
-      fetch('https://open.rcwulian.cn/api/pay/BindPaymentAccount.php', {
-        method: 'POST',
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
         if (data.code === 0) {
-          alert('绑定成功');
-          location.reload();
-        } else {
-          alert('绑定失败：' + data.msg);
+          isBound = false;
+          setFormReadonly(false);
+          showStatus('empty', '尚未绑定收款账号', '请填写银行卡收款信息，提交后会自动切换为只读展示。');
+          return;
         }
-      })
-      .catch(err => {
-        alert('提交失败，请稍后再试');
-        console.error(err);
-      });
+
+        isBound = false;
+        setFormReadonly(false);
+        showStatus('error', '读取绑定状态失败', data.msg || '请刷新页面后重试。');
+      } catch (err) {
+        console.error('读取绑定信息失败:', err);
+        isBound = false;
+        setFormReadonly(false);
+        showStatus('error', '读取绑定状态失败', '网络异常或接口返回异常，请稍后再试。');
+      }
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (isBound) return;
+
+      const formData = new FormData(form);
+      submitBtn.disabled = true;
+      submitBtn.textContent = '正在提交...';
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        const data = await res.json();
+
+        if (data.code === 0) {
+          isBound = true;
+          setFormReadonly(true);
+          showStatus('bound', '绑定成功', '收款账号已绑定，当前页面已切换为只读展示。');
+          showToast('绑定成功，已展示当前账号信息');
+        } else if (data.code === 1002) {
+          showToast('账号已绑定，已为你读取当前信息', 'success');
+          await loadBinding();
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '提交绑定';
+          showStatus('error', '绑定失败', data.msg || '请核对信息后重试。');
+          showToast(data.msg || '绑定失败，请稍后重试', 'error');
+        }
+      } catch (err) {
+        console.error('提交绑定失败:', err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = '提交绑定';
+        showStatus('error', '提交失败', '网络异常或接口返回异常，请稍后再试。');
+        showToast('提交失败，请稍后再试', 'error');
+      }
     });
+
+    loadBinding();
   </script>
 </body>
 </html>

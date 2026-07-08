@@ -143,7 +143,7 @@ $database->close();
     }
 
     .wrap{
-      max-width: 420px; /* 手机看着像App页面 */
+      width: min(1280px, calc(100vw - 32px));
       margin: 0 auto;
     }
 
@@ -160,6 +160,7 @@ $database->close();
       display:flex;
       gap:10px;
       justify-content:center;
+      width: 100%;
       padding: 10px;
       background: rgba(255,255,255,.7);
       border: 1px solid rgba(0,0,0,.06);
@@ -196,9 +197,9 @@ $database->close();
     }
 
     .card-container{
-      display:flex;
-      flex-direction: column;
-      gap: 12px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
     }
 
     .card{
@@ -223,13 +224,28 @@ $database->close();
       color: #0f172a;
     }
 
-    /* 大一点屏幕（比如横屏/平板）再变两列 */
-    @media (min-width: 520px){
-      .wrap{ max-width: 760px; }
+    /* 平板两列，桌面三列，大屏四列，尽量铺开页面 */
+    @media (min-width: 640px){
       .card-container{
-        display:grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1100px){
+      .wrap{
+        width: min(1320px, calc(100vw - 40px));
+      }
+      .card-container{
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1500px){
+      .wrap{
+        width: min(1480px, calc(100vw - 48px));
+      }
+      .card-container{
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
     }
   </style>
