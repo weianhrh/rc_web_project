@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>拉黑保护名单</title>
+  <title>截屏录屏白名单</title>
   <style>
     :root{
       --primary:#5b8cff;
@@ -81,16 +81,16 @@
 <body>
 <div class="container">
   <div class="card">
-    <div class="card-title">拉黑保护名单</div>
+    <div class="card-title">截屏录屏白名单</div>
     <div class="page-tabs">
       <a href="black_user_gmt.html">拉黑用户</a>
       <a href="venue_mute_records.html">禁言用户</a>
-      <a href="blacklist_protect.html" class="active">拉黑保护</a>
-      <a href="screen_permission_whitelist.html">截屏录屏</a>
+      <a href="blacklist_protect.html">拉黑保护</a>
+      <a href="screen_permission_whitelist.html" class="active">截屏录屏</a>
     </div>
 
     <div class="tip" id="tipText">
-      这里维护的是“禁止被拉黑”的 UID 名单。名单写在后端 txt 中，拉黑弹窗和拉黑接口都会读取同一个配置，避免前端改了但后端没拦住。
+      这里维护的是“允许截屏/录屏”的 UID 白名单。后台通过 rcwulian.cn 站内接口读写 /www/wwwroot/rcwulian.cn/app/user/car/screen_permission_uids.txt，App 接口也读取这一份，不再写死 UID。
     </div>
 
     <div class="form-card" id="addArea">
@@ -98,8 +98,8 @@
         <input id="uidInput" class="input" type="number" inputmode="numeric" autocomplete="off" placeholder="输入用户 UID" />
         <div id="uidSuggest" class="suggest" hidden></div>
       </div>
-      <input id="remarkInput" class="input" maxlength="80" placeholder="备注，例如：官方巡查 / 系统账号，可留空" />
-      <button id="btnAdd" class="btn btn-primary">添加保护</button>
+      <input id="remarkInput" class="input" maxlength="80" placeholder="备注，例如：官方巡查 / 内部测试 / 售后账号，可留空" />
+      <button id="btnAdd" class="btn btn-primary">添加权限</button>
     </div>
 
     <div class="toolbar">
@@ -115,8 +115,8 @@
 
 <div class="modal" id="deleteModal" aria-hidden="true" role="dialog">
   <div class="modal-content" role="document">
-    <div class="modal-title">确认移除保护？</div>
-    <div class="modal-text" id="deleteText">移除后，该 UID 可以被正常拉黑。</div>
+    <div class="modal-title">确认移除权限？</div>
+    <div class="modal-text" id="deleteText">移除后，该 UID 将无法执行截屏/录屏。</div>
     <div class="modal-actions">
       <button class="btn btn-outline" data-close>取消</button>
       <button class="btn btn-danger" id="confirmDelete">确认移除</button>
@@ -129,7 +129,7 @@
 <script>
   const API_BASE = '/api/operat';
   const API = {
-    PROTECT: API_BASE + '/blacklist_protect.php',
+    SCREEN_PERMISSION: API_BASE + '/screen_permission_whitelist.php',
     SEARCH_USER: API_BASE + '/search_user.php'
   };
 
@@ -171,7 +171,7 @@
   }
 
   async function apiPost(action, data){
-    const resp = await fetch(API.PROTECT, {
+    const resp = await fetch(API.SCREEN_PERMISSION, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -185,7 +185,7 @@
   async function loadList(){
     $('#list').innerHTML = '<div class="loading">加载中…</div>';
     try{
-      const resp = await fetch(API.PROTECT + '?action=list', { credentials: 'include' });
+      const resp = await fetch(API.SCREEN_PERMISSION + '?action=list', { credentials: 'include' });
       const json = await resp.json();
       if(json.code !== 0) throw new Error(json.msg || '加载失败');
       const data = json.data || {};
@@ -202,7 +202,7 @@
   function renderPermission(){
     $('#addArea').style.display = state.canWrite ? 'grid' : 'none';
     if(!state.canWrite){
-      $('#tipText').textContent = '当前账号只能查看拉黑保护名单，不能修改。拉黑接口仍会按这个名单自动拦截。';
+      $('#tipText').textContent = '当前账号只能查看截屏录屏白名单，不能修改。名单统一来自 /www/wwwroot/rcwulian.cn/app/user/car/screen_permission_uids.txt。';
     }
   }
 
@@ -219,7 +219,7 @@
     }
 
     if(!list.length){
-      wrap.innerHTML = '<div class="empty">暂无拉黑保护 UID</div>';
+      wrap.innerHTML = '<div class="empty">暂无截屏录屏白名单 UID</div>';
       return;
     }
 
@@ -233,7 +233,7 @@
           </div>
           <div class="remark ${remark ? '' : 'empty'}">${remark ? '备注：' + escapeHTML(remark) : '暂无备注'}</div>
           <div class="actions">
-            ${state.canWrite ? `<button class="btn btn-danger" data-delete="${uid}">移除保护</button>` : ''}
+            ${state.canWrite ? `<button class="btn btn-danger" data-delete="${uid}">移除权限</button>` : ''}
           </div>
         </div>
       `;
@@ -242,7 +242,7 @@
     $$('[data-delete]').forEach(btn => {
       btn.addEventListener('click', () => {
         state.pendingDeleteUid = Number(btn.getAttribute('data-delete'));
-        $('#deleteText').textContent = `确定把 UID ${state.pendingDeleteUid} 从拉黑保护名单移除吗？移除后该用户可以被正常拉黑。`;
+        $('#deleteText').textContent = `确定把 UID ${state.pendingDeleteUid} 从截屏录屏白名单移除吗？移除后该用户将无法执行截屏/录屏。`;
         openModal('#deleteModal');
       });
     });
@@ -264,7 +264,7 @@
     uidEl.classList.remove('invalid');
     try{
       const json = await apiPost('add', { uid, remark });
-      toast(json.msg || '已添加');
+      toast(json.msg || '已添加权限');
       uidEl.value = '';
       remarkEl.value = '';
       await loadList();
@@ -278,7 +278,7 @@
     if(!uid){ closeModal('#deleteModal'); return; }
     try{
       const json = await apiPost('delete', { uid });
-      toast(json.msg || '已移除');
+      toast(json.msg || '已移除权限');
       closeModal('#deleteModal');
       state.pendingDeleteUid = 0;
       await loadList();
