@@ -36,7 +36,7 @@
         } 
  
         .container { 
-            max-width: 600px; 
+            max-width: 680px; 
             width: 100%; 
         } 
  
@@ -272,6 +272,93 @@
 .shoot-group .form-field{ margin-bottom: 12px; }
 .shoot-group .form-field:last-child{ margin-bottom: 0; }
 
+
+/* ✅ 配置复制/粘贴分组：压缩高度，只允许相同 car_type 的配置粘贴保存 */
+.copy-paste-group{
+  border: 1px solid rgba(91,140,255,0.28);
+  background: linear-gradient(180deg, rgba(91,140,255,0.055), rgba(91,140,255,0.025));
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 20px 0 18px;
+}
+.copy-paste-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+}
+.copy-paste-title{
+  font-size: 14px;
+  color: var(--primary);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.copy-paste-tip{
+  font-size: 12px;
+  color: #7f8fa4;
+  line-height: 1.55;
+  margin-top: 4px;
+}
+.copy-paste-badge{
+  flex:0 0 auto;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid rgba(91,140,255,0.25);
+  color:var(--primary);
+  font-size:12px;
+  line-height:1;
+  white-space:nowrap;
+}
+#config-paste-input{
+  width: 100%;
+  min-height: 74px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid rgba(127,143,164,0.32);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #333;
+  background: #fff;
+  outline: none;
+}
+#config-paste-input:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(91,140,255,0.12);
+}
+.copy-paste-actions{
+  display: flex;
+  justify-content:flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.copy-paste-actions .submit-btn{
+  width: auto;
+  min-width: 112px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 7px;
+}
+.copy-paste-status{
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #7f8fa4;
+  word-break: break-all;
+}
+.copy-paste-status.ok{ color: #16a34a; }
+.copy-paste-status.err{ color: #dc2626; }
+@media (max-width: 640px){
+  .container{ max-width: 100%; }
+  .copy-paste-header{ display:block; }
+  .copy-paste-badge{ display:inline-block; margin-top:8px; }
+  .copy-paste-actions{ justify-content:stretch; }
+  .copy-paste-actions .submit-btn{ flex: 1 1 100%; }
+}
+
     </style> 
 </head> 
  
@@ -288,24 +375,24 @@
                 <div class="form-field"> 
                     <label for="throttle_max">油门最大值</label> 
                     <input type="range" id="throttle_max_range" min="0" max="100" oninput="updateThrottleMaxValue(this.value)">   
-                    <input type="number" id="throttle_max" name="throttle_max" readonly> 
+                    <input type="number" id="throttle_max" name="throttle_max" min="1500" max="2000" step="1"> 
                  
                 </div> 
                 <div class="form-field"> 
                     <label for="direction_mid">方向中位值</label> 
                     <input type="range" id="direction_mid_range" min="0" max="100" oninput="updateValue('direction_mid', this.value)">   
-                    <input type="number" id="direction_mid" name="direction_mid" readonly> 
+                    <input type="number" id="direction_mid" name="direction_mid" min="1000" max="2000" step="1"> 
                 </div> 
                 <div class="form-field" id="throttle-mid-field" style="display: none">
                     <label for="throttle_mid">油门中位值</label>
                     <input type="range" id="throttle_mid_range" min="0" max="100" oninput="updateThrottleMidValue(this.value)">
-                    <input type="number" id="throttle_mid" name="throttle_mid" readonly>
+                    <input type="number" id="throttle_mid" name="throttle_mid" min="1000" max="2000" step="1">
                 </div>
 
                 <div class="form-field"> 
                     <label for="throttle_min">油门最小值</label> 
                     <input type="range" id="throttle_min_range" min="0" max="100" oninput="updateThrottleMinValue(this.value)">   
-                    <input type="number" id="throttle_min" name="throttle_min" readonly> 
+                    <input type="number" id="throttle_min" name="throttle_min" min="1000" max="1500" step="1"> 
                     
                 </div> 
                 <div class="form-field radio-group"> 
@@ -366,7 +453,7 @@
                 </div>
 
 
-                <div class="form-field">
+                <div class="form-field" id="car-type-field" style="display:none;">
                     <label for="car_type">车辆类型</label>
                     <select id="car_type" name="car_type">
                         <option value="1">汽车</option>
@@ -405,6 +492,24 @@
                 </div>
      
 
+
+
+
+                <div class="copy-paste-group" id="config-copy-paste-group" style="display:none;">
+                    <div class="copy-paste-header">
+                        <div>
+                            <div class="copy-paste-title">配置复制 / 粘贴</div>
+                            <div class="copy-paste-tip">先复制同类型车辆配置，再粘贴保存；car_type 不一致会自动拦截。</div>
+                        </div>
+                        <span class="copy-paste-badge">仅同 car_type</span>
+                    </div>
+                    <textarea id="config-paste-input" placeholder="粘贴“复制当前配置”得到的 JSON 配置文本"></textarea>
+                    <div class="copy-paste-actions">
+                        <button type="button" class="submit-btn" id="copy-config-btn">复制当前配置</button>
+                        <button type="button" class="submit-btn" id="paste-save-btn">粘贴并保存</button>
+                    </div>
+                    <div class="copy-paste-status" id="config-paste-status"></div>
+                </div>
 
                 <button type="submit" class="submit-btn">保存修改</button> 
                 <button type="button" class="submit-btn" id="restore-default-btn">恢复默认</button> 
@@ -479,11 +584,82 @@ function mapFromRange(v){ return (v/100)*1000+1000; }
 function mapThrottleMidToRange(v){ return ((v-1000)/1000)*100; }
 function mapThrottleMidFromRange(v){ return (v/100)*1000+1000; }
 
+const BASE_NUMERIC_LIMITS = {
+  throttle_max:  { min: 1500, max: 2000, toRange: mapThrottleMaxToRange,  fromRange: mapThrottleMaxFromRange  },
+  direction_mid: { min: 1000, max: 2000, toRange: mapToRange,             fromRange: mapFromRange             },
+  throttle_mid:  { min: 1000, max: 2000, toRange: mapThrottleMidToRange,  fromRange: mapThrottleMidFromRange  },
+  throttle_min:  { min: 1000, max: 1500, toRange: mapThrottleMinToRange,  fromRange: mapThrottleMinFromRange  }
+};
+const BASE_NUMERIC_LABELS = {
+  throttle_max: '油门最大值',
+  direction_mid: '方向中位值',
+  throttle_mid: '油门中位值',
+  throttle_min: '油门最小值'
+};
+
+function clampBaseNumber(id, value) {
+  const rule = BASE_NUMERIC_LIMITS[id];
+  let n = Number(value);
+  if (!Number.isFinite(n)) n = Number(rule?.min || 0);
+  n = Math.round(n);
+  if (!rule) return n;
+  return Math.max(rule.min, Math.min(rule.max, n));
+}
+
+function setBaseNumberValue(id, value, shouldMarkDirty = true) {
+  const rule = BASE_NUMERIC_LIMITS[id];
+  const input = document.getElementById(id);
+  const range = document.getElementById(`${id}_range`);
+  if (!rule || !input) return;
+
+  const n = clampBaseNumber(id, value);
+  input.value = n;
+  if (range) range.value = rule.toRange(n);
+  if (shouldMarkDirty) markDirty(id);
+}
+
+function syncBaseNumberFromInput(id, clampNow = false) {
+  const rule = BASE_NUMERIC_LIMITS[id];
+  const input = document.getElementById(id);
+  const range = document.getElementById(`${id}_range`);
+  if (!rule || !input) return;
+
+  const raw = String(input.value || '').trim();
+  if (raw === '') {
+    if (clampNow) {
+      input.value = rule.min;
+      if (range) range.value = rule.toRange(rule.min);
+    }
+    markDirty(id);
+    return;
+  }
+
+  let n = Number(raw);
+  if (!Number.isFinite(n)) return;
+  n = Math.round(n);
+
+  if (clampNow) {
+    n = clampBaseNumber(id, n);
+    input.value = n;
+  } else if (n < rule.min || n > rule.max) {
+    // 正在输入时不强行打断；失焦/保存前会自动压回边界值。
+    markDirty(id);
+    return;
+  }
+
+  if (range) range.value = rule.toRange(n);
+  markDirty(id);
+}
+
+function normalizeBaseNumericInputs() {
+  Object.keys(BASE_NUMERIC_LIMITS).forEach(id => syncBaseNumberFromInput(id, true));
+}
+
 /* 输入更新 */
-function updateThrottleMaxValue(v){ document.getElementById('throttle_max').value = Math.round(mapThrottleMaxFromRange(v)); markDirty('throttle_max'); }
-function updateThrottleMinValue(v){ document.getElementById('throttle_min').value = Math.round(mapThrottleMinFromRange(v)); markDirty('throttle_min'); }
-function updateValue(id, v){ document.getElementById(id).value = Math.round(mapFromRange(v)); markDirty(id); }
-function updateThrottleMidValue(v){ document.getElementById('throttle_mid').value = Math.round(mapThrottleMidFromRange(v)); markDirty('throttle_mid'); }
+function updateThrottleMaxValue(v){ setBaseNumberValue('throttle_max', mapThrottleMaxFromRange(v)); }
+function updateThrottleMinValue(v){ setBaseNumberValue('throttle_min', mapThrottleMinFromRange(v)); }
+function updateValue(id, v){ setBaseNumberValue(id, mapFromRange(v)); }
+function updateThrottleMidValue(v){ setBaseNumberValue('throttle_mid', mapThrottleMidFromRange(v)); }
 function updateCooldownValue(v){ document.getElementById('cooldown').value = v; markDirty('cooldown'); }
 
 /** 根据角色与车种决定是否显示 CH1~CH6 容器 */
@@ -513,9 +689,15 @@ if (group) group.style.display = canEditShoot ? 'block' : 'none';
     el.querySelectorAll('input,select').forEach(x => x.disabled = !canEditShoot);
   });
 
+  // ✅ 油门中位值：role=1/2/3/4 都可见可输入，后端也会做范围兜底。
+const throttleMidField = document.getElementById('throttle-mid-field');
+if (throttleMidField) {
+  throttleMidField.style.display = 'flex';
+  throttleMidField.querySelectorAll('input,select,button').forEach(x => x.disabled = false);
+}
+
   // ✅ 仍然只有管理员可见
-// const adminOnlyIds = ['throttle-mid-field', 'fw-update-row', 'audio-source-field'];
-const adminOnlyIds = ['throttle-mid-field', 'fw-update-row', 'audio-source-field', 'achievement-field'];
+const adminOnlyIds = ['fw-update-row', 'audio-source-field', 'achievement-field'];
 
 adminOnlyIds.forEach(id => {
   const el = document.getElementById(id);
@@ -529,6 +711,21 @@ if (dt) {
   const admin = isPlatformAdmin();
   dt.style.display = admin ? 'flex' : 'none';
   dt.querySelectorAll('select,input').forEach(x => x.disabled = !admin);
+}
+
+// ✅ 车辆类型 + 配置复制/粘贴：仅平台管理员 role=1/2 可见可操作。
+// 加盟商/主播侧入口 vehicleslite.html 跳进来时不展示，避免误改 car_type 或乱粘贴配置。
+const carTypeField = document.getElementById('car-type-field');
+if (carTypeField) {
+  carTypeField.style.display = admin ? 'flex' : 'none';
+  carTypeField.querySelectorAll('select,input,button,textarea').forEach(x => x.disabled = !admin);
+}
+
+const copyPasteGroup = document.getElementById('config-copy-paste-group');
+if (copyPasteGroup) {
+  copyPasteGroup.style.display = admin ? 'block' : 'none';
+  copyPasteGroup.querySelectorAll('textarea,input,select,button').forEach(x => x.disabled = !admin);
+  if (!admin) setPasteStatus('');
 }
 
 }
@@ -616,17 +813,10 @@ function restoreDefaultValues() {
   const defaultDirection = 'true';
   const defaultThrottle  = 'true';
 
-  document.getElementById('throttle_max_range').value = mapThrottleMaxToRange(defaultThrottleMax);
-  document.getElementById('throttle_max').value = defaultThrottleMax;
-
-  document.getElementById('direction_mid_range').value = mapToRange(defaultDirectionMid);
-  document.getElementById('direction_mid').value = defaultDirectionMid;
-
-  document.getElementById('throttle_mid_range').value = mapThrottleMidToRange(defaultThrottleMid);
-  document.getElementById('throttle_mid').value = defaultThrottleMid;
-
-  document.getElementById('throttle_min_range').value = mapThrottleMinToRange(defaultThrottleMin);
-  document.getElementById('throttle_min').value = defaultThrottleMin;
+  setBaseNumberValue('throttle_max', defaultThrottleMax, false);
+  setBaseNumberValue('direction_mid', defaultDirectionMid, false);
+  setBaseNumberValue('throttle_mid', defaultThrottleMid, false);
+  setBaseNumberValue('throttle_min', defaultThrottleMin, false);
 
   document.querySelector(`input[name="direction"][value="${defaultDirection}"]`).checked = true;
   document.querySelector(`input[name="throttle"][value="${defaultThrottle}"]`).checked  = true;
@@ -649,6 +839,395 @@ modifyFormEl.addEventListener('change', (e) => {
     markDirty(el.name);
   }
 });
+
+Object.keys(BASE_NUMERIC_LIMITS).forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => syncBaseNumberFromInput(id, false));
+  el.addEventListener('change', () => syncBaseNumberFromInput(id, true));
+  el.addEventListener('blur', () => syncBaseNumberFromInput(id, true));
+});
+
+
+
+// ✅ 配置复制/粘贴：复制出来的文本带 car_type，粘贴保存前前端校验，后端也会二次校验
+const CONFIG_COPY_TYPE = 'rc_vehicle_control_settings';
+const CONFIG_COPY_VERSION = 1;
+const carTypeNameMap = {
+  1: '汽车',
+  2: '坦克',
+  3: '挖掘机',
+  4: '推土机',
+  5: '翻斗车',
+  6: '娃娃机',
+  7: '液压推土机',
+  8: '液压自卸车',
+  9: '液压挖掘机'
+};
+
+function getCarTypeName(v) {
+  const n = Number(v || 0);
+  return carTypeNameMap[n] ? `${carTypeNameMap[n]}(${n})` : `未知(${n || '-'})`;
+}
+
+function setPasteStatus(text, type = '') {
+  const el = document.getElementById('config-paste-status');
+  if (!el) return;
+  el.className = 'copy-paste-status' + (type ? ` ${type}` : '');
+  el.textContent = text || '';
+}
+
+function getNumberFromEl(id, fallback) {
+  const el = document.getElementById(id);
+  const raw = el ? el.value : '';
+  if (raw === '' || raw === null || raw === undefined) {
+    return BASE_NUMERIC_LIMITS[id] ? clampBaseNumber(id, fallback) : Number(fallback || 0);
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    return BASE_NUMERIC_LIMITS[id] ? clampBaseNumber(id, fallback) : Number(fallback || 0);
+  }
+  return BASE_NUMERIC_LIMITS[id] ? clampBaseNumber(id, n) : Math.round(n);
+}
+
+function getValueFromEl(id, fallback) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  return el.value === undefined || el.value === null ? fallback : el.value;
+}
+
+function getDbBoolFromRadio(name, fallback) {
+  const checked = getCheckedValue(name);
+  if (!checked) return fallback;
+  return uiBoolToDbBool(checked);
+}
+
+function buildCurrentChannelRaw(ch) {
+  const oldInfo = parseChannel(DEVICE_DATA?.[ch]);
+  const statusEl = document.querySelector(`input[name="${ch}_status"]:checked`);
+  const status = statusEl ? statusEl.value : oldInfo.status;
+  const max = getNumberFromEl(`${ch}_max`, oldInfo.max);
+  const min = getNumberFromEl(`${ch}_min`, oldInfo.min);
+  const mid = getNumberFromEl(`${ch}_mid`, oldInfo.mid);
+
+  return buildChannelString({
+    label: oldInfo.label || ch,
+    min,
+    max,
+    mid,
+    status
+  });
+}
+
+function collectCurrentFormConfigSnapshot() {
+  if (!DEVICE_DATA) throw new Error('设备配置还没有加载完成');
+  normalizeBaseNumericInputs();
+
+  const cfg = {
+    // 复制出来的 car_type 固定使用数据库加载值，避免未保存的车辆类型选择伪装成其他类型。
+    car_type: Number(DEVICE_DATA.car_type || 0),
+    direction_mid: getNumberFromEl('direction_mid', DEVICE_DATA.direction_mid),
+    throttle_mid: getNumberFromEl('throttle_mid', DEVICE_DATA.throttle_mid || 1500),
+    driver_type: Number(getValueFromEl('driver_type', DEVICE_DATA.driver_type || 0)),
+    throttle_max: getNumberFromEl('throttle_max', DEVICE_DATA.throttle_max),
+    throttle_min: getNumberFromEl('throttle_min', DEVICE_DATA.throttle_min),
+    direction: getDbBoolFromRadio('direction', DEVICE_DATA.direction),
+    throttle: getDbBoolFromRadio('throttle', DEVICE_DATA.throttle),
+    is_display: Number(getCheckedValue('is_display') || DEVICE_DATA.is_display || 0),
+    cooldown: getNumberFromEl('cooldown', DEVICE_DATA.cooldown || 100),
+    bullet_channel: String(getValueFromEl('bullet_channel', DEVICE_DATA.bullet_channel || 'C1')).toUpperCase(),
+    audio_source_type: Number(getValueFromEl('audio_source_type', DEVICE_DATA.audio_source_type || 0)),
+    is_show_achievements: Number(getCheckedValue('is_show_achievements') || DEVICE_DATA.is_show_achievements || 0)
+  };
+
+  channels.forEach(ch => {
+    cfg[ch] = buildCurrentChannelRaw(ch);
+  });
+
+  return cfg;
+}
+
+function buildCopyPayload() {
+  const cfg = collectCurrentFormConfigSnapshot();
+  const serialNumber = document.getElementById('device_id').value || '';
+
+  return {
+    type: CONFIG_COPY_TYPE,
+    version: CONFIG_COPY_VERSION,
+    copied_at: new Date().toISOString(),
+    source_serial_number: serialNumber,
+    source_name: document.getElementById('name').value || '',
+    car_type: Number(cfg.car_type || 0),
+    car_type_name: getCarTypeName(cfg.car_type),
+    config: cfg
+  };
+}
+
+function cleanPastedConfigText(text) {
+  let raw = String(text || '').trim();
+  if (raw.startsWith('```')) {
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
+  }
+  return raw;
+}
+
+function validateChannelRaw(ch, raw) {
+  if (typeof raw !== 'string') return false;
+  const reg = new RegExp(`^${ch}#\\d{3,4}-\\d{3,4}#(?:true|false)#\\d{3,4}$`, 'i');
+  return reg.test(raw.trim());
+}
+
+function parsePastedConfigText(text) {
+  const raw = cleanPastedConfigText(text);
+  if (!raw) throw new Error('请先粘贴配置文本');
+
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch (e) {
+    throw new Error('配置文本不是合法 JSON，请使用“复制当前配置”生成的文本');
+  }
+
+  if (!payload || payload.type !== CONFIG_COPY_TYPE || !payload.config || typeof payload.config !== 'object') {
+    throw new Error('配置格式不正确：不是本页面复制出来的设备配置');
+  }
+
+  const sourceCarType = Number(payload.car_type || payload.config.car_type || 0);
+  const currentCarType = Number(DEVICE_DATA?.car_type || 0);
+
+  if (!sourceCarType) {
+    throw new Error('配置缺少 car_type，已拦截');
+  }
+
+  if (sourceCarType !== currentCarType) {
+    throw new Error(`car_type 不一致，已拦截：配置=${getCarTypeName(sourceCarType)}，当前设备=${getCarTypeName(currentCarType)}`);
+  }
+
+  if (payload.config.car_type !== undefined && Number(payload.config.car_type) !== sourceCarType) {
+    throw new Error('配置内部 car_type 与外层 car_type 不一致，已拦截');
+  }
+
+  Object.keys(BASE_NUMERIC_LIMITS).forEach(field => {
+    if (payload.config[field] === undefined || payload.config[field] === null || payload.config[field] === '') return;
+    const rule = BASE_NUMERIC_LIMITS[field];
+    const n = Number(payload.config[field]);
+    if (!Number.isFinite(n) || n < rule.min || n > rule.max) {
+      throw new Error(`${BASE_NUMERIC_LABELS[field] || field} 超出允许范围 ${rule.min}-${rule.max}，已拦截`);
+    }
+  });
+
+  channels.forEach(ch => {
+    if (payload.config[ch] !== undefined && !validateChannelRaw(ch, payload.config[ch])) {
+      throw new Error(`${ch.toUpperCase()} 格式不正确，已拦截`);
+    }
+  });
+
+  return { payload, sourceCarType, currentCarType };
+}
+
+function previewPastedConfig() {
+  const input = document.getElementById('config-paste-input');
+  if (!input || !input.value.trim()) {
+    setPasteStatus('');
+    return null;
+  }
+
+  try {
+    const parsed = parsePastedConfigText(input.value);
+    const from = parsed.payload.source_serial_number ? `来源设备：${parsed.payload.source_serial_number}，` : '';
+    setPasteStatus(`${from}car_type 校验通过：${getCarTypeName(parsed.sourceCarType)}，可以粘贴保存。`, 'ok');
+    return parsed;
+  } catch (e) {
+    setPasteStatus(e.message || '配置校验失败', 'err');
+    return null;
+  }
+}
+
+function addPasteChanged(data, key, newValue, oldValue) {
+  if (newValue === undefined || newValue === null || newValue === '') return;
+  if (!sameValue(newValue, oldValue)) data[key] = newValue;
+}
+
+function addPasteNumberChanged(data, key, rawValue, oldValue) {
+  if (rawValue === undefined || rawValue === null || rawValue === '') return;
+  const n = Number(rawValue);
+  if (!Number.isFinite(n)) return;
+  addPasteChanged(data, key, Math.round(n), oldValue);
+}
+
+function normalizeBoolString(v, fallback) {
+  if (v === 'true' || v === true) return 'true';
+  if (v === 'false' || v === false) return 'false';
+  return fallback;
+}
+
+function buildPasteSaveData(parsed) {
+  const cfg = parsed.payload.config || {};
+  const data = {
+    action: 'save',
+    device_id: document.getElementById('device_id').value,
+    paste_config: 1,
+    paste_source_car_type: parsed.sourceCarType,
+    paste_source_serial_number: String(parsed.payload.source_serial_number || '').slice(0, 64),
+    paste_version: Number(parsed.payload.version || CONFIG_COPY_VERSION)
+  };
+
+  // 粘贴配置不允许改当前设备 car_type，只拿 car_type 做校验。
+  addPasteNumberChanged(data, 'direction_mid', cfg.direction_mid, DEVICE_DATA.direction_mid);
+  addPasteNumberChanged(data, 'throttle_mid', cfg.throttle_mid, DEVICE_DATA.throttle_mid);
+  addPasteNumberChanged(data, 'throttle_max', cfg.throttle_max, DEVICE_DATA.throttle_max);
+  addPasteNumberChanged(data, 'throttle_min', cfg.throttle_min, DEVICE_DATA.throttle_min);
+  if (cfg.direction !== undefined) addPasteChanged(data, 'direction', normalizeBoolString(cfg.direction, DEVICE_DATA.direction), DEVICE_DATA.direction);
+  if (cfg.throttle !== undefined) addPasteChanged(data, 'throttle', normalizeBoolString(cfg.throttle, DEVICE_DATA.throttle), DEVICE_DATA.throttle);
+
+  if (isPlatformAdmin()) {
+    addPasteNumberChanged(data, 'driver_type', cfg.driver_type, DEVICE_DATA.driver_type);
+    if (cfg.audio_source_type !== undefined) {
+      addPasteChanged(data, 'audio_source_type', Number(cfg.audio_source_type) === 1 ? 1 : 0, DEVICE_DATA.audio_source_type);
+    }
+    if (cfg.is_show_achievements !== undefined) {
+      addPasteChanged(data, 'is_show_achievements', Number(cfg.is_show_achievements) === 1 ? 1 : 0, DEVICE_DATA.is_show_achievements);
+    }
+  }
+
+  if (isPlatformAdmin() || isSiteRole()) {
+    if (cfg.is_display !== undefined) {
+      addPasteChanged(data, 'is_display', Number(cfg.is_display) === 1 ? 1 : 0, DEVICE_DATA.is_display);
+    }
+    addPasteNumberChanged(data, 'cooldown', cfg.cooldown, DEVICE_DATA.cooldown);
+    const bullet = String(cfg.bullet_channel || '').toUpperCase();
+    if (/^C[1-6]$/.test(bullet)) {
+      addPasteChanged(data, 'bullet_channel', bullet, DEVICE_DATA.bullet_channel);
+    }
+  }
+
+  const canSubmitChannels = (() => {
+    const oldCarType = Number(DEVICE_DATA?.car_type || 0);
+    return isPlatformAdmin() || (isSiteRole() && (oldCarType === 7 || oldCarType === 9));
+  })();
+
+  if (canSubmitChannels) {
+    channels.forEach(ch => {
+      if (cfg[ch] === undefined) return;
+
+      const oldInfo = parseChannel(DEVICE_DATA[ch]);
+      const pastedInfo = parseChannel(String(cfg[ch]));
+
+      const newInfo = {
+        label: oldInfo.label || ch,
+        min: pastedInfo.min,
+        max: pastedInfo.max,
+        mid: pastedInfo.mid,
+        status: pastedInfo.status
+      };
+
+      if (newInfo.status !== oldInfo.status) data[`${ch}_status`] = newInfo.status;
+      if (String(Number(newInfo.max)) !== String(Number(oldInfo.max))) data[`${ch}_max`] = newInfo.max;
+      if (String(Number(newInfo.min)) !== String(Number(oldInfo.min))) data[`${ch}_min`] = newInfo.min;
+      if (String(Number(newInfo.mid)) !== String(Number(oldInfo.mid))) data[`${ch}_mid`] = newInfo.mid;
+    });
+  }
+
+  return data;
+}
+
+async function copyCurrentConfig() {
+  if (!isPlatformAdmin()) {
+    alert('无权限使用配置复制/粘贴');
+    return;
+  }
+
+  if (!DEVICE_DATA) {
+    alert('设备配置还没有加载完成');
+    return;
+  }
+
+  const input = document.getElementById('config-paste-input');
+  const payload = buildCopyPayload();
+  const text = JSON.stringify(payload, null, 2);
+  if (input) input.value = text;
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      setPasteStatus(`已复制当前配置：${getCarTypeName(payload.car_type)}。只能粘贴到相同 car_type 的设备。`, 'ok');
+    } else {
+      setPasteStatus('当前浏览器不允许自动写入剪贴板，配置已生成到输入框，请手动复制。', 'ok');
+    }
+  } catch (e) {
+    setPasteStatus('配置已生成到输入框，但浏览器拦截了自动复制，请手动复制。', 'ok');
+  }
+}
+
+async function pasteAndSaveConfig() {
+  if (!isPlatformAdmin()) {
+    alert('无权限使用配置复制/粘贴');
+    return;
+  }
+
+  if (!DEVICE_DATA) {
+    alert('设备配置还没有加载完成');
+    return;
+  }
+
+  const parsed = previewPastedConfig();
+  if (!parsed) return;
+
+  const data = buildPasteSaveData(parsed);
+  const metaKeys = ['action', 'device_id', 'paste_config', 'paste_source_car_type', 'paste_source_serial_number', 'paste_version'];
+  const changedKeys = Object.keys(data).filter(k => !metaKeys.includes(k));
+
+  if (!changedKeys.length) {
+    setPasteStatus('粘贴配置和当前设备配置一致，没有需要保存的字段。', 'ok');
+    return;
+  }
+
+  const fromText = parsed.payload.source_serial_number ? `来源设备 ${parsed.payload.source_serial_number}` : '粘贴配置';
+  if (!confirm(`${fromText} 的配置将写入当前设备。\n已校验 car_type：${getCarTypeName(parsed.sourceCarType)}。\n本次将提交 ${changedKeys.length} 个字段，确认保存吗？`)) {
+    return;
+  }
+
+  const btn = document.getElementById('paste-save-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '保存中...';
+  }
+
+  try {
+    const resp = await fetch('https://open.rcwulian.cn/api/vehicle/modifDevicecfg_safe_transaction.php', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    if (result.code === 200) {
+      alert(`粘贴保存成功，实际变更 ${result?.data?.changed_count ?? changedKeys.length} 项`);
+      localStorage.removeItem('deviceData');
+      location.reload();
+    } else {
+      setPasteStatus('粘贴保存失败：' + (result.msg || '未知错误'), 'err');
+      alert('粘贴保存失败：' + (result.msg || '未知错误'));
+    }
+  } catch(e) {
+    console.error('粘贴保存失败:', e);
+    setPasteStatus('粘贴保存失败：网络或服务异常', 'err');
+    alert('粘贴保存失败，请重试');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '粘贴并保存';
+    }
+  }
+}
+
+const copyConfigBtn = document.getElementById('copy-config-btn');
+if (copyConfigBtn) copyConfigBtn.addEventListener('click', copyCurrentConfig);
+
+const pasteSaveBtn = document.getElementById('paste-save-btn');
+if (pasteSaveBtn) pasteSaveBtn.addEventListener('click', pasteAndSaveConfig);
+
+const configPasteInput = document.getElementById('config-paste-input');
+if (configPasteInput) configPasteInput.addEventListener('input', previewPastedConfig);
 
 /** 页面加载：先取用户，再拉设备，再按规则显示 */
 /** 页面加载：先取用户，再拉设备，再按规则显示 */
@@ -705,17 +1284,12 @@ window.addEventListener('DOMContentLoaded',  async function () {
       achievementTrueEl.checked = isShowAchievements;
       achievementFalseEl.checked = !isShowAchievements;
     }
-    document.getElementById('direction_mid_range').value = ((DEVICE_DATA.direction_mid-1000)/1000)*100;
-    document.getElementById('direction_mid').value = DEVICE_DATA.direction_mid;
-
-    document.getElementById('throttle_mid_range').value = (((DEVICE_DATA.throttle_mid||1500)-1000)/1000)*100;
-    document.getElementById('throttle_mid').value = DEVICE_DATA.throttle_mid||1500;
+    setBaseNumberValue('direction_mid', DEVICE_DATA.direction_mid, false);
+    setBaseNumberValue('throttle_mid', DEVICE_DATA.throttle_mid || 1500, false);
 
     document.getElementById('driver_type').value = DEVICE_DATA.driver_type;
-    document.getElementById('throttle_max_range').value = ((DEVICE_DATA.throttle_max-1500)/500)*100;
-    document.getElementById('throttle_max').value = DEVICE_DATA.throttle_max;
-    document.getElementById('throttle_min_range').value = ((DEVICE_DATA.throttle_min-1000)/500)*100;
-    document.getElementById('throttle_min').value = DEVICE_DATA.throttle_min;
+    setBaseNumberValue('throttle_max', DEVICE_DATA.throttle_max, false);
+    setBaseNumberValue('throttle_min', DEVICE_DATA.throttle_min, false);
 
     document.querySelector(`input[name="direction"][value="${DEVICE_DATA.direction==='true'?'false':'true'}"]`).checked = true;
     document.querySelector(`input[name="throttle"][value="${DEVICE_DATA.throttle==='true'?'false':'true'}"]`).checked = true;
@@ -783,14 +1357,20 @@ document.getElementById('modify-form').addEventListener('submit', async function
           return;
         }
 
+        normalizeBaseNumericInputs();
+
         const data = {
           action: 'save',
           device_id: document.getElementById('device_id').value
         };
 
-        // ✅ 基础字段：只有用户动过，并且和 DEVICE_DATA 不一致时才提交
-        addChanged(data, 'car_type',       document.getElementById('car_type').value,       DEVICE_DATA.car_type);
+        // ✅ 基础驾驶参数：role=1/2/3/4 都可输入；只有用户动过，并且和 DEVICE_DATA 不一致时才提交
+        // ✅ 车辆类型 car_type 只允许平台管理员 role=1/2 修改，role=3/4 页面隐藏且不提交。
+        if (isPlatformAdmin()) {
+          addChanged(data, 'car_type', document.getElementById('car_type').value, DEVICE_DATA.car_type);
+        }
         addChanged(data, 'direction_mid',  document.getElementById('direction_mid').value,  DEVICE_DATA.direction_mid);
+        addChanged(data, 'throttle_mid',   document.getElementById('throttle_mid').value,   DEVICE_DATA.throttle_mid);
         addChanged(data, 'throttle_max',   document.getElementById('throttle_max').value,   DEVICE_DATA.throttle_max);
         addChanged(data, 'throttle_min',   document.getElementById('throttle_min').value,   DEVICE_DATA.throttle_min);
         addChanged(data, 'direction',      uiBoolToDbBool(getCheckedValue('direction')),    DEVICE_DATA.direction);
@@ -798,7 +1378,6 @@ document.getElementById('modify-form').addEventListener('submit', async function
 
         // ✅ 管理员字段
         if (isPlatformAdmin()) {
-          addChanged(data, 'throttle_mid',         document.getElementById('throttle_mid').value,         DEVICE_DATA.throttle_mid);
           addChanged(data, 'driver_type',          document.getElementById('driver_type').value,          DEVICE_DATA.driver_type);
           addChanged(data, 'audio_source_type',    document.getElementById('audio_source_type').value,    DEVICE_DATA.audio_source_type);
           addChanged(data, 'is_show_achievements', getCheckedValue('is_show_achievements'),              DEVICE_DATA.is_show_achievements);

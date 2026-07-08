@@ -432,7 +432,7 @@ function getDeviceStatusTag(device) {
       const deviceDataCfg = card.getAttribute('data-device-cfg');  
       const device = JSON.parse(deviceDataCfg);  
       const queryString = Object.keys(device).map(key  => `${encodeURIComponent(key)}=${encodeURIComponent(device[key])}`).join('&'); 
-      window.location.href  = `modify-deviceCfgTest.html?${queryString}`;  
+      window.location.href  = `modify-deviceCfgTest_safe_submit.html?${queryString}`;  
     } 
  function refreshDeviceList() {
   const btn = document.querySelector('.float-refresh-btn');

@@ -371,6 +371,93 @@ $allowedPayload = [
 $deniedPayload = [];
 $pendingUpdates = [];
 
+
+// ✅ 粘贴配置的后端兜底：只允许同 car_type 的配置被提交。
+// 前端会先校验一次，这里再校验一次，避免抓包或乱粘贴绕过。
+$isPasteConfig = ((int)($data['paste_config'] ?? 0) === 1);
+if ($isPasteConfig) {
+    $pasteSourceCarType = isset($data['paste_source_car_type']) && is_numeric($data['paste_source_car_type'])
+        ? (int)$data['paste_source_car_type']
+        : 0;
+
+    $pasteSourceSerial = trim((string)($data['paste_source_serial_number'] ?? ''));
+    $pasteVersion = (int)($data['paste_version'] ?? 0);
+
+    $allowedPayload['paste_config'] = 1;
+    $allowedPayload['paste_source_car_type'] = $pasteSourceCarType;
+    $allowedPayload['paste_source_serial_number'] = substr($pasteSourceSerial, 0, 64);
+    $allowedPayload['paste_version'] = $pasteVersion;
+
+    $rejectPaste = function ($msg, $field, $value) use (
+        $database,
+        $request_id,
+        $device_id,
+        $user,
+        $role_id,
+        $data,
+        &$allowedPayload,
+        &$deniedPayload,
+        $beforeSettings
+    ) {
+        $deniedPayload[$field] = [
+            'value' => $value,
+            'reason' => $msg
+        ];
+
+        $log_id = insertVehicleCfgOperationLog(
+            $database,
+            $request_id,
+            $device_id,
+            $user,
+            $role_id,
+            $data,
+            $allowedPayload,
+            $deniedPayload,
+            $beforeSettings,
+            $beforeSettings,
+            [],
+            1010,
+            $msg
+        );
+
+        echo json_encode([
+            'code' => 1010,
+            'msg'  => $msg,
+            'data' => [
+                'serial_number' => $device_id,
+                'action' => 'paste_config',
+                'log_id' => $log_id
+            ]
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    };
+
+    if (!$isAdmin) {
+        $rejectPaste('仅平台管理员可使用配置复制/粘贴', 'paste_config', $data['paste_config'] ?? null);
+    }
+
+    if ($pasteSourceCarType <= 0) {
+        $rejectPaste('粘贴配置缺少有效的 car_type，已拦截', 'paste_source_car_type', $data['paste_source_car_type'] ?? null);
+    }
+
+    if ($pasteSourceCarType !== $oldCarType) {
+        $rejectPaste(
+            '粘贴配置的 car_type 与当前设备不一致，已拦截',
+            'paste_source_car_type',
+            $pasteSourceCarType
+        );
+    }
+
+    // 粘贴配置只拿 car_type 做校验，不允许借粘贴动作改当前设备的车辆类型。
+    if (array_key_exists('car_type', $data) && (int)$data['car_type'] !== $oldCarType) {
+        $rejectPaste(
+            '粘贴配置不能修改当前设备 car_type，已拦截',
+            'car_type',
+            $data['car_type']
+        );
+    }
+}
+
 $denyField = function ($key, $reason) use (&$deniedPayload, $data) {
     if (array_key_exists($key, $data)) {
         $deniedPayload[$key] = [
@@ -413,12 +500,18 @@ $clampInt = function ($value, $min, $max) {
 $knownKeys = [
     'action' => true,
     'device_id' => true,
+    // 粘贴配置的元信息只用于校验/日志，不进入 UPDATE。
+    'paste_config' => true,
+    'paste_source_car_type' => true,
+    'paste_source_serial_number' => true,
+    'paste_version' => true,
 ];
 
 $commonIntFields = [
-    // 如果你不想让 role=3/4 改车辆类型，就把 car_type 从这里删掉，放到 $adminIntFields。
-    'car_type'      => [1, 9],
+    // role=1/2/3/4 都可改这些基础驾驶参数；前端可输入，后端再做范围兜底。
+    // car_type 已挪到 $adminIntFields，仅平台管理员可改，避免加盟商/主播误改车辆类型。
     'direction_mid' => [1000, 2000],
+    'throttle_mid'  => [1000, 2000],
     'throttle_max'  => [1500, 2000],
     'throttle_min'  => [1000, 1500],
 ];
@@ -439,7 +532,7 @@ foreach (['direction', 'throttle'] as $field) {
 }
 
 $adminIntFields = [
-    'throttle_mid' => [1000, 2000],
+    'car_type'     => [1, 9],
     'driver_type'  => [0, 1],
 ];
 
