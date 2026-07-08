@@ -463,6 +463,7 @@ const CLAW_SN_SET = new Set([
 let userCanEditImage = false;
 let userCanEditPhoto = false;
 let userCanEditStatus = false;
+let userCanDirectEditName = false;
 let initialPhotoValue = '';
 
 function escapeHtml(value) {
@@ -744,6 +745,7 @@ async function fetchCurrentUserRole() {
     userCanEditImage = (roleId === 1);
     userCanEditPhoto = (roleId === 1 || roleId === 2);
     userCanEditStatus = (roleId === 1 || roleId === 2);
+    userCanDirectEditName = (roleId === 1 || roleId === 2);
   } catch (err) {
     console.warn('获取用户角色失败:', err);
   }
@@ -968,7 +970,9 @@ bindMaxLen('share_name', '设备分享名称', 10);
       await initClawSection(device.serial_number);
     }
 
-    checkRejectedVehicleName(device.serial_number || device.device_id || '');
+    if (!userCanDirectEditName) {
+      checkRejectedVehicleName(device.serial_number || device.device_id || '');
+    }
 
   } else {
     appAlert('未获取到设备信息', '加载失败', 'error');

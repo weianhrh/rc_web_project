@@ -20,16 +20,16 @@ if (!$user || !$user['role_id']) {
     exit;
 }
 
-$role_id = $user['role_id'];
+$role_id = (int)$user['role_id'];
 $data = json_decode(file_get_contents('php://input'), true);
 if (!$data || !isset($data['device_id']) || !isset($data['name']) || !isset($data['share_name']) || !isset($data['image_device_serial']) || !isset($data['sharing_status'])) {
     echo json_encode(['code' => 1006, 'msg' => '缺少必要参数', 'data' => []]);
     exit;
 }
 
-$device_id = $data['device_id'];
-$name = $data['name'];
-$share_name = $data['share_name'];
+$device_id = trim((string)$data['device_id']);
+$name = trim((string)$data['name']);
+$share_name = trim((string)$data['share_name']);
 $image_device_serial = $data['image_device_serial'];
 $bk_image_device_serial = $data['bk_image_device_serial'] ?? '';
 $sharing_status = $data['sharing_status'];
@@ -150,6 +150,7 @@ function containsSensitiveWords($text, $words) {
 $words = loadSensitiveWords();
 $is_sensitive = false;
 $need_audit = false;
+$can_direct_modify_names = in_array($role_id, [1, 2], true);
 
 // ========== 名称审核处理 ==========
 function submitAudit($redis, $device_id, $field, $old, $new) {
@@ -171,6 +172,18 @@ function submitAudit($redis, $device_id, $field, $old, $new) {
     $property->setAccessible(true);
     $nativeRedis = $property->getValue($redis);
     $nativeRedis->sAdd('vehicle_name_audit_pool', $auditKey);
+}
+function clearNameAudit($redis, $device_id, $field) {
+    $auditKey = "vehicle_name_audit:{$device_id}:{$field}";
+    try {
+        $redis->delete($auditKey);
+        $nativeRedis = method_exists($redis, 'getNative') ? $redis->getNative() : null;
+        if ($nativeRedis) {
+            $nativeRedis->sRem('vehicle_name_audit_pool', $auditKey);
+        }
+    } catch (Exception $e) {
+        // 清理审核缓存失败不影响管理员直接修改成功
+    }
 }
 function resolveImageDeviceSerial(Database $database, string $inputValue): array {
     $inputValue = trim($inputValue);
@@ -230,29 +243,38 @@ function findDeviceInformationById(Database $database, string $id): ?array {
 
     return !empty($rows) ? $rows[0] : null;
 }
-// name 字段变更
-if ($name !== $old_name) {
-    $check = containsSensitiveWords($name, $words);
-    if (!$check['pass']) {
-        $is_sensitive = true;
-        $name = $old_name; // 敏感词：不提交审核，直接保留旧值
-    } else {
-        $need_audit = true;
-        submitAudit($redis, $device_id, 'name', $old_name, $name);
-        $name = $old_name; // 待审核期间仍显示旧值
+// name / share_name 字段变更
+// role_id 1/2 为后台管理/运营：名称直接落库，不进入审核池；role_id 3/4 保持原来的敏感词与审核流程。
+if ($can_direct_modify_names) {
+    if ($name !== $old_name) {
+        clearNameAudit($redis, $device_id, 'name');
     }
-}
+    if ($share_name !== $old_share_name) {
+        clearNameAudit($redis, $device_id, 'share_name');
+    }
+} else {
+    if ($name !== $old_name) {
+        $check = containsSensitiveWords($name, $words);
+        if (!$check['pass']) {
+            $is_sensitive = true;
+            $name = $old_name; // 敏感词：不提交审核，直接保留旧值
+        } else {
+            $need_audit = true;
+            submitAudit($redis, $device_id, 'name', $old_name, $name);
+            $name = $old_name; // 待审核期间仍显示旧值
+        }
+    }
 
-// share_name 字段变更
-if ($share_name !== $old_share_name) {
-    $check = containsSensitiveWords($share_name, $words);
-    if (!$check['pass']) {
-        $is_sensitive = true;
-        $share_name = $old_share_name; // 敏感词：不提交审核
-    } else {
-        $need_audit = true;
-        submitAudit($redis, $device_id, 'share_name', $old_share_name, $share_name);
-        $share_name = $old_share_name; // 待审核期间仍显示旧值
+    if ($share_name !== $old_share_name) {
+        $check = containsSensitiveWords($share_name, $words);
+        if (!$check['pass']) {
+            $is_sensitive = true;
+            $share_name = $old_share_name; // 敏感词：不提交审核
+        } else {
+            $need_audit = true;
+            submitAudit($redis, $device_id, 'share_name', $old_share_name, $share_name);
+            $share_name = $old_share_name; // 待审核期间仍显示旧值
+        }
     }
 }
 
@@ -340,6 +362,8 @@ echo json_encode([
     'code' => 0,
     'msg' => '设备信息修改成功',
     'data' => [
+        'name' => $name,
+        'share_name' => $share_name,
         'photo_url' => $photo_url,
         'image_device_serial' => $image_device_serial,
         'image_device_room_id' => $resolvedFrontImage['room_id'] ?? null,

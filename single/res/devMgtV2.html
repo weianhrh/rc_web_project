@@ -314,6 +314,67 @@ body {
     line-height: 1.35;
 }
 
+button.device-name {
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    text-align: left;
+}
+
+.device-name.device-name-editable {
+    min-width: 0;
+    max-width: min(260px, 100%);
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 5px 11px;
+    border: 1px solid #d8e3ff;
+    border-radius: 999px;
+    background: #f8fbff;
+    color: #355780;
+    cursor: pointer;
+    transition: var(--transition);
+    vertical-align: middle;
+}
+
+.device-name.device-name-editable:hover {
+    border-color: var(--primary);
+    color: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(91, 140, 255, 0.12);
+    background: #fff;
+}
+
+.device-name.device-name-editable:focus-visible {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.12);
+}
+
+.device-name-editable .device-name-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.device-name-editable .device-name-edit-icon {
+    flex: 0 0 auto;
+    color: var(--primary);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.name-field-helper {
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--text-light);
+}
+
 .device-status-badges {
     flex: 0 0 auto;
     max-width: 255px;
@@ -1505,6 +1566,33 @@ body {
     </div>
 </div>
 
+<!-- 小弹窗：修改设备名称 / 分享名称（role_id 1/2 直接保存） -->
+<div id="deviceNameModal" class="modal">
+    <div class="modal-content mini-modal-content">
+        <span class="field-modal-close" onclick="closeDeviceNameModal()">&times;</span>
+        <h2>修改设备名称</h2>
+        <div class="device-field-meta">
+            <div>设备序列号：<b id="deviceNameSerialText">-</b></div>
+        </div>
+        <input type="hidden" id="deviceNameSerial">
+        <div class="form-group">
+            <label for="deviceNameValue">设备名称</label>
+            <input type="text" id="deviceNameValue" maxlength="10" autocomplete="off" placeholder="最多10个字">
+            <div class="name-field-helper">展示在设备列表上方。</div>
+        </div>
+        <div class="form-group">
+            <label for="deviceShareNameValue">设备分享名称</label>
+            <input type="text" id="deviceShareNameValue" maxlength="10" autocomplete="off" placeholder="最多10个字">
+            <div class="name-field-helper">分享/展示名称，最多 10 个中文字。</div>
+        </div>
+        <div id="deviceNameMessage" class="modal-message"></div>
+        <div class="modal-actions">
+            <button type="button" class="ghost-modal-btn" onclick="closeDeviceNameModal()">取消</button>
+            <button type="button" class="modify-btn" id="deviceNameSaveBtn" onclick="submitDeviceNameEdit()">保存修改</button>
+        </div>
+    </div>
+</div>
+
 <!-- 小弹窗：修改车辆类型 -->
 <div id="deviceCarTypeModal" class="modal">
     <div class="modal-content mini-modal-content">
@@ -1840,7 +1928,28 @@ function buildCarTypeOptionsHtml(selectedValue) {
         let selectedVenueId = ''; 
         let allDevices = []; // 用于存储所有设备数据 
         let allVenues = [];  // 用于存储所有场地，给模糊搜索使用
+        let currentUserRoleId = 0;
+        let userCanDirectEditName = false;
+        let currentDeviceNameEdit = null;
         const banTimers = {};
+
+async function fetchCurrentUserRole() {
+    try {
+        const res = await fetch('https://open.rcwulian.cn/api/operat/get_current_user.php', { credentials: 'include' });
+        const result = await res.json();
+        currentUserRoleId = Number(result?.data?.role_id || 0);
+        userCanDirectEditName = currentUserRoleId === 1 || currentUserRoleId === 2;
+
+        // 如果角色信息比设备列表晚返回，重新渲染一次，让 role_id 1/2 的设备名称变成可点击。
+        if (allDevices.length) {
+            renderDevices();
+        }
+    } catch (err) {
+        console.warn('获取用户角色失败:', err);
+        currentUserRoleId = 0;
+        userCanDirectEditName = false;
+    }
+}
         // 监听场地选择事件 
 document.getElementById('venue_id').addEventListener('change', function () {
     switchVenue(this.value);
@@ -2115,6 +2224,17 @@ function displayDevices(devices) {
         const backImageId = cleanMetaText(device.bk_image_device_serial);
         const imagePillText = formatImagePillText(frontImageId, frontRoomId);
         const carTypeValue = normalizeCarTypeValue(device.car_type);
+        const displayName = escapeHtml(device.name || '-');
+        const deviceNameHtml = userCanDirectEditName
+            ? `<button type="button"
+                       class="device-name device-name-editable"
+                       data-serial="${escapeHtml(device.serial_number || '')}"
+                       title="点击修改设备名称和分享名称"
+                       aria-label="修改设备名称和分享名称">
+                    <span class="device-name-text">${displayName}</span>
+                    <i class="fas fa-pen device-name-edit-icon" aria-hidden="true"></i>
+               </button>`
+            : `<span class="device-name" title="${displayName}">${displayName}</span>`;
 
         card.innerHTML = `
             <div class="device-media">
@@ -2131,7 +2251,7 @@ function displayDevices(devices) {
             <div class="device-info">
                 <div class="device-head">
                     <div class="device-title-main">
-                        <span class="device-name" title="${escapeHtml(device.name || '-')}">${escapeHtml(device.name || '-')}</span>
+                        ${deviceNameHtml}
                     </div>
                     <div class="device-status-badges">
                         <span class="device-badge ${statusClass}">${device.status || '未知'}</span>
@@ -2224,6 +2344,13 @@ function displayDevices(devices) {
         card.querySelector('.violation-notice-btn').addEventListener('click', function () {
             sendViolationNotice(this.dataset.serial);
         });
+
+        const deviceNameBtn = card.querySelector('.device-name-editable');
+        if (deviceNameBtn) {
+            deviceNameBtn.addEventListener('click', function () {
+                openDeviceNameModal(this);
+            });
+        }
 
         const imagePill = card.querySelector('.device-image-pill');
         if (imagePill) {
@@ -3333,6 +3460,224 @@ function updateDeviceImageStatic(state, frontValue, backValue, responseData) {
     }
 }
 
+// role_id 1/2：点击设备名称，直接修改设备名称和分享名称
+function setDeviceNameMessage(message, type = '') {
+    const msg = document.getElementById('deviceNameMessage');
+    if (!msg) return;
+    msg.className = 'modal-message' + (type ? ' ' + type : '');
+    msg.textContent = message || '';
+}
+
+function getNameTextLen(str) {
+    return Array.from((str || '').trim()).length;
+}
+
+function trimNameToMax(str, maxLen = 10) {
+    return Array.from((str || '').trim()).slice(0, maxLen).join('');
+}
+
+function openDeviceNameModal(nameEl) {
+    if (!userCanDirectEditName) return;
+
+    const deviceCard = nameEl ? nameEl.closest('.device-card') : null;
+    let deviceInfo = {};
+    try {
+        deviceInfo = deviceCard ? JSON.parse(deviceCard.getAttribute('data-device') || '{}') : {};
+    } catch (e) {
+        deviceInfo = {};
+    }
+
+    const serialNumber = cleanMetaText(nameEl?.dataset?.serial || deviceInfo.serial_number || '');
+    if (!serialNumber) {
+        setDeviceNameMessage('缺少设备序列号，无法修改。', 'error');
+        return;
+    }
+
+    currentDeviceNameEdit = {
+        nameEl,
+        deviceCard,
+        deviceInfo,
+        serialNumber
+    };
+
+    document.getElementById('deviceNameSerialText').textContent = serialNumber || '-';
+    document.getElementById('deviceNameSerial').value = serialNumber;
+    document.getElementById('deviceNameValue').value = deviceInfo.name || '';
+    document.getElementById('deviceShareNameValue').value = deviceInfo.share_name || deviceInfo.name || '';
+
+    const saveBtn = document.getElementById('deviceNameSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '保存修改';
+    }
+
+    setDeviceNameMessage('role_id 1/2 保存后直接写入，不进入名称审核。');
+    document.getElementById('deviceNameModal').style.display = 'block';
+
+    setTimeout(function () {
+        const input = document.getElementById('deviceNameValue');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 30);
+}
+
+function closeDeviceNameModal() {
+    const modal = document.getElementById('deviceNameModal');
+    if (modal) modal.style.display = 'none';
+    currentDeviceNameEdit = null;
+}
+
+function normalizeNameInput(inputId) {
+    const el = document.getElementById(inputId);
+    if (!el) return '';
+    const fixed = trimNameToMax(el.value, 10);
+    if (el.value !== fixed) {
+        el.value = fixed;
+    }
+    return fixed;
+}
+
+function submitDeviceNameEdit() {
+    const state = currentDeviceNameEdit;
+    if (!state || !userCanDirectEditName) return;
+
+    const serialNumber = cleanMetaText(document.getElementById('deviceNameSerial').value || state.serialNumber || '');
+    const newName = normalizeNameInput('deviceNameValue');
+    const newShareName = normalizeNameInput('deviceShareNameValue');
+    const saveBtn = document.getElementById('deviceNameSaveBtn');
+
+    if (!serialNumber) {
+        setDeviceNameMessage('缺少设备序列号，无法保存。', 'error');
+        return;
+    }
+    if (!newName) {
+        setDeviceNameMessage('请输入设备名称。', 'error');
+        return;
+    }
+    if (!newShareName) {
+        setDeviceNameMessage('请输入设备分享名称。', 'error');
+        return;
+    }
+    if (getNameTextLen(newName) > 10 || getNameTextLen(newShareName) > 10) {
+        setDeviceNameMessage('设备名称和分享名称最多 10 个中文字。', 'error');
+        return;
+    }
+
+    const deviceInfo = state.deviceInfo || {};
+    const payload = {
+        device_id: serialNumber,
+        name: newName,
+        share_name: newShareName,
+        image_device_serial: deviceInfo.image_device_serial || '',
+        bk_image_device_serial: deviceInfo.bk_image_device_serial || '',
+        sharing_status: deviceInfo.sharing_status || '正在共享',
+        photo_url: deviceInfo.photo_url || '',
+        status: deviceInfo.status || ''
+    };
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+    }
+    setDeviceNameMessage('正在保存名称...');
+
+    fetch('https://open.rcwulian.cn/api/vehicle/modifyDevice.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json;charset=UTF-8'
+        },
+        body: JSON.stringify(payload)
+    })
+        .then(response => response.json())
+        .then(response => {
+            if (response.code === 0) {
+                updateDeviceNameStatic(serialNumber, response.data?.name || newName, response.data?.share_name || newShareName);
+                setDeviceNameMessage('保存成功，当前卡片已更新。', 'success');
+                setTimeout(closeDeviceNameModal, 650);
+                return;
+            }
+
+            // 理论上 role_id 1/2 不会返回 1009；如果登录过期或权限异常，这里直接显示后端原因。
+            setDeviceNameMessage('更新失败：' + (response.msg || '未知错误'), 'error');
+        })
+        .catch(error => {
+            console.error('设备名称更新失败:', error);
+            setDeviceNameMessage('请求失败，请稍后重试。', 'error');
+        })
+        .finally(() => {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存修改';
+            }
+        });
+}
+
+function updateDeviceNameStatic(serialNumber, newName, newShareName) {
+    const deviceIndex = allDevices.findIndex(device => String(device.serial_number) === String(serialNumber));
+    if (deviceIndex !== -1) {
+        allDevices[deviceIndex].name = newName;
+        allDevices[deviceIndex].share_name = newShareName;
+    }
+
+    const deviceCard = Array.from(document.querySelectorAll('.device-card')).find(function (card) {
+        try {
+            const info = JSON.parse(card.getAttribute('data-device') || '{}');
+            return String(info.serial_number) === String(serialNumber);
+        } catch (e) {
+            return false;
+        }
+    });
+
+    if (!deviceCard) return;
+
+    let deviceInfo = {};
+    try {
+        deviceInfo = JSON.parse(deviceCard.getAttribute('data-device') || '{}');
+    } catch (e) {
+        deviceInfo = {};
+    }
+    deviceInfo.name = newName;
+    deviceInfo.share_name = newShareName;
+    deviceCard.setAttribute('data-device', JSON.stringify(deviceInfo));
+
+    const nameNode = deviceCard.querySelector('.device-name');
+    if (nameNode) {
+        const nameTextNode = nameNode.querySelector('.device-name-text');
+        if (nameTextNode) {
+            nameTextNode.textContent = newName || '-';
+        } else {
+            nameNode.textContent = newName || '-';
+        }
+        nameNode.title = userCanDirectEditName ? '点击修改设备名称和分享名称' : (newName || '-');
+        if (nameNode.dataset) {
+            nameNode.dataset.serial = serialNumber;
+        }
+    }
+
+    const carTypeSelect = deviceCard.querySelector('.device-type-select');
+    if (carTypeSelect) {
+        carTypeSelect.dataset.deviceName = newName || '';
+    }
+
+    deviceCard.querySelectorAll('[data-device]').forEach(function (el) {
+        el.dataset.device = JSON.stringify(deviceInfo);
+    });
+}
+
+['deviceNameValue', 'deviceShareNameValue'].forEach(function (id) {
+    document.addEventListener('input', function (event) {
+        if (!event.target || event.target.id !== id) return;
+        const fixed = trimNameToMax(event.target.value, 10);
+        if (event.target.value !== fixed) {
+            event.target.value = fixed;
+            setDeviceNameMessage('设备名称和分享名称最多 10 个中文字。', 'error');
+        }
+    });
+});
+
         // 修改车辆类型：图片下方直接展示小胶囊下拉框，切换时弹出自定义二次确认弹窗
 function setDeviceCarTypeMessage(message, type = '') {
     const msg = document.getElementById('deviceCarTypeMessage');
@@ -3831,6 +4176,7 @@ function getBanEndTime(serialNumber) {
 
         // 页面加载时获取场地列表和第一页数据 
         window.onload = function () {
+          fetchCurrentUserRole();
           loadVenues();
         
         //   // === 状态恢复 ===
