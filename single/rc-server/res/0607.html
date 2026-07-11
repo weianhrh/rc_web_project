@@ -697,9 +697,6 @@ function checkPendingImages() {
                     alertShown = true;
 
                     if (confirmed) {
-                        if (window.parent !== window) {
-                            window.parent.postMessage({ type: 'review-module-change', system: 'rc', module: 'image' }, window.location.origin);
-                        }
                         window.location.href = "https://open.rcwulian.cn/res/peddingMain.html";
                     } else {
                         console.log("用户取消提醒");
@@ -764,9 +761,6 @@ function checkReportCount() {
 
 
 function goToReportReview() {
-    if (window.parent !== window) {
-        window.parent.postMessage({ type: 'review-module-change', system: 'rc', module: 'reports' }, window.location.origin);
-    }
     window.location.href = "https://open.rcwulian.cn/res/reporthand.html";
 }
 

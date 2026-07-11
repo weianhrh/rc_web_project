@@ -20,6 +20,25 @@ function logMessage_log($message) {
     file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
+/**
+ * 根据资费套餐同步介绍中的电池消耗数量。
+ * 只替换“消耗N电池”这一段，不改动介绍中的其他内容。
+ */
+function syncIntroductionBillingPlan($introduction, $billingPlan) {
+    $introduction = (string)$introduction;
+    $billingPlan = (int)$billingPlan;
+
+    if ($introduction === '' || $billingPlan <= 0) {
+        return $introduction;
+    }
+
+    return preg_replace(
+        '/消耗\s*\d+(?:\.\d+)?\s*电池/u',
+        '消耗' . $billingPlan . '电池',
+        $introduction
+    );
+}
+
 // 创建数据库连接
 $database = new Database();
 
@@ -105,6 +124,23 @@ if ($action === 'update' || $action === 'save') {
     // A. 存在：更新
     // ---------------------------------
     if (!empty($exists)) {
+        $oldRecord = $exists[0];
+
+        // 后端联动：资费套餐发生变化时，自动同步介绍里的“消耗N电池”。
+        // 即使前端仍提交旧介绍，也会以新套餐数字为准。
+        if ($billing_plan_raw !== '' && $billing_plan !== (int)$oldRecord['billing_plan']) {
+            $introSource = $product_introduction !== ''
+                ? $product_introduction
+                : (string)$oldRecord['product_introduction'];
+            $product_introduction = syncIntroductionBillingPlan($introSource, $billing_plan);
+
+            logMessage_log(
+                "套餐联动 serial_number={$serial_number} " .
+                "old_plan=" . (int)$oldRecord['billing_plan'] .
+                " new_plan={$billing_plan}"
+            );
+        }
+
         $sets = [];
         $params = [];
 
