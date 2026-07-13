@@ -68,10 +68,10 @@ $modules = $config['modules'];
           theme = doc.createElement('link');
           theme.id = 'review-workbench-theme';
           theme.rel = 'stylesheet';
-          theme.href = '/review/review-theme.css?v=20260711-1';
+          theme.href = '/review/review-theme.css?v=20260711-2';
           doc.head.appendChild(theme);
         }
-        doc.body.classList.add('kwx-legacy-page');
+        doc.body.classList.add('review-dark-page');
         const path = rcFrame.contentWindow.location.pathname;
         doc.body.classList.toggle('ai-patrol-page', path.endsWith('/res/0607.html'));
       } catch (error) {
