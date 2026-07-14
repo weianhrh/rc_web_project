@@ -864,7 +864,10 @@ user023968912_80039"></textarea>
           </div>
           <div class="actions">
             <button class="edit-btn" type="button" data-send="wifi">发送 WIFI 设置</button>
+            <button class="edit-btn secondary" type="button" id="btnResetWifiDefault">恢复默认WIFI配置</button>
+            <button class="edit-btn secondary" type="button" id="btnWifiHistory">查看发送记录</button>
           </div>
+          <div id="wifiHistoryBox" style="display:none;position:fixed;inset:0;z-index:10020;background:rgba(15,23,42,.52);align-items:center;justify-content:center;padding:20px;"></div>
         </div>
 <div class="cmd-group cmd-group-full">
   <div class="cmd-group-title">电压回传地址变更</div>
@@ -898,7 +901,9 @@ user023968912_80039"></textarea>
   </div>
   <div class="actions">
     <button class="edit-btn" type="button" data-send="ota">发送摄像头 OTA 升级</button>
+    <button class="edit-btn secondary" type="button" id="btnOtaHistory">查看发送记录</button>
   </div>
+  <div id="otaHistoryBox" style="display:none;position:fixed;inset:0;z-index:10020;background:rgba(15,23,42,.52);align-items:center;justify-content:center;padding:20px;"></div>
 </div>
 
 <div class="cmd-group cmd-group-full">
@@ -1095,6 +1100,10 @@ function openControlModal(row) {
   cHardwareOtaUrl.value = 'https://rcwulian.cn/OTA/zxb.bin';
   cVoltageUploadUrl.value = 'http://rcwulian.cn/app/dump/dump_post.php';
   refreshCaptureUploadUrl();
+  document.getElementById('wifiHistoryBox').style.display = 'none';
+  document.getElementById('otaHistoryBox').style.display = 'none';
+  document.getElementById('btnWifiHistory').textContent = '查看发送记录';
+  document.getElementById('btnOtaHistory').textContent = '查看发送记录';
 
   controlModalTitle.textContent = `设备控制 - ${row?.device_id ?? ''}`;
 }
@@ -1136,6 +1145,7 @@ async function sendDeviceCommandByType(type, triggerBtn = null) {
     fd.append('room_id', room_id);
     fd.append('from_user_id', from_user_id);
     fd.append('message', message);
+    fd.append('command_type', type);
 
     const resp = await fetch(CONTROL_API, {
       method: 'POST',
@@ -1183,6 +1193,84 @@ voltage_reset: '电压回传地址恢复默认指令已发送'
     }
   }
 }
+
+async function loadWifiHistory() {
+  const roomId = (cRoomId.value || '').trim();
+  const box = document.getElementById('wifiHistoryBox');
+  if (!roomId || !box) {
+    showToast('room_id 不能为空');
+    return;
+  }
+  box.style.display = 'flex';
+  box.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;width:min(900px,96vw);">正在加载历史记录...</div>';
+  try {
+    const resp = await fetch(`/api/devMgr/wifi_command_history.php?room_id=${encodeURIComponent(roomId)}&page_size=50`, { credentials: 'include' });
+    const json = await resp.json();
+    if (Number(json.code) !== 200) throw new Error(json.msg || '查询失败');
+    const list = json.data?.rows || [];
+    if (!list.length) {
+      box.innerHTML = historyModalHtml('WIFI 发送记录', roomId, '<div style="padding:30px;text-align:center;color:#7f8fa4;">该 room_id 暂无 WIFI 发送记录</div>', 'wifi');
+      return;
+    }
+    const table = `<table style="width:100%;border-collapse:collapse;min-width:680px;font-size:13px;">
+      <thead><tr><th>发送时间</th><th>WIFI名称</th><th>WIFI密码</th><th>类型</th><th>操作人</th></tr></thead>
+      <tbody>${list.map(item => `<tr>
+        <td>${esc(item.created_at)}</td><td>${esc(item.wifi_essid)}</td><td>${esc(item.wifi_password)}</td>
+        <td>${item.action_type === 'default_password' ? '恢复默认WIFI配置' : 'WIFI设置'}</td><td>${esc(item.operator_name || item.operator_id || '-')}</td>
+      </tr>`).join('')}</tbody></table>`;
+    box.innerHTML = historyModalHtml('WIFI 发送记录', roomId, table, 'wifi');
+  } catch (e) {
+    box.innerHTML = historyModalHtml('WIFI 发送记录', roomId, `<div style="padding:30px;text-align:center;color:#e74c3c;">${esc(e.message || '历史记录加载失败')}</div>`, 'wifi');
+  }
+}
+
+function historyModalHtml(title, roomId, content, type) {
+  return `<div style="background:#fff;border-radius:14px;width:min(920px,96vw);max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.22);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e8edf5;">
+      <div><strong style="font-size:17px;">${esc(title)}</strong><div style="font-size:12px;color:#7f8fa4;margin-top:4px;">room_id：${esc(roomId)}</div></div>
+      <button type="button" class="edit-btn secondary" onclick="closeHistoryModal('${type}')">关闭</button>
+    </div>
+    <div style="padding:16px 20px;overflow:auto;">${content}</div>
+    <div style="padding:12px 20px;border-top:1px solid #e8edf5;text-align:right;"><button type="button" class="edit-btn secondary" onclick="closeHistoryModal('${type}')">关闭</button></div>
+  </div>`;
+}
+
+function closeHistoryModal(type) {
+  const box = document.getElementById(type === 'ota' ? 'otaHistoryBox' : 'wifiHistoryBox');
+  if (box) box.style.display = 'none';
+}
+
+document.getElementById('btnWifiHistory')?.addEventListener('click', loadWifiHistory);
+document.getElementById('btnResetWifiDefault')?.addEventListener('click', function () {
+  cWifiEssid.value = 'srr1';
+  cWifiPasswd.value = '88888888';
+  showToast('已恢复默认值，请点击“发送 WIFI 设置”后生效');
+});
+
+async function loadOtaHistory() {
+  const roomId = (cRoomId.value || '').trim();
+  const box = document.getElementById('otaHistoryBox');
+  if (!roomId || !box) { showToast('room_id 不能为空'); return; }
+  box.style.display = 'flex';
+  box.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;width:min(900px,96vw);">正在加载历史记录...</div>';
+  try {
+    const resp = await fetch(`/api/devMgr/ota_command_history.php?room_id=${encodeURIComponent(roomId)}&page_size=50`, { credentials: 'include' });
+    const json = await resp.json();
+    if (Number(json.code) !== 200) throw new Error(json.msg || '查询失败');
+    const list = json.data?.rows || [];
+    if (!list.length) { box.innerHTML = historyModalHtml('摄像头 OTA 发送记录', roomId, '<div style="padding:30px;text-align:center;color:#7f8fa4;">该 room_id 暂无摄像头 OTA 发送记录</div>', 'ota'); return; }
+    const table = `<table style="width:100%;border-collapse:collapse;min-width:780px;font-size:13px;">
+      <thead><tr><th>发送时间</th><th>版本号</th><th>固件地址</th><th>force</th><th>操作人</th></tr></thead>
+      <tbody>${list.map(item => `<tr><td>${esc(item.created_at)}</td><td>${esc(item.ota_version)}</td>
+        <td style="word-break:break-all;">${esc(item.firmware_url)}</td><td>${esc(item.ota_force)}</td>
+        <td>${esc(item.operator_name || item.operator_id || '-')}</td></tr>`).join('')}</tbody></table>`;
+    box.innerHTML = historyModalHtml('摄像头 OTA 发送记录', roomId, table, 'ota');
+  } catch (e) {
+    box.innerHTML = historyModalHtml('摄像头 OTA 发送记录', roomId, `<div style="padding:30px;text-align:center;color:#e74c3c;">${esc(e.message || '历史记录加载失败')}</div>`, 'ota');
+  }
+}
+
+document.getElementById('btnOtaHistory')?.addEventListener('click', loadOtaHistory);
 // async function sendHardwareOta(triggerBtn = null) {
 //   const url = (cHardwareOtaUrl.value || '').trim() || 'https://rcwulian.cn/OTA/zxb.bin';
 

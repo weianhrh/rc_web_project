@@ -4,6 +4,8 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, X-Requested-With');
 
+require_once __DIR__ . '/../Database.php';
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
@@ -63,10 +65,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_out(405, '仅支持 POST 请求');
 }
 
+$database = new Database();
+$sessionToken = $_COOKIE['session_token'] ?? '';
+$adminUser = $sessionToken !== '' ? $database->getUserBySessionToken($sessionToken) : null;
+if (!$adminUser || empty($adminUser['role_id'])) {
+    json_out(1001, '用户未登录或会话已过期');
+}
+
 $roomId = trim((string)($_POST['room_id'] ?? ''));
 $fromUserId = trim((string)($_POST['from_user_id'] ?? 'server_bot_1'));
 $message = (string)($_POST['message'] ?? '');
 $toUserIds = parse_to_user_ids($_POST['to_user_ids'] ?? '');
+$commandType = trim((string)($_POST['command_type'] ?? ''));
 
 if ($roomId === '') {
     json_out(400, 'room_id 不能为空');
@@ -167,10 +177,72 @@ if ($zegoCode !== 0) {
     ]);
 }
 
+// WIFI 指令发送成功后保存记录。只认后端实际发送的消息内容，避免前端伪造记录。
+$wifiRecordId = null;
+$otaRecordId = null;
+$messageData = json_decode($message, true);
+if (is_array($messageData) && ($messageData['type'] ?? '') === 'cfg_wifi') {
+    $wifiData = is_array($messageData['data'] ?? null) ? $messageData['data'] : [];
+    $wifiEssid = trim((string)($wifiData['essid'] ?? ''));
+    $wifiPasswd = (string)($wifiData['passwd'] ?? '');
+    $actionType = $commandType === 'wifi_default_password' ? 'default_password' : 'set_wifi';
+    $operatorId = (int)($adminUser['id'] ?? $adminUser['uid'] ?? 0);
+    $operatorName = (string)($adminUser['username'] ?? '');
+
+    $inserted = $database->query(
+        "INSERT INTO camera_wifi_send_records
+         (room_id, wifi_essid, wifi_password, action_type, operator_id, operator_name, zego_code, zego_message, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+        [$roomId, $wifiEssid, $wifiPasswd, $actionType, $operatorId, $operatorName, $zegoCode, $zegoMsg],
+        true
+    );
+
+    if ($inserted === false || $inserted < 1) {
+        json_out(500, 'WIFI 指令已发送成功，但发送记录保存失败，请先执行建表 SQL', [
+            'zego_code' => $zegoCode,
+            'zego_message' => $zegoMsg,
+            'command_sent' => true,
+            'fail_users' => $failUsers,
+        ]);
+    }
+
+    $idRows = $database->query('SELECT LAST_INSERT_ID() AS id');
+    $wifiRecordId = isset($idRows[0]['id']) ? (int)$idRows[0]['id'] : null;
+}
+
+if (is_array($messageData) && ($messageData['type'] ?? '') === 'ota_update') {
+    $otaData = is_array($messageData['data'] ?? null) ? $messageData['data'] : [];
+    $otaVersion = trim((string)($otaData['ver'] ?? ''));
+    $firmwareUrl = trim((string)($otaData['url'] ?? ''));
+    $otaForce = (int)($otaData['force'] ?? 0);
+    $operatorId = (int)($adminUser['id'] ?? $adminUser['uid'] ?? 0);
+    $operatorName = (string)($adminUser['username'] ?? '');
+
+    $inserted = $database->query(
+        "INSERT INTO camera_ota_send_records
+         (room_id, ota_version, firmware_url, ota_force, operator_id, operator_name, zego_code, zego_message, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+        [$roomId, $otaVersion, $firmwareUrl, $otaForce, $operatorId, $operatorName, $zegoCode, $zegoMsg],
+        true
+    );
+    if ($inserted === false || $inserted < 1) {
+        json_out(500, '摄像头 OTA 指令已发送成功，但发送记录保存失败，请先执行建表 SQL', [
+            'zego_code' => $zegoCode,
+            'zego_message' => $zegoMsg,
+            'command_sent' => true,
+            'fail_users' => $failUsers,
+        ]);
+    }
+    $idRows = $database->query('SELECT LAST_INSERT_ID() AS id');
+    $otaRecordId = isset($idRows[0]['id']) ? (int)$idRows[0]['id'] : null;
+}
+
 json_out(200, '发送成功', [
     'zego_code' => $zegoCode,
     'zego_message' => $zegoMsg,
     'fail_users' => $failUsers,
     'zego_data' => $zegoData,
     'raw' => $resp,
+    'wifi_record_id' => $wifiRecordId,
+    'ota_record_id' => $otaRecordId,
 ]);
