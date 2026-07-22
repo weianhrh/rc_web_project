@@ -68,7 +68,7 @@ $modules = $config['modules'];
           theme = doc.createElement('link');
           theme.id = 'review-workbench-theme';
           theme.rel = 'stylesheet';
-          theme.href = '/review/review-theme.css?v=20260711-2';
+          theme.href = '/review/review-theme.css?v=20260717-2';
           doc.head.appendChild(theme);
         }
         doc.body.classList.add('review-dark-page');

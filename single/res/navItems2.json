@@ -1,17 +1,11 @@
 [
     {
         "id": "reservation-management",
-        "label": "驾驶管理",
-        "title": "驾驶管理",
+        "label": "驾驶订单",
+        "title": "驾驶订单",
         "href": "h.html",
         "page": "h.html",
         "icon": "fas fa-calendar-check"
-    },
-    {
-        "id": "order-management",
-        "icon": "fa-shopping-cart",
-        "label": "订单管理",
-        "href": "order.html"
     },
     {
         "id": "user-management",

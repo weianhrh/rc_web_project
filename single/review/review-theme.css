@@ -422,3 +422,23 @@ tr:hover,
     font-size: 20px !important;
   }
 }
+
+/*
+ * KWX 图文审核：原页面给 .venue-info 写死了 #333，
+ * 在审核专用深色卡片上对比度过低。这里同时覆盖 RC 工作台 iframe
+ * 和 KWX 审核代理，不修改两个项目原后台页面的默认皮肤。
+ */
+body.review-dark-page .venue-card .venue-info,
+body.review-dark-page .venue-card .venue-info > span,
+body.kwx-legacy-page .venue-card .venue-info,
+body.kwx-legacy-page .venue-card .venue-info > span {
+  color: #c8dce1 !important;
+  font-weight: 500 !important;
+  line-height: 1.55 !important;
+}
+
+body.review-dark-page .venue-card .venue-info > .venue-name,
+body.kwx-legacy-page .venue-card .venue-info > .venue-name {
+  color: #f1fbfd !important;
+  font-weight: 700 !important;
+}
