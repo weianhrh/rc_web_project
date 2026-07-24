@@ -302,6 +302,32 @@ if (!empty($orphanLines)) {
     ]);
 }
 
+// 设备序列号必须恰好为 12 位，且只能包含英文字母或数字。
+// 整批数据中只要有一条不合格，就终止提交，确保不会部分添加。
+$invalidSerials = [];
+foreach ($rows as $row) {
+    $serialNumber = $row['serial_number'];
+    if (!preg_match('/^[A-Za-z0-9]{12}$/', $serialNumber)) {
+        $invalidSerials[] = [
+            'line_no' => $row['line_no'],
+            'serial_number' => $serialNumber,
+            'length' => strlen($serialNumber)
+        ];
+    }
+}
+
+if (!empty($invalidSerials)) {
+    $msgs = array_map(function ($item) {
+        return '第 ' . $item['line_no'] . ' 行：'
+            . $item['serial_number'] . '（' . $item['length'] . ' 位）';
+    }, array_slice($invalidSerials, 0, 10));
+
+    jsonOut(1002, "设备序列号必须是 12 位字母或数字组合，以下内容不符合要求：\n"
+        . implode("\n", $msgs), [
+        'invalid_serials' => $invalidSerials
+    ]);
+}
+
 // 检查本次输入里设备序列号自己有没有重复
 $duplicateSerials = findDuplicateSerials($rows);
 if (!empty($duplicateSerials)) {

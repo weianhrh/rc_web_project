@@ -12,6 +12,16 @@ $image_device_serial = $_POST['image_device_serial'] ?? ''; // 前摄
 $bk_image_device_serial = $_POST['bk_image_device_serial'] ?? ''; // 后摄
 $car_type = $_POST['car_type'] ?? ''; // 车辆类型
 
+// 后端强制校验，防止绕过页面直接请求接口添加非法序列号
+$serial_number = trim($serial_number);
+if (!preg_match('/^[A-Za-z0-9]{12}$/', $serial_number)) {
+    echo json_encode([
+        'code' => 1,
+        'msg' => '设备序列号必须是 12 位字母或数字组合'
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 
 
 

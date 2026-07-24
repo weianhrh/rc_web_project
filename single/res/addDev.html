@@ -219,16 +219,16 @@
 
             <div class="tip-box">
                 说明：<br>
-                1. 设备序列号为主列，每个非空设备序列号都会生成一台设备。<br>
+                1. 设备序列号为主列，必须是 12 位英文字母或数字组合；每个非空设备序列号都会生成一台设备。<br>
                 2. 图像设备序列号、rtc_user_id 都按<strong>原始行号</strong>与设备序列号对应，允许中间留空，不会再因为空行错位。<br>
                 3. 如果某一行填写了 rtc_user_id，则该行建议同时填写图像设备序列号，并且该图像设备序列号应能匹配到 device_information 的 id 或 room_id。
             </div>
 
             <form id="addDeviceForm">
                 <div class="form-group">
-                    <label for="serial_number">设备序列号（每行一个）<span class="required-star">*</span></label>
-                    <textarea id="serial_number" name="serial_number" rows="8" required placeholder="例如：&#10;car001&#10;car002&#10;car003"></textarea>
-                    <div class="hint">主列。只有这一列非空的行，才会真正创建设备。</div>
+                    <label for="serial_number">设备序列号（每行一个，必须为 12 位字母或数字）<span class="required-star">*</span></label>
+                    <textarea id="serial_number" name="serial_number" rows="8" required placeholder="例如：&#10;AB12CD34EF56&#10;1234567890AB"></textarea>
+                    <div class="hint">主列。必须恰好 12 位，只能包含英文字母或数字；只有这一列非空的行，才会真正创建设备。</div>
                 </div>
 
                 <div class="form-group">
@@ -644,6 +644,18 @@
                     .join('\n');
 
                 alert(`检测到 rtc_user_id 缺少对应图像设备序列号：\n${msg}`);
+                return;
+            }
+
+            const invalidSerials = rows.filter(row => !/^[A-Za-z0-9]{12}$/.test(row.serial));
+            if (invalidSerials.length > 0) {
+                const msg = invalidSerials
+                    .slice(0, 10)
+                    .map(item => `第 ${item.lineNo} 行：${item.serial}（${item.serial.length} 位）`)
+                    .join('\n');
+
+                alert(`设备序列号必须是 12 位字母或数字组合，以下内容不符合要求：\n${msg}`);
+                serialTextarea.focus();
                 return;
             }
 

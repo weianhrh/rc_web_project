@@ -915,9 +915,6 @@ Promise.all([
 
   const roleId  = Number(userInfo?.data?.role_id || 0);
   const venueId = Number(userInfo?.data?.venue_id || 0);
-  const role3HideIds = new Set([
-    'item_1780731430102' // 开播时长
-  ]);
   // role_id = 4 时要隐藏的 9 个红框功能
   const role4HideIds = new Set([
     'moeny-details',          // 财务对账
@@ -938,12 +935,6 @@ Promise.all([
   if (roleId === 4) {
     finalNavData = navData.filter(item => !role4HideIds.has(item.id));
   }
-// role_id=3
-if (roleId === 3) {
-    finalNavData = finalNavData.filter(
-        item => !role3HideIds.has(item.id)
-    );
-}
   // 渲染过滤后的菜单
   renderNavGrid(finalNavData);
 
