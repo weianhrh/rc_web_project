@@ -137,6 +137,130 @@ function get_first_two_messages($conn) {
     ];
 }
 
+function ensure_guardian_config($conn) {
+    $sql = "INSERT IGNORE INTO venue_guardian_config
+            (id, price_gold, duration_days, guardian_icon_url, welcome_animation_url,
+             welcome_animation_type, entry_cooldown_seconds, is_active)
+            VALUES (1, 999, 90, '', '', 'svga', 300, 1)";
+
+    if (!$conn->query($sql)) {
+        throw new Exception('初始化场地守护配置失败：' . $conn->error);
+    }
+}
+
+function get_guardian_config($conn) {
+    $sql = "SELECT id, price_gold, duration_days, guardian_icon_url,
+                   welcome_animation_url, welcome_animation_type,
+                   entry_cooldown_seconds, is_active, created_at, updated_at
+            FROM venue_guardian_config
+            WHERE id = 1
+            LIMIT 1";
+    $result = $conn->query($sql);
+
+    if ($result && $row = $result->fetch_assoc()) {
+        return [
+            'id'                       => (int)$row['id'],
+            'price_gold'               => (int)$row['price_gold'],
+            'duration_days'            => (int)$row['duration_days'],
+            'guardian_icon_url'        => (string)$row['guardian_icon_url'],
+            'welcome_animation_url'    => (string)$row['welcome_animation_url'],
+            'welcome_animation_type'   => (string)$row['welcome_animation_type'],
+            'entry_cooldown_seconds'   => (int)$row['entry_cooldown_seconds'],
+            'is_active'                => (int)$row['is_active'],
+            'created_at'               => (string)$row['created_at'],
+            'updated_at'               => (string)$row['updated_at']
+        ];
+    }
+
+    return [
+        'id'                     => 1,
+        'price_gold'             => 999,
+        'duration_days'          => 90,
+        'guardian_icon_url'      => '',
+        'welcome_animation_url'  => '',
+        'welcome_animation_type' => 'svga',
+        'entry_cooldown_seconds' => 300,
+        'is_active'              => 1,
+        'created_at'             => '',
+        'updated_at'             => ''
+    ];
+}
+
+function read_unsigned_int($value, $default, $fieldName, $allowZero = true) {
+    $value = trim((string)$value);
+    if ($value === '') {
+        $value = (string)$default;
+    }
+
+    if (!preg_match('/^\d+$/', $value)) {
+        json_out(422, $fieldName . '必须是非负整数');
+    }
+
+    $number = (int)$value;
+    if (!$allowZero && $number <= 0) {
+        json_out(422, $fieldName . '必须大于0');
+    }
+
+    return $number;
+}
+
+function validate_url_length($value, $fieldName) {
+    $value = trim((string)$value);
+    if (strlen($value) > 500) {
+        json_out(422, $fieldName . '不能超过500个字符');
+    }
+    return $value;
+}
+
+function save_guardian_config(
+    $conn,
+    $price_gold,
+    $duration_days,
+    $guardian_icon_url,
+    $welcome_animation_url,
+    $welcome_animation_type,
+    $entry_cooldown_seconds,
+    $is_active
+) {
+    $sql = "INSERT INTO venue_guardian_config
+            (id, price_gold, duration_days, guardian_icon_url, welcome_animation_url,
+             welcome_animation_type, entry_cooldown_seconds, is_active)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                price_gold = VALUES(price_gold),
+                duration_days = VALUES(duration_days),
+                guardian_icon_url = VALUES(guardian_icon_url),
+                welcome_animation_url = VALUES(welcome_animation_url),
+                welcome_animation_type = VALUES(welcome_animation_type),
+                entry_cooldown_seconds = VALUES(entry_cooldown_seconds),
+                is_active = VALUES(is_active),
+                updated_at = CURRENT_TIMESTAMP";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        throw new Exception('准备守护配置保存语句失败：' . $conn->error);
+    }
+
+    $stmt->bind_param(
+        'iisssii',
+        $price_gold,
+        $duration_days,
+        $guardian_icon_url,
+        $welcome_animation_url,
+        $welcome_animation_type,
+        $entry_cooldown_seconds,
+        $is_active
+    );
+
+    if (!$stmt->execute()) {
+        $error = $stmt->error;
+        $stmt->close();
+        throw new Exception('保存场地守护配置失败：' . $error);
+    }
+
+    $stmt->close();
+}
+
 function update_message_text($conn, $id, $text, $defaultSort, $is_show_game, $is_show_gift) {
     $text = trim($text);
     if ($text === '') {
@@ -184,6 +308,7 @@ try {
     $conn = $database->getConnection();
 
     ensure_default_messages($conn);
+    ensure_guardian_config($conn);
 
     $action = $_REQUEST['action'] ?? '';
 
@@ -191,12 +316,14 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($action === '' || $action === 'app')) {
         $switch = get_global_switch($conn);
         $messages = get_enabled_messages($conn);
+        $guardianConfig = get_guardian_config($conn);
 
         echo json_encode([
             'code' => 200,
             'msg'  => '获取成功',
             'is_show_game' => (int)$switch['is_show_game'],
             'is_show_gift' => (int)$switch['is_show_gift'],
+            'guardian_config' => $guardianConfig,
             'data' => $messages
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
@@ -206,6 +333,7 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'get_admin') {
         $switch = get_global_switch($conn);
         $texts  = get_first_two_messages($conn);
+        $guardianConfig = get_guardian_config($conn);
 
         json_out(200, '获取成功', [
             'is_show_game' => (int)$switch['is_show_game'],
@@ -213,7 +341,8 @@ try {
             'msg1_id'      => (int)$texts['msg1_id'],
             'msg1_text'    => (string)$texts['msg1_text'],
             'msg2_id'      => (int)$texts['msg2_id'],
-            'msg2_text'    => (string)$texts['msg2_text']
+            'msg2_text'    => (string)$texts['msg2_text'],
+            'guardian_config' => $guardianConfig
         ]);
     }
 
@@ -231,6 +360,39 @@ try {
         $is_show_game = $is_show_game == 1 ? 1 : 0;
         $is_show_gift = $is_show_gift == 1 ? 1 : 0;
 
+        $guardian_price_gold = read_unsigned_int(
+            $_POST['guardian_price_gold'] ?? 999,
+            999,
+            '开通/续费金币'
+        );
+        $guardian_duration_days = read_unsigned_int(
+            $_POST['guardian_duration_days'] ?? 90,
+            90,
+            '每次增加天数',
+            false
+        );
+        $guardian_icon_url = validate_url_length(
+            $_POST['guardian_icon_url'] ?? '',
+            '守护图标URL'
+        );
+        $welcome_animation_url = validate_url_length(
+            $_POST['welcome_animation_url'] ?? '',
+            '进场欢迎动效URL'
+        );
+        $welcome_animation_type = strtolower(trim((string)($_POST['welcome_animation_type'] ?? 'svga')));
+        if ($welcome_animation_type === '') {
+            $welcome_animation_type = 'svga';
+        }
+        if (strlen($welcome_animation_type) > 20) {
+            json_out(422, '动效类型不能超过20个字符');
+        }
+        $entry_cooldown_seconds = read_unsigned_int(
+            $_POST['entry_cooldown_seconds'] ?? 300,
+            300,
+            '重复进场冷却秒数'
+        );
+        $guardian_is_active = isset($_POST['guardian_is_active']) && (int)$_POST['guardian_is_active'] === 1 ? 1 : 0;
+
         $database->beginTransaction();
 
         try {
@@ -245,11 +407,21 @@ try {
             update_message_text($conn, $msg1_id, $msg1_text, 1, $is_show_game, $is_show_gift);
             update_message_text($conn, $msg2_id, $msg2_text, 2, $is_show_game, $is_show_gift);
 
+            // 保存场地守护全局配置
+            save_guardian_config(
+                $conn,
+                $guardian_price_gold,
+                $guardian_duration_days,
+                $guardian_icon_url,
+                $welcome_animation_url,
+                $welcome_animation_type,
+                $entry_cooldown_seconds,
+                $guardian_is_active
+            );
+
             $database->commit();
         } catch (Exception $e) {
-            if ($database->inTransaction()) {
-                $database->rollBack();
-            }
+            $database->rollBack();
             json_out(500, '保存失败：' . $e->getMessage());
         }
 

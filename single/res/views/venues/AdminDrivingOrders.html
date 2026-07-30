@@ -256,6 +256,18 @@ body {
   border: 1px solid #bbf7d0;
 }
 
+.status-failed {
+  background: #fff1f0;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.status-refunded {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
 .status-pending {
   background: var(--warning-bg);
   color: var(--warning);
@@ -750,6 +762,7 @@ body {
                 <select id="orderType" class="form-input">
                     <option value="drive">驾驶订单</option>
                     <option value="gift">礼物订单</option>
+                    <option value="guardian">守护订单</option>
                 </select>
             </div>
             <div class="form-item">
@@ -830,8 +843,12 @@ function searchOrders(resetPage = true) {
 
     const url = '/api/finance/getDrivOrder.php?' + params.toString();
 
-    document.getElementById('pageTitle').textContent =
-        orderType === 'gift' ? '礼物订单查询' : '驾驶订单查询';
+    const titleMap = {
+        drive: '驾驶订单查询',
+        gift: '礼物订单查询',
+        guardian: '守护订单查询'
+    };
+    document.getElementById('pageTitle').textContent = titleMap[orderType] || '订单记录查询';
 
     fetch(url, {
         credentials: 'include',
@@ -852,8 +869,8 @@ function searchOrders(resetPage = true) {
                 const list = Array.isArray(data.data) ? data.data : [];
 
                 totalOrders = list.sort((a, b) => {
-                    const bt = b.sort_time || b.start_time || b.send_time || '';
-                    const at = a.sort_time || a.start_time || a.send_time || '';
+                    const bt = b.sort_time || b.paid_at || b.created_at || b.start_time || b.send_time || '';
+                    const at = a.sort_time || a.paid_at || a.created_at || a.start_time || a.send_time || '';
                     return new Date(bt) - new Date(at);
                 });
 
@@ -970,8 +987,120 @@ document.getElementById('nextPage').disabled = !hasMorePage;
                 const card = document.createElement('div');
                 card.className = 'order-card';
         
-                const statusClass = order.status === '已完成' ? 'status-completed' : 'status-pending';
-        // ==========================
+                const statusText = String(order.status || '');
+                let statusClass = 'status-pending';
+                if (statusText === '已完成' || statusText === '成功') {
+                    statusClass = 'status-completed';
+                } else if (statusText === '失败') {
+                    statusClass = 'status-failed';
+                } else if (statusText === '退款') {
+                    statusClass = 'status-refunded';
+                }
+
+// ==========================
+// 守护订单卡片
+// ==========================
+if (order.order_type === 'guardian') {
+  const formatGold = value => {
+    const number = Number(value || 0);
+    return Number.isFinite(number) ? number.toLocaleString('zh-CN') : '0';
+  };
+
+  card.innerHTML = `
+    <div class="order-head">
+      <div class="order-no">
+        <span class="order-no-label">守护订单编号</span>
+        <span class="order-no-value">${order.order_no || order.order_id || '-'}</span>
+      </div>
+
+      <span class="status-badge ${statusClass}">${statusText || '-'}</span>
+
+      <div class="order-money">
+        <span class="order-money-label">开通金币</span>
+        <span class="order-money-value">${formatGold(order.price_gold)}</span>
+      </div>
+
+      <div class="order-actions"></div>
+    </div>
+
+    <div class="order-body">
+      <div class="order-field">
+        <span class="field-label">用户ID</span>
+        <span class="field-value">${order.uid || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">用户昵称</span>
+        <span class="field-value">${order.nickname || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">场地</span>
+        <span class="field-value">${order.venue_name || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">请求号</span>
+        <span class="field-value mono">${order.request_id || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">增加天数</span>
+        <span class="field-value">${Number(order.duration_days || 0)} 天</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">扣款前金币</span>
+        <span class="field-value money">${formatGold(order.balance_before)}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">扣款后金币</span>
+        <span class="field-value money">${formatGold(order.balance_after)}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">场地分成金币</span>
+        <span class="field-value money">${formatGold(order.venue_share_gold)}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">平台分成金币</span>
+        <span class="field-value money">${formatGold(order.platform_share_gold)}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">开通前到期时间</span>
+        <span class="field-value mono">${order.expires_before || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">开通后到期时间</span>
+        <span class="field-value mono">${order.expires_after || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">创建时间</span>
+        <span class="field-value mono">${order.created_at || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">支付时间</span>
+        <span class="field-value mono">${order.paid_at || '-'}</span>
+      </div>
+
+      <div class="order-field">
+        <span class="field-label">失败原因</span>
+        <span class="field-value">${order.failure_reason || '-'}</span>
+      </div>
+    </div>
+  `;
+
+  container.appendChild(card);
+  return;
+}
+
+// ==========================
 // 礼物订单卡片
 // ==========================
 if (order.order_type === 'gift') {

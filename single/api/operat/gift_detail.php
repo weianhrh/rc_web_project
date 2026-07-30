@@ -38,6 +38,8 @@ if (!in_array($role_id, [1, 2, 3, 4], true)) {
 }
 
 $act = $_GET['act'] ?? 'list';
+$giftScope = (($_GET['scope'] ?? '') === 'venue') ? 'venue' : 'global';
+$giftTable = $giftScope === 'venue' ? 'venue_gift_detail' : 'gift_detail';
 
 // ------- 工具函数 -------
 function toInt($v, $default = 0) {
@@ -82,6 +84,12 @@ function read_payload(): array {
 
 try {
     switch ($act) {
+        case 'venues': {
+            // 与“能量补偿”页面的 get_venues 保持相同的获取及排列方式
+            $rows = $db->query("SELECT id, venue_name FROM venues");
+            ok(['list' => $rows ?: []]);
+        }
+
         // ============ 列表 ============
         case 'list': {
             $page     = max(1, toInt($_GET['page'] ?? 1));
@@ -89,6 +97,9 @@ try {
             $offset   = ($page - 1) * $pageSize;
             $q        = trim($_GET['q'] ?? '');
             $onlyShow = $_GET['is_display'] ?? ''; // "", "0", "1"
+            $venueId = toInt($_GET['venue_id'] ?? 0);
+            $giftStatus = $_GET['gift_status'] ?? '';
+            $broadcastScope = $_GET['is_broadcast_all'] ?? '';
 
             $where = ' WHERE 1=1 ';
             $params = [];
@@ -102,9 +113,21 @@ try {
                 $where .= ' AND gd.is_display = ? ';
                 $params[] = $onlyShow;
             }
+            if ($giftScope === 'venue' && $venueId > 0) {
+                $where .= ' AND gd.venue_id = ? ';
+                $params[] = $venueId;
+            }
+            if ($giftScope === 'venue' && ($giftStatus === '0' || $giftStatus === '1')) {
+                $where .= ' AND gd.gift_status = ? ';
+                $params[] = $giftStatus;
+            }
+            if ($giftScope === 'venue' && ($broadcastScope === '0' || $broadcastScope === '1')) {
+                $where .= ' AND gd.is_broadcast_all = ? ';
+                $params[] = $broadcastScope;
+            }
 
             $countSql = "SELECT COUNT(*) AS c
-                         FROM gift_detail gd
+                         FROM {$giftTable} gd
                          {$where}";
             $countRes = $db->query($countSql, $params);
             $totalRows = (int)($countRes[0]['c'] ?? 0);
@@ -117,8 +140,14 @@ try {
                 gd.image_url,
                 gd.gif_url,
                 COALESCE(gd.is_top_banner_show, 1) AS is_top_banner_show,
-                COALESCE(gd.is_play_svga, 1) AS is_play_svga
-            FROM gift_detail gd
+                COALESCE(gd.is_play_svga, 1) AS is_play_svga" .
+                ($giftScope === 'venue' ? ",
+                gd.venue_id,
+                COALESCE(v.venue_name, '') AS venue_name,
+                COALESCE(gd.is_broadcast_all, 0) AS is_broadcast_all,
+                COALESCE(gd.gift_status, 0) AS gift_status" : "") . "
+            FROM {$giftTable} gd
+            " . ($giftScope === 'venue' ? "LEFT JOIN venues v ON v.id = gd.venue_id" : "") . "
             {$where}
             ORDER BY gd.id DESC
             LIMIT {$offset}, {$pageSize}";
@@ -148,8 +177,12 @@ try {
                         image_url,
                         gif_url,
                         COALESCE(is_top_banner_show, 1) AS is_top_banner_show,
-                        COALESCE(is_play_svga, 1) AS is_play_svga
-                    FROM gift_detail
+                        COALESCE(is_play_svga, 1) AS is_play_svga" .
+                        ($giftScope === 'venue' ? ",
+                        venue_id,
+                        COALESCE(is_broadcast_all, 0) AS is_broadcast_all,
+                        COALESCE(gift_status, 0) AS gift_status" : "") . "
+                    FROM {$giftTable}
                     WHERE id = ?";
             $rows = $db->query($sql, [$id]);
 
@@ -170,12 +203,17 @@ try {
             $gif_url    = strOrEmpty($payload['gif_url'] ?? '');
             $is_top_banner_show = to01DefaultOn($payload['is_top_banner_show'] ?? 1);
             $is_play_svga       = to01DefaultOn($payload['is_play_svga'] ?? 1);
+            $venue_id           = toInt($payload['venue_id'] ?? 0);
+            $is_broadcast_all   = to01($payload['is_broadcast_all'] ?? 0);
+            $gift_status        = to01($payload['gift_status'] ?? 0);
             if (!$gift_name) bad('gift_name 不能为空');
             if ($gift_price < 0) bad('gift_price 不能为负');
+            if ($giftScope === 'venue' && $venue_id <= 0) bad('请选择归属场地');
 
             $db->beginTransaction();
             try {
-                $sql = "INSERT INTO gift_detail (
+                $sql = "INSERT INTO {$giftTable} (
+                            " . ($giftScope === 'venue' ? "venue_id," : "") . "
                             gift_name,
                             gift_price,
                             is_display,
@@ -183,9 +221,10 @@ try {
                             gif_url,
                             is_top_banner_show,
                             is_play_svga
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                            " . ($giftScope === 'venue' ? ", is_broadcast_all, gift_status" : "") . "
+                        ) VALUES (" . implode(',', array_fill(0, $giftScope === 'venue' ? 10 : 7, '?')) . ")";
                 
-                $params = [
+                $params = array_merge($giftScope === 'venue' ? [$venue_id] : [], [
                     $gift_name,
                     $gift_price,
                     $is_display,
@@ -193,7 +232,7 @@ try {
                     $gif_url,
                     $is_top_banner_show,
                     $is_play_svga
-                ];
+                ], $giftScope === 'venue' ? [$is_broadcast_all, $gift_status] : []);
 
                 $db->query($sql, $params, true);
                 $newId = $db->getConnection()->insert_id;
@@ -257,10 +296,24 @@ try {
                 $fields[] = 'is_play_svga = ?';
                 $params[] = to01DefaultOn($payload['is_play_svga']);
             }
+            if ($giftScope === 'venue' && array_key_exists('venue_id', $payload)) {
+                $venueId = toInt($payload['venue_id']);
+                if ($venueId <= 0) bad('请选择归属场地');
+                $fields[] = 'venue_id = ?';
+                $params[] = $venueId;
+            }
+            if ($giftScope === 'venue' && array_key_exists('is_broadcast_all', $payload)) {
+                $fields[] = 'is_broadcast_all = ?';
+                $params[] = to01($payload['is_broadcast_all']);
+            }
+            if ($giftScope === 'venue' && array_key_exists('gift_status', $payload)) {
+                $fields[] = 'gift_status = ?';
+                $params[] = to01($payload['gift_status']);
+            }
             if (!$fields) bad('没有可更新的字段');
 
             $params[] = $id;
-            $sql = "UPDATE gift_detail SET " . implode(', ', $fields) . " WHERE id = ?";
+            $sql = "UPDATE {$giftTable} SET " . implode(', ', $fields) . " WHERE id = ?";
 
             $db->beginTransaction();
             try {
@@ -287,7 +340,7 @@ try {
             $db->beginTransaction();
             try {
                 $affected = $db->query(
-                    "DELETE FROM gift_detail WHERE id = ?",
+                    "DELETE FROM {$giftTable} WHERE id = ?",
                     [$id],
                     true
                 );
@@ -323,7 +376,7 @@ try {
             $db->beginTransaction();
             try {
                 $affected = $db->query(
-                    "DELETE FROM gift_detail WHERE id IN ($in)",
+                    "DELETE FROM {$giftTable} WHERE id IN ($in)",
                     $params,
                     true
                 );
@@ -351,7 +404,7 @@ try {
             $db->beginTransaction();
             try {
                 $affected = $db->query(
-                    "UPDATE gift_detail SET is_display = ? WHERE id = ?",
+                    "UPDATE {$giftTable} SET is_display = ? WHERE id = ?",
                     [$is_display, $id],
                     true
                 );

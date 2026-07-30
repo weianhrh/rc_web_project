@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>场地守护查看</title>
+  <style>
+    :root {
+      --primary: #5b86e5;
+      --primary-dark: #4773d5;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --border: #e7eaf2;
+      --text: #273142;
+      --muted: #7f8a9f;
+      --success: #19be6b;
+      --warning: #ff9900;
+      --danger: #ed4014;
+      --disabled: #8c8c8c;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 18px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    .page-card {
+      max-width: 1500px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(38, 57, 88, .08);
+      overflow: hidden;
+    }
+
+    .page-header {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 650;
+    }
+
+    .title-wrap p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .role-tip {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: #eef3ff;
+      color: #4773d5;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .filter-panel {
+      padding: 16px 22px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: minmax(210px, 1.2fr) minmax(180px, 1fr) minmax(150px, .7fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field { min-width: 0; }
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: 600;
+      color: #3c4658;
+    }
+
+    .control {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #d9deea;
+      border-radius: 6px;
+      padding: 0 11px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(91, 134, 229, .12);
+    }
+
+    .bound-venue {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border-radius: 6px;
+      background: #f5f7fb;
+      border: 1px solid #e1e5ef;
+      color: #4d596e;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 9px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-width: 72px;
+      height: 38px;
+      padding: 0 15px;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity .2s, transform .1s, background .2s;
+    }
+
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { cursor: not-allowed; opacity: .55; }
+    .btn-primary { color: #fff; background: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-default { color: #3d4657; background: #f0f2f7; }
+    .btn-default:hover { background: #e7eaf1; }
+    .btn-view { color: #4773d5; background: #eef3ff; min-width: 58px; height: 32px; padding: 0 12px; }
+    .btn-disable { color: #fff; background: var(--danger); min-width: 58px; height: 32px; padding: 0 12px; }
+
+    .table-meta {
+      padding: 13px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .loading-text { color: var(--primary); }
+    .error-text { color: var(--danger); }
+
+    .table-wrap {
+      overflow-x: auto;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1360px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 13px 12px;
+      border-bottom: 1px solid #edf0f5;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #fafbfe;
+      color: #4b5567;
+      font-weight: 650;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:hover { background: #fafcff; }
+
+    .empty-row td {
+      text-align: center;
+      padding: 52px 20px;
+      color: var(--muted);
+    }
+
+    .venue-name {
+      max-width: 190px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 62px;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    .status-active { color: #0e9f57; background: #eaf9f1; }
+    .status-expired { color: #d57a00; background: #fff4df; }
+    .status-disabled { color: #6d7480; background: #eef0f3; }
+
+    .action-group {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .disabled-label {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 0 4px;
+    }
+
+    .pagination {
+      padding: 16px 22px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 9px;
+    }
+
+    .page-btn {
+      height: 34px;
+      min-width: 36px;
+      padding: 0 11px;
+      border: 1px solid #dfe3ec;
+      background: #fff;
+      border-radius: 5px;
+      color: #4d5668;
+      cursor: pointer;
+    }
+
+    .page-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .page-info { color: var(--muted); padding: 0 4px; }
+
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(18, 25, 38, .46);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 9999;
+    }
+
+    .modal-mask.show { display: flex; }
+
+    .modal {
+      width: min(720px, 100%);
+      max-height: 88vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+
+    .modal-header {
+      padding: 17px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 { margin: 0; font-size: 18px; }
+    .modal-close {
+      border: 0;
+      background: transparent;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      color: #7a8495;
+    }
+
+    .detail-grid {
+      padding: 18px 20px 22px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .detail-item {
+      min-width: 0;
+      padding: 11px 12px;
+      background: #f8f9fc;
+      border-radius: 6px;
+      border: 1px solid #eceff5;
+    }
+
+    .detail-label { color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+    .detail-value { color: var(--text); word-break: break-all; line-height: 1.5; }
+
+    .confirm-text {
+      padding: 22px 20px 8px;
+      line-height: 1.8;
+      color: #3e4859;
+    }
+
+    .confirm-actions {
+      padding: 15px 20px 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    @media (max-width: 980px) {
+      body { padding: 10px; }
+      .filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filter-actions { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 620px) {
+      .page-header, .filter-panel, .table-meta, .pagination { padding-left: 14px; padding-right: 14px; }
+      .filter-panel { grid-template-columns: 1fr; }
+      .filter-actions { grid-column: auto; }
+      .filter-actions .btn { flex: 1; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .role-tip { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-card">
+    <div class="page-header">
+      <div class="title-wrap">
+        <h1>场地守护查看</h1>
+        <!--<p>守护信息仅允许查看和禁用，不提供金币、日期、到期时间等内容的编辑入口。</p>-->
+      </div>
+      <div id="roleTip" class="role-tip">正在读取权限...</div>
+    </div>
+
+    <div class="filter-panel">
+      <div id="venueFilterField" class="field">
+        <label for="venueId">场地</label>
+        <select id="venueId" class="control">
+          <option value="">全部场地</option>
+        </select>
+      </div>
+
+      <div id="boundVenueField" class="field" style="display:none;">
+        <label>当前场地</label>
+        <div id="boundVenueText" class="bound-venue">加载中...</div>
+      </div>
+
+      <div class="field">
+        <label for="keyword">UID / 记录ID</label>
+        <input id="keyword" class="control" type="text" inputmode="numeric" placeholder="输入 UID 或守护记录ID">
+      </div>
+
+      <div class="field">
+        <label for="status">守护状态</label>
+        <select id="status" class="control">
+          <option value="all">全部状态</option>
+          <option value="active">守护中</option>
+          <option value="expired">已到期</option>
+          <option value="disabled">已禁用</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button id="searchBtn" class="btn btn-primary" type="button">查询</button>
+        <button id="resetBtn" class="btn btn-default" type="button">重置</button>
+      </div>
+    </div>
+
+    <div class="table-meta">
+      <div id="resultInfo">等待查询</div>
+      <div id="loadState"></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>记录ID</th>
+            <th>场地</th>
+            <th>用户UID</th>
+            <th>累计守护金币</th>
+            <th>首次开通时间</th>
+            <th>最近续费时间</th>
+            <th>守护到期时间</th>
+            <th>最近订单ID</th>
+            <th>最近欢迎动效</th>
+            <th>状态</th>
+            <th>更新时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="empty-row"><td colspan="12">正在加载...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button id="prevBtn" class="page-btn" type="button">上一页</button>
+      <span id="pageInfo" class="page-info">第 1 / 1 页</span>
+      <button id="nextBtn" class="page-btn" type="button">下一页</button>
+      <select id="pageSize" class="page-btn" aria-label="每页数量">
+        <option value="20">20 条/页</option>
+        <option value="50">50 条/页</option>
+        <option value="100">100 条/页</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="detailMask" class="modal-mask" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <div class="modal-header">
+        <h2 id="detailTitle">守护详情</h2>
+        <button id="detailClose" class="modal-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="detailGrid" class="detail-grid"></div>
+    </div>
+  </div>
+
+  <div id="confirmMask" class="modal-mask" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" style="max-width:480px;">
+      <div class="modal-header">
+        <h2 id="confirmTitle">确认禁用守护</h2>
+        <button id="confirmClose" class="modal-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="confirmText" class="confirm-text"></div>
+      <div class="confirm-actions">
+        <button id="confirmCancel" class="btn btn-default" type="button">取消</button>
+        <button id="confirmDisable" class="btn btn-disable" type="button">确认禁用</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./common/rc-request.js"></script>
+  <script src="./common/rc-auth.js"></script>
+  <script src="./common/rc-venue.js"></script>
+  <script>
+    const API_URL = '/api/voiceRoom/venueGuardianManage.php';
+
+    const state = {
+      user: null,
+      roleId: 0,
+      isAdmin: false,
+      page: 1,
+      pageSize: 20,
+      total: 0,
+      totalPages: 1,
+      loading: false,
+      pendingDisable: null
+    };
+
+    const venueFilterField = document.getElementById('venueFilterField');
+    const boundVenueField = document.getElementById('boundVenueField');
+    const boundVenueText = document.getElementById('boundVenueText');
+    const venueIdEl = document.getElementById('venueId');
+    const keywordEl = document.getElementById('keyword');
+    const statusEl = document.getElementById('status');
+    const searchBtn = document.getElementById('searchBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const tableBody = document.getElementById('tableBody');
+    const resultInfo = document.getElementById('resultInfo');
+    const loadState = document.getElementById('loadState');
+    const pageInfo = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pageSizeEl = document.getElementById('pageSize');
+    const roleTip = document.getElementById('roleTip');
+
+    const detailMask = document.getElementById('detailMask');
+    const detailGrid = document.getElementById('detailGrid');
+    const detailClose = document.getElementById('detailClose');
+
+    const confirmMask = document.getElementById('confirmMask');
+    const confirmClose = document.getElementById('confirmClose');
+    const confirmCancel = document.getElementById('confirmCancel');
+    const confirmDisable = document.getElementById('confirmDisable');
+    const confirmText = document.getElementById('confirmText');
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function displayValue(value) {
+      return value === null || value === undefined || value === '' ? '-' : String(value);
+    }
+
+    function setLoading(loading, text) {
+      state.loading = loading;
+      searchBtn.disabled = loading;
+      resetBtn.disabled = loading;
+      prevBtn.disabled = loading || state.page <= 1;
+      nextBtn.disabled = loading || state.page >= state.totalPages;
+      loadState.className = loading ? 'loading-text' : '';
+      loadState.textContent = text || '';
+    }
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, {
+        credentials: 'include',
+        ...options
+      });
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        throw new Error(text || `接口返回异常：HTTP ${response.status}`);
+      }
+
+      if (Number(data.code) === 1001 || Number(data.code) === 401) {
+        if (window.RcAuth) {
+          RcAuth.redirectToLogin({ message: data.msg || '登录已过期' });
+        }
+        throw new Error(data.msg || '登录已过期');
+      }
+
+      return data;
+    }
+
+    function currentVenueId() {
+      return state.isAdmin ? venueIdEl.value : '';
+    }
+
+    function buildQuery(extra = {}) {
+      const params = new URLSearchParams({
+        action: extra.action || 'list',
+        page: String(extra.page || state.page),
+        page_size: String(state.pageSize),
+        keyword: keywordEl.value.trim(),
+        status: statusEl.value
+      });
+
+      const venueId = currentVenueId();
+      if (venueId) params.set('venue_id', venueId);
+      if (extra.id) params.set('id', String(extra.id));
+      return params;
+    }
+
+    function statusTag(row) {
+      const css = row.status === 'active'
+        ? 'status-active'
+        : (row.status === 'expired' ? 'status-expired' : 'status-disabled');
+      return `<span class="status-tag ${css}">${escapeHtml(row.status_text)}</span>`;
+    }
+
+    function renderRows(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        tableBody.innerHTML = '<tr class="empty-row"><td colspan="12">暂无符合条件的守护记录</td></tr>';
+        return;
+      }
+
+      tableBody.innerHTML = rows.map(row => {
+        const venueText = `${row.venue_id}${row.venue_name ? ' - ' + row.venue_name : ''}`;
+        const disablePart = Number(row.is_disabled) === 1
+          ? '<span class="disabled-label">已禁用</span>'
+          : `<button class="btn btn-disable js-disable" type="button" data-id="${row.id}" data-uid="${row.uid}" data-venue="${escapeHtml(venueText)}">禁用</button>`;
+
+        return `
+          <tr>
+            <td>${row.id}</td>
+            <td class="venue-name" title="${escapeHtml(venueText)}">${escapeHtml(venueText)}</td>
+            <td>${row.uid}</td>
+            <td>${row.total_paid_gold}</td>
+            <td>${escapeHtml(displayValue(row.opened_at))}</td>
+            <td>${escapeHtml(displayValue(row.last_renewed_at))}</td>
+            <td>${escapeHtml(displayValue(row.expires_at))}</td>
+            <td>${escapeHtml(displayValue(row.last_order_id))}</td>
+            <td>${escapeHtml(displayValue(row.last_welcome_at))}</td>
+            <td>${statusTag(row)}</td>
+            <td>${escapeHtml(displayValue(row.updated_at))}</td>
+            <td>
+              <div class="action-group">
+                <button class="btn btn-view js-view" type="button" data-id="${row.id}">查看</button>
+                ${disablePart}
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function updatePagination(pagination) {
+      state.page = Number(pagination.page || 1);
+      state.pageSize = Number(pagination.page_size || 20);
+      state.total = Number(pagination.total || 0);
+      state.totalPages = Math.max(1, Number(pagination.total_pages || 1));
+
+      resultInfo.textContent = `共 ${state.total} 条守护记录`;
+      pageInfo.textContent = `第 ${state.page} / ${state.totalPages} 页`;
+      pageSizeEl.value = String(state.pageSize);
+      prevBtn.disabled = state.loading || state.page <= 1;
+      nextBtn.disabled = state.loading || state.page >= state.totalPages;
+    }
+
+    async function loadList(page = 1) {
+      if (state.loading) return;
+      state.page = page;
+      setLoading(true, '数据加载中...');
+      tableBody.innerHTML = '<tr class="empty-row"><td colspan="12">正在加载...</td></tr>';
+
+      try {
+        const params = buildQuery({ page });
+        const result = await requestJson(`${API_URL}?${params.toString()}`);
+        if (Number(result.code) !== 0) {
+          throw new Error(result.msg || '查询失败');
+        }
+
+        const data = result.data || {};
+        renderRows(data.list || []);
+        updatePagination(data.pagination || {});
+
+        if (!state.isAdmin) {
+          const venueName = data.bound_venue_name || '';
+          const venueId = data.bound_venue_id || (state.user && state.user.venue_id) || '';
+          boundVenueText.textContent = `${venueId}${venueName ? ' - ' + venueName : ''}` || '未绑定场地';
+        }
+
+        setLoading(false, '');
+      } catch (err) {
+        console.error(err);
+        tableBody.innerHTML = `<tr class="empty-row"><td colspan="12" class="error-text">${escapeHtml(err.message || '加载失败')}</td></tr>`;
+        setLoading(false, '');
+        loadState.className = 'error-text';
+        loadState.textContent = err.message || '加载失败';
+      }
+    }
+
+    function openMask(mask) {
+      mask.classList.add('show');
+      mask.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeMask(mask) {
+      mask.classList.remove('show');
+      mask.setAttribute('aria-hidden', 'true');
+    }
+
+    function detailItem(label, value, rawHtml = false) {
+      return `
+        <div class="detail-item">
+          <div class="detail-label">${escapeHtml(label)}</div>
+          <div class="detail-value">${rawHtml ? value : escapeHtml(displayValue(value))}</div>
+        </div>`;
+    }
+
+    async function showDetail(id) {
+      detailGrid.innerHTML = '<div class="detail-item" style="grid-column:1/-1;">正在读取详情...</div>';
+      openMask(detailMask);
+
+      try {
+        const params = new URLSearchParams({ action: 'detail', id: String(id) });
+        const result = await requestJson(`${API_URL}?${params.toString()}`);
+        if (Number(result.code) !== 0) {
+          throw new Error(result.msg || '获取详情失败');
+        }
+
+        const row = result.data && result.data.guardian;
+        if (!row) throw new Error('详情数据为空');
+        const venueText = `${row.venue_id}${row.venue_name ? ' - ' + row.venue_name : ''}`;
+
+        detailGrid.innerHTML = [
+          detailItem('守护记录ID', row.id),
+          detailItem('场地', venueText),
+          detailItem('用户UID', row.uid),
+          detailItem('累计守护金币', row.total_paid_gold),
+          detailItem('首次开通时间', row.opened_at),
+          detailItem('最近续费时间', row.last_renewed_at),
+          detailItem('守护到期时间', row.expires_at),
+          detailItem('最近成功订单ID', row.last_order_id),
+          detailItem('最近欢迎动效时间', row.last_welcome_at),
+          detailItem('当前状态', statusTag(row), true),
+          detailItem('创建时间', row.created_at),
+          detailItem('更新时间', row.updated_at)
+        ].join('');
+      } catch (err) {
+        detailGrid.innerHTML = `<div class="detail-item error-text" style="grid-column:1/-1;">${escapeHtml(err.message || '获取详情失败')}</div>`;
+      }
+    }
+
+    function askDisable(button) {
+      state.pendingDisable = {
+        id: Number(button.dataset.id),
+        uid: button.dataset.uid,
+        venue: button.dataset.venue
+      };
+      confirmText.innerHTML = `确认禁用场地 <strong>${escapeHtml(state.pendingDisable.venue)}</strong> 内，UID <strong>${escapeHtml(state.pendingDisable.uid)}</strong> 的守护关系吗？<br>禁用后本页面不提供编辑或恢复入口。`;
+      openMask(confirmMask);
+    }
+
+    async function disableGuardian() {
+      if (!state.pendingDisable || state.loading) return;
+
+      confirmDisable.disabled = true;
+      confirmDisable.textContent = '禁用中...';
+      try {
+        const body = new URLSearchParams({
+          action: 'disable',
+          id: String(state.pendingDisable.id)
+        });
+        const result = await requestJson(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString()
+        });
+
+        if (Number(result.code) !== 0) {
+          throw new Error(result.msg || '禁用失败');
+        }
+
+        closeMask(confirmMask);
+        state.pendingDisable = null;
+        await loadList(state.page);
+      } catch (err) {
+        alert(err.message || '禁用失败');
+      } finally {
+        confirmDisable.disabled = false;
+        confirmDisable.textContent = '确认禁用';
+      }
+    }
+
+    async function initialize() {
+      try {
+        state.user = await RcAuth.requireLogin();
+        state.roleId = Number(state.user && state.user.role_id || 0);
+        state.isAdmin = [1, 2].includes(state.roleId);
+
+        if (![1, 2, 3, 4].includes(state.roleId)) {
+          throw new Error('当前账号无权访问场地守护查看');
+        }
+
+        if (state.isAdmin) {
+          venueFilterField.style.display = '';
+          boundVenueField.style.display = 'none';
+          roleTip.textContent = '管理员：可按场地查看并禁用守护';
+          await RcVenue.loadSelectForUser(venueIdEl, state.user, {
+            container: venueFilterField,
+            includeAll: true,
+            allText: '全部场地',
+            allValue: '',
+            selectedValue: '',
+            rejectOnError: false
+          });
+        } else {
+          venueFilterField.style.display = 'none';
+          boundVenueField.style.display = '';
+          roleTip.textContent = '场地账号：仅查看和禁用绑定场地守护';
+        }
+
+        await loadList(1);
+      } catch (err) {
+        console.error(err);
+        roleTip.textContent = '无访问权限';
+        tableBody.innerHTML = `<tr class="empty-row"><td colspan="12" class="error-text">${escapeHtml(err.message || '初始化失败')}</td></tr>`;
+      }
+    }
+
+    searchBtn.addEventListener('click', () => loadList(1));
+    resetBtn.addEventListener('click', () => {
+      if (state.isAdmin) venueIdEl.value = '';
+      keywordEl.value = '';
+      statusEl.value = 'all';
+      loadList(1);
+    });
+
+    keywordEl.addEventListener('keydown', event => {
+      if (event.key === 'Enter') loadList(1);
+    });
+
+    venueIdEl.addEventListener('change', () => loadList(1));
+    statusEl.addEventListener('change', () => loadList(1));
+    pageSizeEl.addEventListener('change', () => {
+      state.pageSize = Number(pageSizeEl.value || 20);
+      loadList(1);
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (state.page > 1) loadList(state.page - 1);
+    });
+    nextBtn.addEventListener('click', () => {
+      if (state.page < state.totalPages) loadList(state.page + 1);
+    });
+
+    tableBody.addEventListener('click', event => {
+      const viewBtn = event.target.closest('.js-view');
+      if (viewBtn) {
+        showDetail(viewBtn.dataset.id);
+        return;
+      }
+      const disableBtn = event.target.closest('.js-disable');
+      if (disableBtn) askDisable(disableBtn);
+    });
+
+    detailClose.addEventListener('click', () => closeMask(detailMask));
+    detailMask.addEventListener('click', event => {
+      if (event.target === detailMask) closeMask(detailMask);
+    });
+
+    confirmClose.addEventListener('click', () => closeMask(confirmMask));
+    confirmCancel.addEventListener('click', () => closeMask(confirmMask));
+    confirmMask.addEventListener('click', event => {
+      if (event.target === confirmMask) closeMask(confirmMask);
+    });
+    confirmDisable.addEventListener('click', disableGuardian);
+
+    initialize();
+  </script>
+</body>
+</html>

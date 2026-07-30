@@ -29,12 +29,140 @@ $order_number = filter_input(INPUT_GET, 'order_number');
 $uid = filter_input(INPUT_GET, 'uid');
 $venue_id = filter_input(INPUT_GET, 'venue_id', FILTER_VALIDATE_INT);
 
-// 订单类型：drive=驾驶订单，gift=礼物订单
+// 订单类型：drive=驾驶订单，gift=礼物订单，guardian=守护订单
 $order_type = filter_input(INPUT_GET, 'order_type') ?: 'drive';
-$order_type = ($order_type === 'gift') ? 'gift' : 'drive';
+$order_type = in_array($order_type, ['drive', 'gift', 'guardian'], true)
+    ? $order_type
+    : 'drive';
+
+// ==========================
+// 守护订单查询：venue_guardian_orders
+// ==========================
+if ($order_type === 'guardian') {
+    $whereSql = " WHERE 1=1";
+    $params = [];
+
+    // 支持按守护订单号、请求号、表主键搜索
+    if (!empty($order_number)) {
+        $whereSql .= " AND (
+            gdo.order_no LIKE ?
+            OR gdo.request_id LIKE ?
+            OR CAST(gdo.id AS CHAR) LIKE ?
+        )";
+        $keyword = "%{$order_number}%";
+        $params[] = $keyword;
+        $params[] = $keyword;
+        $params[] = $keyword;
+    }
+
+    if (!empty($uid)) {
+        $whereSql .= " AND gdo.uid = ?";
+        $params[] = $uid;
+    }
+
+    if (!in_array($role_id, [1, 2], true)) {
+        // role_id=3/4 以及其他非管理员账号，只能查询绑定场地
+        $whereSql .= " AND gdo.venue_id = ?";
+        $params[] = (int)($user['venue_id'] ?? 0);
+    } elseif (!empty($venue_id)) {
+        // role_id=1/2 可按场地下拉框筛选
+        $whereSql .= " AND gdo.venue_id = ?";
+        $params[] = $venue_id;
+    }
+
+    $page = max(1, intval($_GET['page'] ?? 1));
+    $pageSize = max(1, min(20, intval($_GET['page_size'] ?? $_GET['limit'] ?? 5)));
+    $offset = ($page - 1) * $pageSize;
+    $fast = isset($_GET['fast']) && $_GET['fast'] == '1';
+    $queryLimit = $fast ? ($pageSize + 1) : $pageSize;
+
+    $sql = "SELECT
+                gdo.id,
+                gdo.order_no,
+                gdo.order_no AS order_id,
+                gdo.request_id,
+                gdo.venue_id,
+                gdo.venue_id AS reservation_id,
+                gdo.uid,
+                COALESCE(u.nickname, '') AS nickname,
+                gdo.price_gold,
+                gdo.duration_days,
+                gdo.balance_before,
+                gdo.balance_after,
+                gdo.expires_before,
+                gdo.expires_after,
+                gdo.venue_share_gold,
+                gdo.platform_share_gold,
+                gdo.status AS status_code,
+                CASE gdo.status
+                    WHEN 0 THEN '处理中'
+                    WHEN 1 THEN '成功'
+                    WHEN 2 THEN '失败'
+                    WHEN 3 THEN '退款'
+                    ELSE CONCAT('未知(', gdo.status, ')')
+                END AS status,
+                gdo.failure_reason,
+                gdo.created_at,
+                gdo.paid_at,
+                gdo.updated_at,
+                COALESCE(gdo.paid_at, gdo.created_at) AS start_time,
+                COALESCE(gdo.paid_at, gdo.created_at) AS sort_time,
+                COALESCE(v.venue_name, '未知场地') AS venue_name,
+                '金币' AS pays_type,
+                'guardian' AS order_type,
+                NULL AS refund_status,
+                NULL AS lock_status,
+                0 AS lock_amount
+            FROM venue_guardian_orders gdo
+            LEFT JOIN users u ON u.uid = gdo.uid
+            LEFT JOIN venues v ON v.id = gdo.venue_id
+            {$whereSql}
+            ORDER BY COALESCE(gdo.paid_at, gdo.created_at) DESC, gdo.id DESC
+            LIMIT {$queryLimit} OFFSET {$offset}";
+
+    $data = $database->query($sql, $params);
+
+    if ($data === false || !is_array($data)) {
+        echo json_encode([
+            'code' => 500,
+            'msg' => '守护订单查询失败，请确认 venue_guardian_orders 表已创建',
+            'data' => []
+        ], JSON_UNESCAPED_UNICODE);
+        $database->close();
+        exit;
+    }
+
+    $hasMore = false;
+    if ($fast && count($data) > $pageSize) {
+        $hasMore = true;
+        $data = array_slice($data, 0, $pageSize);
+    }
+
+    if ($fast) {
+        $totalCount = $offset + count($data) + ($hasMore ? 1 : 0);
+    } else {
+        $countSql = "SELECT COUNT(*) AS count FROM venue_guardian_orders gdo {$whereSql}";
+        $countResult = $database->query($countSql, $params);
+        $totalCount = is_array($countResult) && isset($countResult[0]['count'])
+            ? intval($countResult[0]['count'])
+            : count($data);
+    }
+
+    echo json_encode([
+        'code' => 0,
+        'msg' => '',
+        'order_type' => 'guardian',
+        'count' => $totalCount,
+        'has_more' => $hasMore,
+        'fast' => $fast,
+        'data' => $data
+    ], JSON_UNESCAPED_UNICODE);
+
+    $database->close();
+    exit;
+}
  
- 
- // ==========================
+// ==========================
 // 礼物订单查询
 // ==========================
 if ($order_type === 'gift') {

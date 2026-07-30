@@ -55,6 +55,10 @@
     padding-bottom:10px;
     margin-bottom:16px;
   }
+  .tabs{display:flex;gap:8px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .tab-btn{height:34px;padding:0 18px;border:1px solid var(--border);border-radius:999px;background:#fff;color:#666;cursor:pointer}
+  .tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+  .venue-only{display:none}
 
   .toolbar{
     display:flex;
@@ -610,6 +614,10 @@
   <div class="container">
     <div class="card">
       <div class="card-title">礼物管理</div>
+      <div class="tabs">
+        <button class="tab-btn active" data-scope="global">通用礼物</button>
+        <button class="tab-btn" data-scope="venue">场地专属礼物</button>
+      </div>
 
       <div class="toolbar">
         <input id="kw" class="input" placeholder="搜索礼物名称…" />
@@ -617,6 +625,19 @@
           <option value="">全部状态</option>
           <option value="1">仅显示中</option>
           <option value="0">仅隐藏</option>
+        </select>
+        <select id="filterVenue" class="select venue-only">
+          <option value="">全部场地</option>
+        </select>
+        <select id="filterGiftStatus" class="select venue-only">
+          <option value="">全部类型</option>
+          <option value="0">普通礼物</option>
+          <option value="1">控制型礼物</option>
+        </select>
+        <select id="filterBroadcast" class="select venue-only">
+          <option value="">全部广播范围</option>
+          <option value="0">仅本场地</option>
+          <option value="1">广播到全部场地</option>
         </select>
 
         <button class="btn btn-primary" id="btnSearch">搜索</button>
@@ -654,6 +675,10 @@
       <div class="modal-title" id="modalTitle">新增礼物</div>
 
       <input id="f_id" type="hidden" />
+      <div class="venue-only">
+        <label>归属场地</label>
+        <select id="f_venue_id" class="select" style="width:100%"></select>
+      </div>
 
       <label>礼物名称</label>
       <input id="f_name" type="text" placeholder="例如：小跑车" />
@@ -683,6 +708,17 @@
       <input id="f_top_banner_show" type="checkbox" checked />
       <span>顶部浮条显示</span>
     </label>
+    <label class="check-line venue-only">
+      <input id="f_broadcast_all" type="checkbox" />
+      <span>广播到全局（不勾选则只广播到本场地）</span>
+    </label>
+    <div class="venue-only">
+      <label>礼物类型</label>
+      <select id="f_gift_status" class="select" style="width:100%">
+        <option value="0">普通礼物</option>
+        <option value="1">控制型礼物</option>
+      </select>
+    </div>
     
     <label class="check-line">
       <input id="f_play_svga" type="checkbox" checked />
@@ -761,6 +797,11 @@
   }
 
   const state = {
+    scope: 'global',
+    venueId: '',
+    giftStatus: '',
+    broadcastScope: '',
+    venues: [],
     page: 1,
     pageSize: 20,
     q: '',
@@ -928,6 +969,10 @@
       page_size: state.pageSize,
       q: state.q,
       is_display: state.is_display
+      ,scope: state.scope
+      ,venue_id: state.venueId
+      ,gift_status: state.giftStatus
+      ,is_broadcast_all: state.broadcastScope
     };
 
     const res = await fetch(`${API_BASE}?${qs(params)}`, {
@@ -938,7 +983,7 @@
   };
 
   const apiCreate = (payload) =>
-    fetch(`${API_BASE}?act=create`, {
+    fetch(`${API_BASE}?act=create&scope=${state.scope}`, {
       ...API_FETCH_OPTS,
       method: 'POST',
       headers: API_HEADERS,
@@ -946,7 +991,7 @@
     }).then(r => r.json());
 
   const apiUpdate = (payload) =>
-    fetch(`${API_BASE}?act=update`, {
+    fetch(`${API_BASE}?act=update&scope=${state.scope}`, {
       ...API_FETCH_OPTS,
       method: 'POST',
       headers: API_HEADERS,
@@ -954,7 +999,7 @@
     }).then(r => r.json());
 
   const apiDelete = (id) =>
-    fetch(`${API_BASE}?act=delete`, {
+    fetch(`${API_BASE}?act=delete&scope=${state.scope}`, {
       ...API_FETCH_OPTS,
       method: 'POST',
       headers: API_HEADERS,
@@ -962,7 +1007,7 @@
     }).then(r => r.json());
 
   const apiBatchDelete = (ids) =>
-    fetch(`${API_BASE}?act=batch_delete`, {
+    fetch(`${API_BASE}?act=batch_delete&scope=${state.scope}`, {
       ...API_FETCH_OPTS,
       method: 'POST',
       headers: API_HEADERS,
@@ -970,7 +1015,7 @@
     }).then(r => r.json());
 
   const apiToggleDisplay = (id, is_display) =>
-    fetch(`${API_BASE}?act=toggle_display`, {
+    fetch(`${API_BASE}?act=toggle_display&scope=${state.scope}`, {
       ...API_FETCH_OPTS,
       method: 'POST',
       headers: API_HEADERS,
@@ -1018,6 +1063,7 @@ function renderDesktopRow(row){
       <div class="gift-info">
         <div class="gift-name">${escapeHtml(row.gift_name || '')}</div>
         <div class="muted">礼物ID：${row.id}</div>
+        ${state.scope === 'venue' ? `<div class="muted">归属场地：${escapeHtml(row.venue_name || '')}（ID：${row.venue_id}）</div>` : ''}
 
         <div class="gift-link">
           图片：${row.image_url ? `<a href="${escapeHtml(row.image_url)}" target="_blank">查看链接</a>` : '—'}
@@ -1042,6 +1088,11 @@ function renderDesktopRow(row){
             ${playSvgaOn ? '播放' : '关闭'}
           </strong>
         </div>
+        ${state.scope === 'venue' ? `
+        <div class="gift-link">
+          广播范围：${String(row.is_broadcast_all ?? 0) === '1' ? '全部场地' : '仅本场地'}
+          ｜类型：${String(row.gift_status ?? 0) === '1' ? '控制型礼物' : '普通礼物'}
+        </div>` : ''}
       </div>
     </div>
   `;
@@ -1184,7 +1235,7 @@ function renderDesktopRow(row){
   }
 
 function openCreate(){
-  $('#modalTitle').textContent = '新增礼物';
+  $('#modalTitle').textContent = state.scope === 'venue' ? '新增场地专属礼物' : '新增通用礼物';
   $('#f_id').value = '';
   $('#f_name').value = '';
   $('#f_price').value = '';
@@ -1193,6 +1244,9 @@ function openCreate(){
   $('#f_display').checked = true;
   $('#f_top_banner_show').checked = true;
   $('#f_play_svga').checked = true;
+  $('#f_venue_id').value = state.venueId || '';
+  $('#f_broadcast_all').checked = false;
+  $('#f_gift_status').value = '0';
   $('#giftModal').style.display = 'flex';
 }
 
@@ -1206,6 +1260,9 @@ function openEdit(row){
   $('#f_display').checked = String(row.is_display) === '1';
   $('#f_top_banner_show').checked = String(row.is_top_banner_show ?? 1) === '1';
   $('#f_play_svga').checked = String(row.is_play_svga ?? 1) === '1';
+  $('#f_venue_id').value = row.venue_id || '';
+  $('#f_broadcast_all').checked = String(row.is_broadcast_all ?? 0) === '1';
+  $('#f_gift_status').value = String(row.gift_status ?? 0);
   $('#giftModal').style.display = 'flex';
 }
 
@@ -1225,6 +1282,15 @@ function openEdit(row){
       is_top_banner_show: $('#f_top_banner_show').checked ? 1 : 0,
       is_play_svga: $('#f_play_svga').checked ? 1 : 0
     };
+    if (state.scope === 'venue') {
+      payload.venue_id = Number($('#f_venue_id').value || 0);
+      payload.is_broadcast_all = $('#f_broadcast_all').checked ? 1 : 0;
+      payload.gift_status = Number($('#f_gift_status').value || 0);
+      if (!payload.venue_id) {
+        toast('请选择归属场地');
+        return;
+      }
+    }
 
     if (!payload.gift_name) {
       toast('礼物名称不能为空');
@@ -1309,6 +1375,9 @@ function openEdit(row){
   $('#btnSearch').onclick = () => {
     state.q = $('#kw').value.trim();
     state.is_display = $('#filterDisplay').value;
+    state.venueId = $('#filterVenue').value;
+    state.giftStatus = $('#filterGiftStatus').value;
+    state.broadcastScope = $('#filterBroadcast').value;
     state.page = 1;
     state.checked.clear();
     load();
@@ -1384,8 +1453,50 @@ function openEdit(row){
     renderList();
   });
 
-  (function init(){
+  function fillVenueSelects(){
+    const options = state.venues.map(v => `<option value="${v.id}">${escapeHtml(v.venue_name || '')}（ID：${v.id}）</option>`).join('');
+    $('#filterVenue').innerHTML = '<option value="">全部场地</option>' + options;
+    $('#f_venue_id').innerHTML = '<option value="">请选择场地</option>' + options;
+  }
+
+  async function loadVenues(){
+    const ret = await fetch(`${API_BASE}?act=venues`, API_FETCH_OPTS).then(r => r.json());
+    if (ret.ok) {
+      state.venues = ret.data.list || [];
+      fillVenueSelects();
+    }
+  }
+
+  document.querySelectorAll('[data-scope]').forEach(btn => {
+    btn.onclick = () => {
+      state.scope = btn.dataset.scope;
+      state.page = 1;
+      state.venueId = '';
+      state.giftStatus = '';
+      state.broadcastScope = '';
+      state.checked.clear();
+      document.querySelectorAll('[data-scope]').forEach(x => x.classList.toggle('active', x === btn));
+      document.querySelectorAll('.venue-only').forEach(x => {
+        if (state.scope !== 'venue') {
+          x.style.display = 'none';
+        } else if (x.classList.contains('check-line')) {
+          x.style.display = 'flex';
+        } else if (x.tagName === 'SELECT') {
+          x.style.display = 'inline-block';
+        } else {
+          x.style.display = 'block';
+        }
+      });
+      $('#filterVenue').value = '';
+      $('#filterGiftStatus').value = '';
+      $('#filterBroadcast').value = '';
+      load();
+    };
+  });
+
+  (async function init(){
     $('#pageSize').value = String(state.pageSize);
+    await loadVenues();
     load();
   })();
 </script>

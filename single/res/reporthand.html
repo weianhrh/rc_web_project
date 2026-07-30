@@ -301,6 +301,41 @@
             font-size: 14px;
             margin-bottom: 10px;
         }
+
+        .global-mute-target {
+            background: #f6f8ff;
+            border: 1px solid #e5eaff;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .global-mute-help {
+            margin-top: -6px;
+            margin-bottom: 15px;
+            color: #7f8fa4;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .global-mute-submit {
+            width: 100%;
+            padding: 10px;
+            background-color: #22a06b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .global-mute-submit:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
     </style>
 </head>
 
@@ -376,6 +411,43 @@
         </div>
     </div>
 
+    <div id="globalMuteModal" class="ban-modal" style="display: none;" onclick="if (event.target === this) closeGlobalMuteModal()">
+        <div class="ban-modal-content">
+            <span class="ban-modal-close" onclick="closeGlobalMuteModal()">&times;</span>
+            <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px;">全场禁言</h2>
+            <form id="globalMuteForm">
+                <input type="hidden" id="globalMuteReportId">
+                <input type="hidden" id="globalMuteSourceTable">
+                <input type="hidden" id="globalMuteUid">
+
+                <div class="global-mute-target" id="globalMuteTargetText">被举报用户：-</div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="globalMuteDuration" style="display:block; margin-bottom: 5px; font-weight: bold;">禁言时长</label>
+                    <select id="globalMuteDuration" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                        <option value="600">10分钟</option>
+                        <option value="1800" selected>30分钟</option>
+                        <option value="3600">1小时</option>
+                        <option value="21600">6小时</option>
+                        <option value="43200">12小时</option>
+                        <option value="86400">1天</option>
+                        <option value="259200">3天</option>
+                        <option value="604800">7天</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="globalMuteReason" style="display:block; margin-bottom: 5px; font-weight: bold;">禁言原因</label>
+                    <textarea id="globalMuteReason" rows="3" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"></textarea>
+                </div>
+
+                <div class="global-mute-help">确认后会按照“用户禁言记录”的 banned_users 逻辑，对当前全部场地写入限时禁言，并将本条举报标记为已处理。</div>
+
+                <button type="submit" id="globalMuteSubmitBtn" class="global-mute-submit">确认全场禁言</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         const STATUS_ENUM = {
             '未处理': '未处理',
@@ -385,6 +457,7 @@
 
         let currentUserRole = 0;
         const complaintCache = {};
+        const GLOBAL_MUTE_API = '/api/operat/venue_mute_records_api.php';
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -511,11 +584,18 @@ function renderDeviceComplaint(complaint) {
             if (!(currentUserRole === 1 || currentUserRole === 2)) return '';
 
             const sourceTable = complaint.source_table || 'Reports';
+            const isVoiceCommentReport = sourceTable === 'voice_reports' && String(complaint.report_type) === '1';
             const canBan = sourceTable === 'Reports' || (sourceTable === 'voice_reports' && String(complaint.report_type) === '0');
             const cacheKey = complaint.__cacheKey || '';
-            const validActionHtml = canBan
-                ? `<button class="action-button green" onclick="openBanModalByKey('${escapeHtml(cacheKey)}')">有效</button>`
-                : `<button class="action-button green" onclick="modifyComplaintStatus(${Number(complaint.id)}, '${escapeHtml(complaint.status)}', '已处理', '${escapeHtml(sourceTable)}')">标记已处理</button>`;
+            let validActionHtml = '';
+
+            if (isVoiceCommentReport) {
+                validActionHtml = `<button class="action-button green" onclick="openGlobalMuteModalByKey('${escapeHtml(cacheKey)}')">有效</button>`;
+            } else if (canBan) {
+                validActionHtml = `<button class="action-button green" onclick="openBanModalByKey('${escapeHtml(cacheKey)}')">有效</button>`;
+            } else {
+                validActionHtml = `<button class="action-button green" onclick="modifyComplaintStatus(${Number(complaint.id)}, '${escapeHtml(complaint.status)}', '已处理', '${escapeHtml(sourceTable)}')">标记已处理</button>`;
+            }
 
             return `
                 <div class="action-row">
@@ -630,6 +710,62 @@ function renderDeviceComplaint(complaint) {
                 });
         }
 
+        function openGlobalMuteModalByKey(cacheKey) {
+            const complaint = complaintCache[cacheKey];
+            if (!complaint) {
+                alert('未找到投诉记录');
+                return;
+            }
+            openGlobalMuteModal(complaint);
+        }
+
+        function openGlobalMuteModal(complaint) {
+            if (!(currentUserRole === 1 || currentUserRole === 2)) {
+                alert('当前角色无权执行全场禁言');
+                return;
+            }
+
+            if (complaint.source_table !== 'voice_reports' || String(complaint.report_type) !== '1') {
+                alert('只有评论/弹幕举报可以执行全场禁言');
+                return;
+            }
+
+            const bannedUid = String(complaint.target_id || complaint.handler_uid || '').trim();
+            if (!/^\d+$/.test(bannedUid) || Number(bannedUid) <= 0) {
+                alert('被举报用户 UID 无效，无法执行禁言');
+                return;
+            }
+
+            document.getElementById('globalMuteReportId').value = complaint.id || '';
+            document.getElementById('globalMuteSourceTable').value = 'voice_reports';
+            document.getElementById('globalMuteUid').value = bannedUid;
+            document.getElementById('globalMuteDuration').value = '1800';
+
+            const targetName = String(complaint.target_name || '').trim();
+            document.getElementById('globalMuteTargetText').textContent = targetName
+                ? `被举报用户：${bannedUid}（${targetName}）`
+                : `被举报用户：${bannedUid}`;
+
+            syncGlobalMuteReason();
+            document.getElementById('globalMuteSubmitBtn').disabled = false;
+            document.getElementById('globalMuteModal').style.display = 'flex';
+        }
+
+        function closeGlobalMuteModal() {
+            document.getElementById('globalMuteModal').style.display = 'none';
+            document.getElementById('globalMuteSubmitBtn').disabled = false;
+        }
+
+        function getGlobalMuteDurationText() {
+            const select = document.getElementById('globalMuteDuration');
+            const selected = select.options[select.selectedIndex];
+            return selected ? selected.textContent.trim() : '30分钟';
+        }
+
+        function syncGlobalMuteReason() {
+            document.getElementById('globalMuteReason').value = `存在违规发言，现已被禁言${getGlobalMuteDurationText()}`;
+        }
+
         function openBanModalByKey(cacheKey) {
             const complaint = complaintCache[cacheKey];
             if (!complaint) {
@@ -706,6 +842,76 @@ document.getElementById('banDuration').value = '600';
         function closeBanModal() {
             document.getElementById('banModal').style.display = 'none';
         }
+
+        document.getElementById('globalMuteDuration').addEventListener('change', syncGlobalMuteReason);
+
+        document.getElementById('globalMuteForm').onsubmit = function (e) {
+            e.preventDefault();
+
+            if (!(currentUserRole === 1 || currentUserRole === 2)) {
+                alert('当前角色无权执行全场禁言');
+                return;
+            }
+
+            const reportId = document.getElementById('globalMuteReportId').value;
+            const bannedUid = document.getElementById('globalMuteUid').value;
+            const durationSeconds = document.getElementById('globalMuteDuration').value;
+            const reason = document.getElementById('globalMuteReason').value.trim();
+            const submitBtn = document.getElementById('globalMuteSubmitBtn');
+
+            if (!/^\d+$/.test(reportId) || Number(reportId) <= 0) {
+                alert('举报记录参数错误');
+                return;
+            }
+
+            if (!/^\d+$/.test(bannedUid) || Number(bannedUid) <= 0) {
+                alert('被举报用户 UID 无效');
+                return;
+            }
+
+            if (!reason) {
+                alert('请输入禁言原因');
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.set('action', 'global_mute');
+            params.set('report_id', reportId);
+            params.set('banned_uid', bannedUid);
+            params.set('duration_seconds', durationSeconds);
+            params.set('reason', reason);
+
+            submitBtn.disabled = true;
+
+            fetch(GLOBAL_MUTE_API, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (Number(data.code) === 0) {
+                        const result = data.data || {};
+                        const venueCount = Number(result.venue_count || 0);
+                        const endTime = result.end_time ? `，结束时间：${result.end_time}` : '';
+                        alert(`全场禁言成功，已覆盖 ${venueCount} 个场地${endTime}`);
+                        closeGlobalMuteModal();
+                        loadComplaintRecords();
+                    } else {
+                        alert('全场禁言失败：' + (data.msg || '未知错误'));
+                    }
+                })
+                .catch(err => {
+                    console.error('全场禁言失败:', err);
+                    alert('全场禁言失败，请稍后重试');
+                })
+                .finally(() => {
+                    submitBtn.disabled = false;
+                });
+        };
 
         document.getElementById('banForm').onsubmit = function (e) {
             e.preventDefault();

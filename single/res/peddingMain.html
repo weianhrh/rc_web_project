@@ -782,20 +782,46 @@ function loadPendingImages() {
                 data.data.forEach(item => {
                     const card = document.createElement('div');
                     card.className = 'venue-card';
-                    const imageUrl = "https://open.rcwulian.cn/api/venue/"+item.image_url;
+                    const reviewType = item.review_type === 'voice_room_background'
+                        ? 'voice_room_background'
+                        : 'venue_avatar';
+                    const reviewId = String(item.review_id || '').replace(/[^A-Za-z0-9_-]/g, '');
+                    const rawImageUrl = String(item.image_url || '');
+                    const imageUrl = /^https?:\/\//i.test(rawImageUrl)
+                        ? rawImageUrl
+                        : 'https://open.rcwulian.cn/api/venue/' + rawImageUrl.replace(/^\/+/, '');
+                    const typeText = reviewType === 'voice_room_background'
+                        ? '语音房背景图'
+                        : '场地头像';
                     card.innerHTML = `
-                    <img src="https://open.rcwulian.cn/api/venue/${item.image_url}"class="venue-img" alt="待审核图片"  onclick="showModal('${imageUrl}')">
+                    <img class="venue-img" alt="待审核图片">
                         <div class="venue-info">
-                            <span class="venue-name">${item.venue_name}</span>
-                            <span>场地ID: ${item.id}</span>
-                            <span>状态: ${item.image_status}</span>
-                            <span>上传时间: ${item.upload_time}</span>
+                            <span class="venue-name"></span>
+                            <span class="review-type"></span>
+                            <span class="venue-id"></span>
+                            <span class="review-status"></span>
+                            <span class="upload-time"></span>
                         </div>
                         <div class="venue-actions">
-                            <button class="edit-btn" onclick="approveImage(${item.id})">审核通过</button>
-                            <button class="edit-btn" style="background-color:#f44336" onclick="rejectImage(${item.id})">拒绝</button>
+                            <button class="edit-btn approve-btn">审核通过</button>
+                            <button class="edit-btn reject-btn" style="background-color:#f44336">拒绝</button>
                         </div>
                     `;
+
+                    const image = card.querySelector('.venue-img');
+                    image.src = imageUrl;
+                    image.onclick = () => showModal(imageUrl);
+                    card.querySelector('.venue-name').textContent = item.venue_name || '未知场地';
+                    card.querySelector('.review-type').textContent = '审核类型: ' + typeText;
+                    card.querySelector('.venue-id').textContent = '场地ID: ' + item.id;
+                    card.querySelector('.review-status').textContent = '状态: ' + (item.image_status || 'pending');
+                    card.querySelector('.upload-time').textContent = '上传时间: ' + (item.upload_time || '-');
+                    card.querySelector('.approve-btn').onclick = () => {
+                        approveImage(Number(item.id), reviewType, reviewId, card);
+                    };
+                    card.querySelector('.reject-btn').onclick = () => {
+                        rejectImage(Number(item.id), reviewType, reviewId, card);
+                    };
 
                     container.appendChild(card);
                 });
@@ -888,10 +914,14 @@ function loadPendingImages() {
 //     }
 // }
 
-async function approveImage(venueId) {
+async function approveImage(venueId, reviewType = 'venue_avatar', reviewId = '', cardElement = null) {
+    if (reviewType === 'voice_room_background') {
+        return reviewVoiceRoomBg(venueId, reviewId, 'approve');
+    }
+
     if (!confirm("确认通过该图片审核，并设为场地头像？")) return;
 
-    const card = document.querySelector(`.venue-card button[onclick="approveImage(${venueId})"]`).closest('.venue-card');
+    const card = cardElement || document.querySelector(`.venue-card button[onclick="approveImage(${venueId})"]`).closest('.venue-card');
     const imgUrl = card.querySelector('img').getAttribute('src');
 
     try {
@@ -941,7 +971,7 @@ async function approveImage(venueId) {
     }
 }
 
-async function rejectImage(venueId) {
+async function rejectImage(venueId, reviewType = 'venue_avatar', reviewId = '', cardElement = null) {
   
     
 
@@ -951,6 +981,10 @@ async function rejectImage(venueId) {
     // 找到图片 URL 并提取 filename
     const reason = prompt("请输入拒绝原因：", "内容不适宜");
     if (!reason) return;
+    if (reviewType === 'voice_room_background') {
+        return reviewVoiceRoomBg(venueId, reviewId, 'reject', reason);
+    }
+
     const rejectRes = await fetch('https://open.rcwulian.cn/api/venue/rejectImage.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -960,7 +994,7 @@ async function rejectImage(venueId) {
         })
     });
 
-    const card = document.querySelector(`.venue-card button[onclick="rejectImage(${venueId})"]`).closest('.venue-card');
+    const card = cardElement || document.querySelector(`.venue-card button[onclick="rejectImage(${venueId})"]`).closest('.venue-card');
     const imgUrl = card.querySelector('img').getAttribute('src');
     const filename = imgUrl.split('/pending_images/')[1];
 
@@ -982,6 +1016,40 @@ async function rejectImage(venueId) {
         location.reload();
     } else {
         alert('删除失败：' + deleteData.msg);
+    }
+}
+
+async function reviewVoiceRoomBg(venueId, reviewId, action, reason = '') {
+    const actionText = action === 'approve' ? '通过' : '拒绝';
+    if (!reviewId) {
+        alert('语音房背景图审核记录ID缺失，请刷新页面后重试');
+        return;
+    }
+    if (action === 'approve' && !confirm('确认通过该语音房背景图审核？通过后将立即作为该场地的语音房背景图。')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('https://open.rcwulian.cn/api/venue/reviewVoiceRoomBg.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                venue_id: venueId,
+                review_id: reviewId,
+                action,
+                reason
+            })
+        });
+        const result = await response.json();
+        if (result.code === 0) {
+            alert(result.msg || `语音房背景图已${actionText}`);
+            location.reload();
+        } else {
+            alert(result.msg || `语音房背景图${actionText}失败`);
+        }
+    } catch (error) {
+        console.error('语音房背景图审核失败：', error);
+        alert('语音房背景图审核处理失败，请检查网络或服务器');
     }
 }
 

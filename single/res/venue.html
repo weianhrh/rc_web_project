@@ -511,6 +511,146 @@
       }
     }
 
+    /* ===== role_id=3：语音房背景图审核上传 ===== */
+    .voice-bg-role3-panel{
+      display:none;
+      margin-top:2px;
+    }
+    .voice-bg-preview-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1fr);
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .voice-bg-preview-grid.has-submitted{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .voice-bg-preview-item{
+      position:relative;
+      overflow:hidden;
+      min-width:0;
+      margin:0;
+      border:1px solid rgba(64,158,255,.20);
+      border-radius:14px;
+      background:rgba(238,245,255,.66);
+    }
+    .voice-bg-preview-media{
+      position:relative;
+      width:100%;
+      aspect-ratio:9/16;
+      max-height:260px;
+      overflow:hidden;
+      background:linear-gradient(145deg,#edf4fc,#dfeaf7);
+    }
+    .voice-bg-preview-media img{
+      width:100%;
+      height:100%;
+      display:none;
+      object-fit:cover;
+    }
+    .voice-bg-preview-empty{
+      position:absolute;
+      inset:0;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:14px;
+      color:#8290a5;
+      text-align:center;
+      font-size:12px;
+      line-height:1.45;
+    }
+    .voice-bg-preview-empty i{
+      font-size:24px;
+      color:#9aabc1;
+    }
+    .voice-bg-preview-caption{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:38px;
+      padding:8px 10px;
+      border-top:1px solid rgba(64,158,255,.14);
+      color:#526176;
+      font-size:12px;
+      font-weight:800;
+      text-align:center;
+    }
+    .voice-bg-review-status{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      min-height:52px;
+      margin-bottom:10px;
+      padding:11px 13px;
+      border:1px solid #d9e1ee;
+      border-radius:13px;
+      background:rgba(243,246,251,.86);
+      color:#526176;
+      font-size:13px;
+      line-height:1.55;
+    }
+    .voice-bg-review-status > i{
+      flex:0 0 auto;
+      margin-top:3px;
+      font-size:15px;
+    }
+    .voice-bg-review-status.pending{
+      border-color:rgba(217,119,6,.28);
+      background:rgba(255,247,237,.88);
+      color:#9a5b08;
+    }
+    .voice-bg-review-status.approved{
+      border-color:rgba(21,128,61,.24);
+      background:rgba(240,253,244,.88);
+      color:#13733a;
+    }
+    .voice-bg-review-status.rejected,
+    .voice-bg-review-status.error{
+      border-color:rgba(186,26,26,.24);
+      background:rgba(255,241,242,.88);
+      color:#a61919;
+    }
+    .voice-bg-review-title{font-weight:900;}
+    .voice-bg-review-detail{
+      margin-top:2px;
+      overflow-wrap:anywhere;
+      font-size:12px;
+      font-weight:500;
+    }
+    .voice-bg-role3-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .voice-bg-role3-actions .mini-btn{
+      width:100%;
+      min-height:44px !important;
+    }
+    .voice-bg-role3-actions .mini-btn:disabled{
+      cursor:not-allowed;
+      transform:none !important;
+      filter:none !important;
+      opacity:.58;
+      background:#8190a5 !important;
+    }
+    .voice-bg-cooldown-tip{
+      min-height:20px;
+      margin-top:7px;
+      color:#6b778b;
+      font-size:12px;
+      line-height:1.55;
+    }
+    .voice-bg-cooldown-tip i{margin-right:4px;}
+
+    @media (max-width:520px){
+      .voice-bg-preview-grid{gap:9px;}
+      .voice-bg-preview-media{max-height:230px;}
+      .voice-bg-preview-caption{padding:7px 6px;font-size:11px;}
+    }
+
 
   </style>
 </head>
@@ -534,11 +674,28 @@
     let IS_EDITING = false;
     let SENSITIVE_WORDS = [];
     let hasUploaded = false;
+    let VOICE_BG_REVIEW = null;
+    let VOICE_BG_UPLOADING = false;
+    let VOICE_BG_COOLDOWN_END = 0;
+    let VOICE_BG_COOLDOWN_TIMER = null;
+
+    const VOICE_BG_UPLOAD_API = 'https://open.rcwulian.cn/api/venue/uploadVoiceRoomBg.php';
+    const VOICE_BG_STATUS_API = 'https://open.rcwulian.cn/api/venue/getVoiceRoomBgReviewStatus.php';
 
     // ================= 工具函数 =================
     function getUrlParameter(name) {
       const urlParams = new URLSearchParams(window.location.search);
       return urlParams.get(name);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      })[char]);
     }
 
 
@@ -569,42 +726,345 @@
       for (let w of SENSITIVE_WORDS) if (t.includes(w)) return w;
       return null;
     }
-async function handleVoiceRoomBgUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+    async function readVoiceBgApiResponse(response) {
+      const raw = await response.text();
+      let result;
 
-  try {
-    const formData = new FormData();
+      try {
+        result = JSON.parse(raw);
+      } catch (e) {
+        throw new Error(`服务器返回格式异常（HTTP ${response.status}）`);
+      }
 
-    // 这里我同时 append 两个键，兼容你那边 upload_profile.php 可能取 file 或 image
-    formData.append('file', file);
-    formData.append('image', file);
+      if (!response.ok) {
+        throw new Error(result.msg || `HTTP 错误：${response.status}`);
+      }
 
-    const response = await fetch('https://rcwulian.cn/app/img/userimg/upload_profile.php', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP 错误：${response.status}`);
+      return result;
     }
 
-    const result = await response.json();
-    console.log('上传返回结果', result.url);
+    function normaliseVoiceBgStatusData(data) {
+      const source = data && typeof data === 'object' ? data : {};
+      const review = source.review && typeof source.review === 'object'
+        ? source.review
+        : source;
+      const lock =
+        (source.cooldown && typeof source.cooldown === 'object' && source.cooldown) ||
+        (source.lock && typeof source.lock === 'object' && source.lock) ||
+        {};
 
-    if (result.url) {
-      document.getElementById('voice-room-bg-input').value = result.url;
-      alert('上传成功，已回填链接');
-    } else {
-      alert(result.msg || '上传成功，但未返回图片链接');
+      let remaining = Number(
+        source.cooldown_remaining ??
+        source.remaining_seconds ??
+        source.ttl ??
+        lock.ttl ??
+        0
+      );
+      if (!Number.isFinite(remaining) || remaining < 0) remaining = 0;
+
+      const until =
+        source.cooldown_until ||
+        source.until_iso ||
+        lock.until_iso ||
+        '';
+
+      return {
+        status: String(
+          review.status ||
+          (source.has_pending ? 'pending' : 'none')
+        ).toLowerCase(),
+        currentUrl:
+          source.current_url ||
+          source.current_image_url ||
+          (window.CURRENT_VENUE && window.CURRENT_VENUE.voice_room_bg_url) ||
+          '',
+        submittedUrl:
+          review.preview_url ||
+          source.pending_url ||
+          source.review_image_url ||
+          review.image_url ||
+          review.pending_url ||
+          '',
+        reason: review.reason || review.reject_reason || '',
+        uploadedAt: review.uploaded_at || '',
+        reviewedAt: review.reviewed_at || '',
+        remaining,
+        cooldownEnd: remaining > 0 ? Date.now() + remaining * 1000 : 0,
+        until,
+        canUpload: typeof source.can_upload === 'boolean'
+          ? source.can_upload
+          : (lock.locked === true ? false : null)
+      };
     }
-  } catch (e) {
-    console.error('语音房背景图上传失败：', e);
-    alert('上传失败：' + e.message);
-  } finally {
-    event.target.value = '';
-  }
-}
+
+    function formatVoiceBgCooldown(seconds) {
+      let sec = Math.max(0, Math.ceil(Number(seconds) || 0));
+      const days = Math.floor(sec / 86400);
+      sec %= 86400;
+      const hours = Math.floor(sec / 3600);
+      sec %= 3600;
+      const minutes = Math.max(sec > 0 ? 1 : 0, Math.floor(sec / 60));
+      const parts = [];
+
+      if (days > 0) parts.push(`${days}天`);
+      if (hours > 0) parts.push(`${hours}小时`);
+      if (days === 0 && minutes > 0) parts.push(`${minutes}分钟`);
+      return parts.join('') || '已到期';
+    }
+
+    function setVoiceBgPreview(imageId, emptyId, url) {
+      const image = document.getElementById(imageId);
+      const empty = document.getElementById(emptyId);
+      if (!image || !empty) return;
+
+      if (!url) {
+        image.removeAttribute('src');
+        image.style.display = 'none';
+        empty.style.display = 'flex';
+        return;
+      }
+
+      image.onload = () => {
+        image.style.display = 'block';
+        empty.style.display = 'none';
+      };
+      image.onerror = () => {
+        image.style.display = 'none';
+        empty.style.display = 'flex';
+      };
+      image.src = url;
+    }
+
+    function getVoiceBgRemainingSeconds() {
+      if (!VOICE_BG_COOLDOWN_END) return 0;
+      return Math.max(0, Math.ceil((VOICE_BG_COOLDOWN_END - Date.now()) / 1000));
+    }
+
+    function updateVoiceBgCooldownUI() {
+      if (ROLE_ID !== 3) return;
+
+      const button = document.getElementById('voice-room-bg-role3-upload-btn');
+      const tip = document.getElementById('voice-room-bg-cooldown-tip');
+      if (!button || !tip) return;
+
+      const review = VOICE_BG_REVIEW || normaliseVoiceBgStatusData(null);
+      const remaining = getVoiceBgRemainingSeconds();
+      const isPending = review.status === 'pending';
+      const cooldownExpired = review.cooldownEnd > 0 && remaining <= 0;
+      const explicitlyBlocked = review.canUpload === false && !cooldownExpired;
+      const canUpload = !VOICE_BG_UPLOADING && !isPending && remaining <= 0 && !explicitlyBlocked;
+
+      button.disabled = !canUpload;
+      button.textContent = VOICE_BG_UPLOADING
+        ? '正在提交...'
+        : (isPending ? '等待审核' : (remaining > 0 ? '冷却中' : '上传新背景图'));
+
+      if (isPending) {
+        tip.innerHTML = '<i class="fas fa-hourglass-half"></i>已提交审核，审核完成前不能重复提交。';
+      } else if (remaining > 0) {
+        const untilText = review.until ? `，解锁时间：${escapeHtml(review.until)}` : '';
+        tip.innerHTML = `<i class="fas fa-clock"></i>每个场地 7 天只能提交一次，还需 ${formatVoiceBgCooldown(remaining)}${untilText}`;
+      } else if (explicitlyBlocked) {
+        tip.innerHTML = '<i class="fas fa-lock"></i>当前暂不可提交，请稍后刷新页面查看。';
+      } else {
+        tip.innerHTML = '<i class="fas fa-info-circle"></i>每个场地 7 天只能提交一次；提交后需等待图文审核。';
+      }
+    }
+
+    function renderVoiceRoomBgReviewUI() {
+      if (ROLE_ID !== 3) return;
+
+      const review = VOICE_BG_REVIEW || normaliseVoiceBgStatusData(null);
+      const statusBox = document.getElementById('voice-room-bg-review-status');
+      const submittedWrap = document.getElementById('voice-room-bg-submitted-wrap');
+      const previewGrid = submittedWrap ? submittedWrap.parentElement : null;
+
+      setVoiceBgPreview('voice-room-bg-current-image', 'voice-room-bg-current-empty', review.currentUrl);
+
+      const showSubmitted =
+        !!review.submittedUrl &&
+        (review.status === 'pending' || review.status === 'rejected');
+      if (submittedWrap) submittedWrap.style.display = showSubmitted ? 'block' : 'none';
+      if (previewGrid) previewGrid.classList.toggle('has-submitted', showSubmitted);
+      if (showSubmitted) {
+        setVoiceBgPreview('voice-room-bg-submitted-image', 'voice-room-bg-submitted-empty', review.submittedUrl);
+      }
+
+      if (statusBox) {
+        let icon = 'fa-info-circle';
+        let title = '暂无背景图审核记录';
+        let detail = '您可以上传新的语音房背景图，提交后由审核员处理。';
+        let statusClass = '';
+
+        if (review.status === 'pending') {
+          icon = 'fa-hourglass-half';
+          title = '语音房背景图审核中';
+          detail = review.uploadedAt ? `提交时间：${review.uploadedAt}` : '请等待审核员处理。';
+          statusClass = 'pending';
+        } else if (review.status === 'approved') {
+          icon = 'fa-check-circle';
+          title = '语音房背景图已审核通过';
+          detail = review.reviewedAt ? `审核时间：${review.reviewedAt}` : '当前图片已经生效。';
+          statusClass = 'approved';
+        } else if (review.status === 'rejected') {
+          icon = 'fa-times-circle';
+          title = '语音房背景图审核未通过';
+          detail = `原因：${review.reason || '审核员未填写原因'}`;
+          statusClass = 'rejected';
+        } else if (review.status === 'error') {
+          icon = 'fa-exclamation-circle';
+          title = '审核状态加载失败';
+          detail = review.reason || '请刷新页面重试。';
+          statusClass = 'error';
+        }
+
+        statusBox.className = `voice-bg-review-status ${statusClass}`.trim();
+        statusBox.innerHTML = `
+          <i class="fas ${icon}"></i>
+          <div>
+            <div class="voice-bg-review-title">${escapeHtml(title)}</div>
+            <div class="voice-bg-review-detail">${escapeHtml(detail)}</div>
+          </div>
+        `;
+      }
+
+      VOICE_BG_COOLDOWN_END = review.cooldownEnd || 0;
+
+      if (VOICE_BG_COOLDOWN_TIMER) {
+        clearInterval(VOICE_BG_COOLDOWN_TIMER);
+        VOICE_BG_COOLDOWN_TIMER = null;
+      }
+      updateVoiceBgCooldownUI();
+      if (VOICE_BG_COOLDOWN_END > Date.now()) {
+        VOICE_BG_COOLDOWN_TIMER = setInterval(updateVoiceBgCooldownUI, 30000);
+      }
+    }
+
+    async function loadVoiceRoomBgReviewStatus() {
+      if (ROLE_ID !== 3) return;
+
+      const venueId =
+        getUrlParameter('id') ||
+        (window.CURRENT_VENUE && window.CURRENT_VENUE.id) ||
+        '';
+      if (!venueId) return;
+
+      try {
+        const response = await fetch(`${VOICE_BG_STATUS_API}?id=${encodeURIComponent(venueId)}`, {
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        const result = await readVoiceBgApiResponse(response);
+
+        if (Number(result.code) !== 0) {
+          throw new Error(result.msg || '审核状态加载失败');
+        }
+
+        VOICE_BG_REVIEW = normaliseVoiceBgStatusData(result.data);
+      } catch (e) {
+        console.error('语音房背景图审核状态加载失败：', e);
+        VOICE_BG_REVIEW = normaliseVoiceBgStatusData({
+          status: 'error',
+          reason: e.message,
+          can_upload: false
+        });
+      }
+
+      renderVoiceRoomBgReviewUI();
+    }
+
+    async function uploadRole3VoiceRoomBg(file) {
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024;
+
+      if (file.type && !allowedTypes.includes(file.type)) {
+        alert('仅支持 JPG、PNG、WEBP 格式图片');
+        return;
+      }
+      if (file.size > maxSize) {
+        alert('图片大小不能超过 5MB');
+        return;
+      }
+
+      const venueId =
+        getUrlParameter('id') ||
+        (window.CURRENT_VENUE && window.CURRENT_VENUE.id) ||
+        '';
+      if (!venueId) {
+        alert('未找到当前场地ID');
+        return;
+      }
+
+      VOICE_BG_UPLOADING = true;
+      updateVoiceBgCooldownUI();
+
+      try {
+        const formData = new FormData();
+        formData.append('id', venueId);
+        formData.append('image', file);
+
+        const response = await fetch(VOICE_BG_UPLOAD_API, {
+          method: 'POST',
+          credentials: 'same-origin',
+          body: formData
+        });
+        const result = await readVoiceBgApiResponse(response);
+
+        if (Number(result.code) !== 0) {
+          throw new Error(result.msg || '提交审核失败');
+        }
+
+        alert(result.msg || '背景图已提交，等待图文审核');
+        await loadVoiceRoomBgReviewStatus();
+      } catch (e) {
+        console.error('语音房背景图提交失败：', e);
+        alert('提交失败：' + e.message);
+        await loadVoiceRoomBgReviewStatus();
+      } finally {
+        VOICE_BG_UPLOADING = false;
+        updateVoiceBgCooldownUI();
+      }
+    }
+
+    async function handleVoiceRoomBgUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        if (ROLE_ID === 3) {
+          await uploadRole3VoiceRoomBg(file);
+          return;
+        }
+
+        const formData = new FormData();
+
+        // 管理员沿用原来的直传逻辑
+        formData.append('file', file);
+        formData.append('image', file);
+
+        const response = await fetch('https://rcwulian.cn/app/img/userimg/upload_profile.php', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP 错误：${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.url) {
+          document.getElementById('voice-room-bg-input').value = result.url;
+          alert('上传成功，已回填链接');
+        } else {
+          alert(result.msg || '上传成功，但未返回图片链接');
+        }
+      } catch (e) {
+        console.error('语音房背景图上传失败：', e);
+        alert('上传失败：' + e.message);
+      } finally {
+        event.target.value = '';
+      }
+    }
     // ================= 锁：名称/图片 10天冷却 =================
     function loadLocks(venueId) {
       const url = `https://open.rcwulian.cn/api/venue/getVenueEditLock.php${venueId ? `?id=${venueId}` : ''}`;
@@ -632,6 +1092,9 @@ async function handleVoiceRoomBgUpload(event) {
             applyVoiceRoomPermission();
             applyVoiceRoomBgPermission();
             applyVoiceRoomSceneTypePermission();
+            if (ROLE_ID === 3) {
+              loadVoiceRoomBgReviewStatus();
+            }
             syncRole3TopCardHeight();
             setTimeout(syncRole3TopCardHeight, 80);
             setTimeout(syncRole3TopCardHeight, 260);
@@ -818,11 +1281,16 @@ function applyVoiceRoomBgPermission() {
   const wrap = document.getElementById('voice-room-bg-wrap');
   const input = document.getElementById('voice-room-bg-input');
   const btn = document.getElementById('voice-room-bg-upload-btn');
+  const adminLine = document.getElementById('voice-room-bg-admin-line');
+  const role3Panel = document.getElementById('voice-room-bg-role3-panel');
+  const hint = document.getElementById('voice-room-bg-hint');
 
-  if (!wrap || !input || !btn) return;
+  if (!wrap || !input || !btn || !adminLine || !role3Panel) return;
 
   if (ROLE_ID === 1 || ROLE_ID === 2) {
     wrap.style.display = 'block';
+    adminLine.style.setProperty('display', 'flex', 'important');
+    role3Panel.style.display = 'none';
 
     input.disabled = !IS_EDITING;
     input.readOnly = !IS_EDITING;
@@ -830,9 +1298,21 @@ function applyVoiceRoomBgPermission() {
     input.style.background = IS_EDITING ? '#f8f9ff' : '#f5f5f5';
     input.style.color = IS_EDITING ? '#333' : '#999';
 
-    btn.style.display = IS_EDITING ? 'inline-flex' : 'none';
+    btn.style.setProperty('display', IS_EDITING ? 'inline-flex' : 'none', 'important');
+    if (hint) hint.textContent = '管理员可直接上传并保存背景图链接';
+  } else if (ROLE_ID === 3) {
+    wrap.style.display = 'block';
+    adminLine.style.setProperty('display', 'none', 'important');
+    role3Panel.style.display = 'block';
+    btn.style.setProperty('display', 'none', 'important');
+    input.disabled = true;
+    input.readOnly = true;
+    if (hint) hint.textContent = '新背景图提交后进入图文审核；每个场地 7 天只能提交一次';
   } else {
     wrap.style.display = 'none';
+    adminLine.style.setProperty('display', 'none', 'important');
+    role3Panel.style.display = 'none';
+    btn.style.setProperty('display', 'none', 'important');
   }
 }
 function applyVoiceRoomPermission() {
@@ -850,8 +1330,14 @@ function applyVoiceRoomPermission() {
     sel.readOnly = !IS_EDITING;
     sel.style.background = IS_EDITING ? 'rgba(255,255,255,.62)' : 'rgba(243,246,251,.78)';
     sel.style.color = IS_EDITING ? '#191c1f' : '#64748b';
+  } else if (ROLE_ID === 3) {
+    if (settingsGrid) settingsGrid.classList.remove('role3-live-full');
+    if (card) card.style.display = 'flex';
+    wrap.style.display = 'none';
+    sel.disabled = true;
+    sel.readOnly = true;
   } else {
-    if (settingsGrid) settingsGrid.classList.toggle('role3-live-full', ROLE_ID === 3);
+    if (settingsGrid) settingsGrid.classList.remove('role3-live-full');
     wrap.style.display = 'none';
     if (card) card.style.display = 'none';
   }
@@ -1186,12 +1672,52 @@ function renderLocksUI() {
 
             <div class="setting-field" id="voice-room-bg-wrap" style="display:none;">
               <div class="label">语音房背景图</div>
-              <div class="voice-bg-line">
+
+              <div id="voice-room-bg-role3-panel" class="voice-bg-role3-panel">
+                <div class="voice-bg-preview-grid">
+                  <figure class="voice-bg-preview-item">
+                    <div class="voice-bg-preview-media">
+                      <img id="voice-room-bg-current-image" alt="当前生效的语音房背景图">
+                      <div id="voice-room-bg-current-empty" class="voice-bg-preview-empty">
+                        <i class="far fa-image"></i>
+                        <span>暂未设置背景图</span>
+                      </div>
+                    </div>
+                    <figcaption class="voice-bg-preview-caption">当前生效背景</figcaption>
+                  </figure>
+
+                  <figure id="voice-room-bg-submitted-wrap" class="voice-bg-preview-item" style="display:none;">
+                    <div class="voice-bg-preview-media">
+                      <img id="voice-room-bg-submitted-image" alt="本次提交审核的语音房背景图">
+                      <div id="voice-room-bg-submitted-empty" class="voice-bg-preview-empty">
+                        <i class="far fa-image"></i>
+                        <span>图片暂时无法预览</span>
+                      </div>
+                    </div>
+                    <figcaption class="voice-bg-preview-caption">本次提交图片</figcaption>
+                  </figure>
+                </div>
+
+                <div id="voice-room-bg-review-status" class="voice-bg-review-status">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  <div>
+                    <div class="voice-bg-review-title">正在读取审核状态</div>
+                    <div class="voice-bg-review-detail">请稍候...</div>
+                  </div>
+                </div>
+
+                <div class="voice-bg-role3-actions">
+                  <button type="button" id="voice-room-bg-role3-upload-btn" class="mini-btn" disabled onclick="document.getElementById('voice-room-bg-file').click()">上传新背景图</button>
+                </div>
+                <div id="voice-room-bg-cooldown-tip" class="voice-bg-cooldown-tip"></div>
+              </div>
+
+              <div id="voice-room-bg-admin-line" class="voice-bg-line">
                 <input id="voice-room-bg-input" class="edit-input" type="text" placeholder="上传后自动回填图片链接，也可手动粘贴" disabled>
                 <button type="button" id="voice-room-bg-upload-btn" class="mini-btn" style="display:none;" onclick="document.getElementById('voice-room-bg-file').click()">上传图片</button>
               </div>
               <input type="file" id="voice-room-bg-file" accept="image/*" style="display:none;" onchange="handleVoiceRoomBgUpload(event)">
-              <div class="hint">仅 role_id=1/2 可见，上传成功后自动回填链接，保存时存入</div>
+              <div id="voice-room-bg-hint" class="hint">仅 role_id=1/2 可见，上传成功后自动回填链接，保存时存入</div>
             </div>
           </section>
 

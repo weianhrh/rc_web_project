@@ -1,4 +1,5 @@
 <?php
+header('Content-Type: application/json; charset=utf-8');
 require_once '../Database.php';
 require_once '../RedisHelper.php';
 
@@ -39,19 +40,73 @@ foreach ($files as $file) {
             'venue_name' => $venue[0]['venue_name'] ?? '未知场地',
             'image_url' => 'pending_images/' . $file,
             'image_status' => 'pending',
-            'upload_time' => $formatted_time // 加上时间字段
+            'upload_time' => $formatted_time, // 加上时间字段
+            // 兼容旧场地头像审核；语音房背景图通过独立类型进入同一审核列表。
+            'review_id' => '',
+            'review_type' => 'venue_avatar'
         ];
     }
 }
 
+// 语音房背景图审核：只读取 Redis DB6 中待审核池，不改动原场地头像审核表/目录。
+$voiceRedis = new RedisHelper();
+$voiceRedis->connect();
+$voiceRedis->selectDb(6);
+$voiceNativeRedis = $voiceRedis->getNative();
+$voiceBgKeys = $voiceNativeRedis->sMembers('venue_voice_bg_review_pool');
+foreach ($voiceBgKeys as $voiceBgKey) {
+    $raw = $voiceRedis->get($voiceBgKey);
+    $review = $raw ? json_decode($raw, true) : null;
+
+    // 过期、损坏或已经处理的记录从待审核池清掉，状态记录本身仍按原 TTL 保留。
+    if (
+        !is_array($review) ||
+        ($review['review_type'] ?? '') !== 'voice_room_background' ||
+        ($review['status'] ?? '') !== 'pending'
+    ) {
+        $voiceNativeRedis->sRem('venue_voice_bg_review_pool', $voiceBgKey);
+        continue;
+    }
+
+    $voiceVenueId = (int)($review['venue_id'] ?? 0);
+    $reviewId = trim((string)($review['review_id'] ?? ''));
+    $pendingPath = ltrim((string)($review['pending_path'] ?? $review['image_url'] ?? ''), '/');
+    if (
+        $voiceVenueId <= 0 ||
+        $reviewId === '' ||
+        !preg_match(
+            '#^pending_voice_room_bg/voice_bg_\d+_\d{14}_[A-Za-z0-9_-]+\.(jpg|jpeg|png|webp)$#i',
+            $pendingPath
+        ) ||
+        pathinfo(basename($pendingPath), PATHINFO_FILENAME) !== $reviewId
+    ) {
+        $voiceNativeRedis->sRem('venue_voice_bg_review_pool', $voiceBgKey);
+        continue;
+    }
+
+    $venue = $database->query("SELECT venue_name FROM venues WHERE id = ?", [$voiceVenueId]);
+    $uploadedAt = (string)($review['uploaded_at'] ?? '');
+    if ($uploadedAt === '' && !empty($review['timestamp'])) {
+        $uploadedAt = date('Y-m-d H:i:s', (int)$review['timestamp']);
+    }
+
+    $results[] = [
+        'id' => $voiceVenueId,
+        'venue_name' => $venue[0]['venue_name'] ?? '未知场地',
+        'image_url' => $pendingPath,
+        'image_status' => 'pending',
+        'upload_time' => $uploadedAt,
+        'review_id' => $reviewId,
+        'review_type' => 'voice_room_background'
+    ];
+}
+$voiceRedis->close();
+
+// 原名称、描述、设备名称审核池继续使用 Redis DB3。
 $redis = new RedisHelper();
 $redis->connect();
 $redis->selectDb(3);
-
-$reflection = new ReflectionClass($redis);
-$property = $reflection->getProperty('redis');
-$property->setAccessible(true);
-$nativeRedis = $property->getValue($redis);
+$nativeRedis = $redis->getNative();
 
 // 场地名称
 $nameKeys = $nativeRedis->sMembers('venue_name_audit_pool');
