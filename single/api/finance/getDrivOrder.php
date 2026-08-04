@@ -309,6 +309,7 @@ $sql = "SELECT
         FROM orders o 
         LEFT JOIN users u ON o.uid = u.uid
         LEFT JOIN venues v ON v.id = o.reservation_id
+        
         {$whereSql}
         ORDER BY o.start_time DESC, o.order_id DESC
         LIMIT {$queryLimit} OFFSET {$offset}";
@@ -331,7 +332,49 @@ if ($fast && count($data) > $pageSize) {
     $hasMore = true;
     $data = array_slice($data, 0, $pageSize);
 }
+// 批量补充设备名称，避免 orders 和 vehicles 直接联表导致查询变慢
+if (!empty($data)) {
+    $serialNumbers = [];
 
+    foreach ($data as $order) {
+        $serialNumber = trim((string)($order['serial_number'] ?? ''));
+
+        if ($serialNumber !== '') {
+            $serialNumbers[] = $serialNumber;
+        }
+    }
+
+    $serialNumbers = array_values(array_unique($serialNumbers));
+    $deviceNameMap = [];
+
+    if (!empty($serialNumbers)) {
+        $placeholders = implode(',', array_fill(0, count($serialNumbers), '?'));
+
+        $deviceSql = "
+            SELECT serial_number, name
+            FROM vehicles
+            WHERE serial_number IN ($placeholders)
+        ";
+
+        $deviceRows = $database->query($deviceSql, $serialNumbers);
+
+        if (is_array($deviceRows)) {
+            foreach ($deviceRows as $deviceRow) {
+                $sn = (string)($deviceRow['serial_number'] ?? '');
+
+                if ($sn !== '') {
+                    $deviceNameMap[$sn] = (string)($deviceRow['name'] ?? '');
+                }
+            }
+        }
+    }
+
+    foreach ($data as &$order) {
+        $sn = (string)($order['serial_number'] ?? '');
+        $order['device_name'] = $deviceNameMap[$sn] ?? '';
+    }
+    unset($order);
+}
 // 给驾驶订单补充前端需要的字段
 foreach ($data as &$order) {
     $order['order_type'] = 'drive';

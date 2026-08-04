@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>座驾管理</title>
+<style>
+:root{--primary:#5b8cff;--bg1:#f8f9ff;--bg2:#f0f3ff;--card:#fff;--border:#e6e8ef;--text:#303442;--muted:#7f8fa4;--danger:#d14343;--success:#13915c;--shadow:0 4px 24px rgba(91,140,255,.08)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:16px;color:var(--text);background:linear-gradient(135deg,var(--bg1),var(--bg2));font-family:"PingFang SC",system-ui,-apple-system,"Segoe UI",sans-serif}.container{width:100%;max-width:1380px;margin:auto}.card{padding:20px;background:var(--card);border-radius:14px;box-shadow:var(--shadow)}.title{padding-bottom:10px;margin-bottom:14px;border-bottom:2px solid var(--primary);font-size:22px;font-weight:700}.tabs{display:flex;gap:8px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap}.tab{height:34px;padding:0 18px;border:1px solid var(--border);border-radius:999px;background:#fff;color:#666;cursor:pointer}.tab.active{border-color:var(--primary);background:var(--primary);color:#fff}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.input,.select{height:38px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:14px}.input{min-width:240px}.select{min-width:130px}.btn{height:38px;padding:0 15px;border:0;border-radius:10px;cursor:pointer;font-size:14px}.btn-primary{background:var(--primary);color:#fff}.btn-ghost{border:1px solid var(--border);background:#fff;color:var(--text)}.btn-danger{border:1px solid #f3b6b6;background:#fff;color:var(--danger)}.btn-s{height:31px;padding:0 10px;font-size:12px}.spacer{flex:1}.thead,.row{display:grid;grid-template-columns:minmax(330px,1.5fr) 115px 95px 100px 130px 180px;gap:12px;align-items:center}.thead{padding:12px 0;border-bottom:1px dashed var(--border);color:#666;font-weight:600}.row{padding:14px 0;border-bottom:1px dashed #edf0f5}.main{display:flex;gap:12px;min-width:0}.thumb{width:72px;height:72px;flex:0 0 auto;border:1px solid #edf0f5;border-radius:13px;object-fit:contain;background:#fbfbfd}.info{min-width:0;line-height:1.55}.name{font-weight:700;color:#2b59ff}.meta{font-size:12px;color:#687386;word-break:break-all}.meta a{color:#2b59ff;text-decoration:none}.price{font-size:16px;font-weight:700}.badge{display:inline-flex;align-items:center;justify-content:center;min-width:64px;padding:4px 9px;border-radius:999px;border:1px solid}.badge.on{color:var(--success);border-color:#9bd6bb;background:#f3fff8}.badge.off{color:#8a8f9a;border-color:#ccd1d9;background:#f7f8fa}.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.empty{padding:70px 20px;text-align:center;color:var(--muted)}.pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:16px}.pager .info-text{margin-right:6px;color:var(--muted);font-size:13px}.modal-mask{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(21,25,34,.48)}.modal-mask.show{display:flex}.modal{width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:16px;background:#fff;box-shadow:0 24px 80px rgba(0,0,0,.22)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);font-size:19px;font-weight:700}.close{border:0;background:none;font-size:25px;cursor:pointer;color:#8a8f9a}.form{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;padding:20px 22px}.field{min-width:0}.field.full{grid-column:1/-1}.field label{display:block;margin-bottom:7px;font-size:13px;font-weight:600}.field input,.field select{width:100%;height:40px;padding:0 11px;border:1px solid var(--border);border-radius:9px}.upload-row{display:flex;gap:8px}.upload-row input{min-width:0;flex:1}.upload-row button{flex:0 0 auto}.check{display:flex;align-items:center;gap:8px;height:40px}.modal-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 22px 20px}.toast{position:fixed;z-index:40;left:50%;bottom:30px;transform:translate(-50%,18px);padding:11px 20px;border-radius:999px;background:rgba(27,31,40,.92);color:#fff;opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:1050px){.thead{display:none}.row{grid-template-columns:1fr 1fr;padding:15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}.row>div::before{content:attr(data-label);display:block;margin-bottom:4px;color:var(--muted);font-size:11px}.row .main{grid-column:1/-1}.actions{justify-content:flex-start}}@media(max-width:620px){body{padding:8px}.card{padding:12px}.form{grid-template-columns:1fr}.field.full{grid-column:auto}.row{grid-template-columns:1fr}.row .main{grid-column:auto}.input,.select{width:100%;min-width:0}.toolbar .spacer{display:none}.modal{max-height:96vh}}
+</style>
+</head>
+<body>
+<div class="container"><section class="card">
+  <div class="title">礼物与座驾管理</div>
+  <div class="tabs">
+    <button class="tab" type="button" onclick="location.href='gift_admin.html'">礼物管理</button>
+    <button class="tab active" type="button">座驾管理</button>
+    <button class="tab" type="button" onclick="location.href='entry_vehicle_orders.html'">座驾订单</button>
+  </div>
+  <div class="toolbar">
+    <input id="q" class="input" placeholder="搜索特效名称或购买ID">
+    <select id="status" class="select"><option value="">全部状态</option><option value="1">已上架</option><option value="0">已下架</option></select>
+    <button id="search" class="btn btn-primary">搜索</button>
+    <button id="reset" class="btn btn-ghost">重置</button>
+    <span class="spacer"></span>
+    <button id="create" class="btn btn-primary">新增座驾</button>
+  </div>
+  <div class="thead"><div>座驾商品</div><div>价格</div><div>有效期</div><div>排序</div><div>状态</div><div style="text-align:right">操作</div></div>
+  <div id="list"><div class="empty">正在加载...</div></div>
+  <div class="pager"><span id="pageInfo" class="info-text"></span><select id="pageSize" class="select" style="min-width:90px"><option>10</option><option selected>20</option><option>50</option><option>100</option></select><button id="prev" class="btn btn-ghost btn-s">上一页</button><button id="next" class="btn btn-ghost btn-s">下一页</button></div>
+</section></div>
+
+<div id="mask" class="modal-mask"><div class="modal">
+  <div class="modal-head"><span id="modalTitle">新增座驾</span><button id="close" class="close">×</button></div>
+  <div class="form">
+    <input id="f_id" type="hidden">
+    <div class="field"><label>特效名称 *</label><input id="f_name" maxlength="100" placeholder="例如：巴博斯座驾"></div>
+    <div class="field"><label>购买ID / SKU *</label><input id="f_purchase_id" maxlength="64" placeholder="CAR_BRABUS_30D"></div>
+    <div class="field full"><label>商品图链接 *</label><div class="upload-row"><input id="f_image" placeholder="https://..."><button id="uploadImage" class="btn btn-primary" type="button">上传商品图</button></div><input id="imageFile" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.apng,image/*" hidden></div>
+    <div class="field full"><label>进场动图链接 *</label><div class="upload-row"><input id="f_animation" placeholder="https://...svga"><button id="uploadAnimation" class="btn btn-primary" type="button">上传动图</button></div><input id="animationFile" type="file" accept=".gif,.webp,.apng,.svga" hidden></div>
+    <div class="field"><label>价格（wallet余额）*</label><input id="f_price" type="number" min="0" step="0.01" value="0.00"></div>
+    <div class="field"><label>每次购买增加有效天数 *</label><input id="f_days" type="number" min="1" max="36500" value="30"></div>
+    <div class="field"><label>开始售卖时间（可空）</label><input id="f_start" type="datetime-local"></div>
+    <div class="field"><label>停止售卖时间（可空）</label><input id="f_expire" type="datetime-local"></div>
+    <div class="field"><label>排序（越小越靠前）</label><input id="f_sort" type="number" value="0"></div>
+    <div class="field"><label>商品状态</label><div class="check"><input id="f_status" type="checkbox" checked><span>上架销售</span></div></div>
+  </div>
+  <div class="modal-actions"><button id="cancel" class="btn btn-ghost">取消</button><button id="save" class="btn btn-primary">保存</button></div>
+</div></div>
+<div id="toast" class="toast"></div>
+<script>
+(() => {
+'use strict';
+const API='/api/operat/entry_vehicle_products.php';
+const UPLOAD='/api/operat/entry_vehicle_upload.php';
+const $=id=>document.getElementById(id);
+const state={page:1,pageSize:20,total:0,totalPage:0,q:'',status:'',list:[],busy:false};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const money=v=>Number(v||0).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const query=o=>new URLSearchParams(Object.entries(o).filter(([,v])=>v!==''&&v!==null&&v!==undefined)).toString();
+function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>$('toast').classList.remove('show'),2200)}
+async function api(act,opt={}){const res=await fetch(`${API}?act=${act}${opt.params?'&'+query(opt.params):''}`,{credentials:'include',method:opt.method||'GET',headers:opt.body?{'Content-Type':'application/json'}:undefined,body:opt.body?JSON.stringify(opt.body):undefined});const json=await res.json().catch(()=>({ok:0,msg:'服务器返回格式错误'}));if(!json.ok)throw new Error(json.msg||'请求失败');return json.data||{}}
+function saleText(item){const start=item.start_time||'立即';const end=item.expire_time||'长期';return `${start} ～ ${end}`}
+function render(){if(!state.list.length){$('list').innerHTML='<div class="empty">暂无座驾商品</div>'}else{$('list').innerHTML=state.list.map(item=>`<div class="row">
+<div class="main"><img class="thumb" src="${esc(item.effect_image_url)}" alt=""><div class="info"><div class="name">${esc(item.effect_name)}</div><div class="meta">商品ID：${item.id}　购买ID：${esc(item.purchase_id)}</div><div class="meta">商品图：<a href="${esc(item.effect_image_url)}" target="_blank">查看</a>　动图：<a href="${esc(item.effect_animation_url)}" target="_blank">查看资源</a></div><div class="meta">售卖：${esc(saleText(item))}</div></div></div>
+<div data-label="价格" class="price">￥${money(item.price)}</div><div data-label="有效期">${Number(item.valid_days)}天</div><div data-label="排序">${Number(item.sort_order)}</div><div data-label="状态"><button class="badge ${Number(item.status)===1?'on':'off'}" data-toggle="${item.id}" data-status="${item.status}">${Number(item.status)===1?'上架中':'已下架'}</button></div><div data-label="操作" class="actions"><button class="btn btn-ghost btn-s" data-edit="${item.id}">编辑</button><button class="btn btn-danger btn-s" data-delete="${item.id}">删除</button></div></div>`).join('')}
+state.totalPage=Math.max(1,Math.ceil(state.total/state.pageSize));$('pageInfo').textContent=`共 ${state.total} 条　第 ${state.page}/${state.totalPage} 页`;$('prev').disabled=state.page<=1;$('next').disabled=state.page>=state.totalPage;
+document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(Number(b.dataset.edit)));document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>remove(Number(b.dataset.delete)));document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>toggle(Number(b.dataset.toggle),Number(b.dataset.status)===1?0:1))}
+async function load(){try{$('list').innerHTML='<div class="empty">正在加载...</div>';const data=await api('list',{params:{page:state.page,page_size:state.pageSize,q:state.q,status:state.status}});state.list=data.list||[];state.total=Number(data.pagination?.total||0);render()}catch(e){$('list').innerHTML=`<div class="empty" style="color:#d14343">${esc(e.message)}</div>`}}
+function localTime(v){return v?String(v).replace(' ','T').slice(0,16):''}
+function openCreate(){$('modalTitle').textContent='新增座驾';$('f_id').value='';$('f_name').value='';$('f_purchase_id').value='';$('f_image').value='';$('f_animation').value='';$('f_price').value='0.00';$('f_days').value='30';$('f_start').value='';$('f_expire').value='';$('f_sort').value='0';$('f_status').checked=true;$('mask').classList.add('show')}
+function openEdit(id){const x=state.list.find(v=>Number(v.id)===id);if(!x)return;$('modalTitle').textContent='编辑座驾';$('f_id').value=x.id;$('f_name').value=x.effect_name||'';$('f_purchase_id').value=x.purchase_id||'';$('f_image').value=x.effect_image_url||'';$('f_animation').value=x.effect_animation_url||'';$('f_price').value=x.price||'0.00';$('f_days').value=x.valid_days||30;$('f_start').value=localTime(x.start_time);$('f_expire').value=localTime(x.expire_time);$('f_sort').value=x.sort_order||0;$('f_status').checked=Number(x.status)===1;$('mask').classList.add('show')}
+function close(){if(!state.busy)$('mask').classList.remove('show')}
+function payload(){return{id:Number($('f_id').value||0),effect_name:$('f_name').value.trim(),purchase_id:$('f_purchase_id').value.trim(),effect_image_url:$('f_image').value.trim(),effect_animation_url:$('f_animation').value.trim(),price:$('f_price').value,valid_days:Number($('f_days').value||0),start_time:$('f_start').value,expire_time:$('f_expire').value,status:$('f_status').checked?1:0,sort_order:Number($('f_sort').value||0)}}
+async function save(){if(state.busy)return;const body=payload();if(!body.effect_name||!body.purchase_id||!body.effect_image_url||!body.effect_animation_url){toast('请填写所有必填项');return}state.busy=true;$('save').disabled=true;try{await api(body.id?'update':'create',{method:'POST',body});toast(body.id?'保存成功':'新增成功');state.busy=false;$('mask').classList.remove('show');load()}catch(e){toast(e.message)}finally{state.busy=false;$('save').disabled=false}}
+async function toggle(id,status){try{await api('toggle_status',{method:'POST',body:{id,status}});toast(status?'已上架':'已下架');load()}catch(e){toast(e.message)}}
+async function remove(id){if(!confirm('确定删除该商品吗？已有购买记录的商品不能删除，只能下架。'))return;try{await api('delete',{method:'POST',body:{id}});toast('删除成功');load()}catch(e){toast(e.message)}}
+async function upload(file,kind,target){if(!file)return;const fd=new FormData();fd.append('file',file);fd.append('kind',kind);try{toast('正在上传...');const res=await fetch(UPLOAD,{method:'POST',credentials:'include',body:fd});const json=await res.json();if(!json.ok)throw new Error(json.msg||'上传失败');$(target).value=json.data.url;toast('上传成功')}catch(e){toast(e.message||'上传失败')}}
+$('search').onclick=()=>{state.q=$('q').value.trim();state.status=$('status').value;state.page=1;load()};$('reset').onclick=()=>{$('q').value='';$('status').value='';state.q='';state.status='';state.page=1;load()};$('create').onclick=openCreate;$('close').onclick=close;$('cancel').onclick=close;$('save').onclick=save;$('mask').onclick=e=>{if(e.target===$('mask'))close()};$('pageSize').onchange=e=>{state.pageSize=Number(e.target.value);state.page=1;load()};$('prev').onclick=()=>{if(state.page>1){state.page--;load()}};$('next').onclick=()=>{if(state.page<state.totalPage){state.page++;load()}};$('uploadImage').onclick=()=>{$('imageFile').value='';$('imageFile').click()};$('uploadAnimation').onclick=()=>{$('animationFile').value='';$('animationFile').click()};$('imageFile').onchange=e=>upload(e.target.files[0],'image','f_image');$('animationFile').onchange=e=>upload(e.target.files[0],'animation','f_animation');$('q').onkeydown=e=>{if(e.key==='Enter')$('search').click()};load();
+})();
+</script>
+</body>
+</html>
