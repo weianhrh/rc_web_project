@@ -838,6 +838,175 @@ elseif ($action === 'set_voice_room_ban') {
 
     exit;
 }
+elseif ($action === 'close_voice_room') {
+
+    $venue_id = intval($_POST['venue_id'] ?? 0);
+
+    if ($venue_id <= 0) {
+        echo json_encode([
+            'code' => 1,
+            'msg' => '场地ID无效'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // 建议只允许超级管理员和管理员操作
+    if (!in_array(intval($user['role_id'] ?? 0), [1, 2], true)) {
+        echo json_encode([
+            'code' => 403,
+            'msg' => '权限不足'
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $conn = $database->getConnection();
+
+    try {
+        // 1. 查询场地对应的语音房 room_id
+        $stmt = $conn->prepare("
+            SELECT id, venue_name, venue_room_id, is_live, venue_status_num
+            FROM venues
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->bind_param('i', $venue_id);
+        $stmt->execute();
+
+        $venue = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$venue) {
+            throw new Exception('场地不存在');
+        }
+
+        $roomId = trim((string)($venue['venue_room_id'] ?? ''));
+
+        if ($roomId === '') {
+            throw new Exception('该场地未配置语音房room_id');
+        }
+
+        /*
+         * 2. 发送关播信令
+         *
+         * 当前Android只识别：
+         * VOICE_ROOM_BAN#1#原因
+         *
+         * send_voice_room_close_message.php 会负责拼接这个格式，
+         * 这里传 ban_reason=房间存在违规，已关闭。
+         */
+        $sendUrl = 'https://open.rcwulian.cn/api/devMgr/send_voice_room_close_message.php';
+
+        $payload = json_encode([
+            'room_id' => $roomId,
+            'ban_reason' => '房间存在违规，已关闭',
+            'from_user_id' => 'server_bot_1'
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $ch = curl_init();
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $sendUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json'
+            ],
+        ]);
+
+        $sendRaw = curl_exec($ch);
+        $sendError = curl_error($ch);
+        $sendHttpCode = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+
+        curl_close($ch);
+
+        if ($sendError !== '') {
+            throw new Exception('发送关播信令失败：' . $sendError);
+        }
+
+        if ($sendHttpCode !== 200) {
+            throw new Exception(
+                '关播接口HTTP状态异常：' . $sendHttpCode .
+                '，响应：' . $sendRaw
+            );
+        }
+
+        $sendJson = json_decode((string)$sendRaw, true);
+
+        if (!is_array($sendJson)) {
+            throw new Exception('关播接口返回的不是合法JSON：' . $sendRaw);
+        }
+
+        if (intval($sendJson['code'] ?? -1) !== 0) {
+            throw new Exception(
+                '关播信令发送失败：' .
+                ($sendJson['msg'] ?? '未知错误')
+            );
+        }
+
+        /*
+         * 3. 信令发送成功后更新MySQL直播状态。
+         * 注意：这里不修改 is_voice_room_banned。
+         */
+        $stmt = $conn->prepare("
+            UPDATE venues
+            SET is_live = 0,
+                venue_status_num = 0
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->bind_param('i', $venue_id);
+
+        if (!$stmt->execute()) {
+            throw new Exception('更新场地直播状态失败');
+        }
+
+        $stmt->close();
+
+        // 4. 删除Redis DB7的房间在线缓存
+        if (!class_exists('Redis')) {
+            throw new Exception('关播信令已发送，但服务器未安装Redis扩展');
+        }
+
+        $redis = new Redis();
+
+        if (!@$redis->connect('127.0.0.1', 6379, 1.5)) {
+            throw new Exception('关播信令已发送，但Redis连接失败');
+        }
+
+        $redis->select(7);
+
+        $redisKey = 'zego_room_alive_' . $roomId;
+        $deleteCount = intval($redis->del($redisKey));
+
+        $redis->close();
+
+        echo json_encode([
+            'code' => 0,
+            'msg' => '语音房已关播',
+            'data' => [
+                'venue_id' => $venue_id,
+                'room_id' => $roomId,
+                'is_voice_room_banned' => 0,
+                'is_live' => 0,
+                'venue_status_num' => 0,
+                'redis_key' => $redisKey,
+                'redis_delete_count' => $deleteCount,
+                'send_result' => $sendJson
+            ]
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    } catch (Throwable $e) {
+        echo json_encode([
+            'code' => 500,
+            'msg' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    exit;
+}
 elseif ($action === 'set_voice_room_unban') {
 
     $venue_id = intval($_POST['venue_id'] ?? 0);

@@ -264,26 +264,6 @@ body {
         .voice-room-unban-btn:hover {
             background-color: #0f766e;
         }
-
-        .voice-room-close-btn {
-            background-color: #b91c1c;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: var(--transition);
-        }
-
-        .voice-room-close-btn:hover {
-            background-color: #991b1b;
-        }
-
-        .voice-room-close-btn:disabled {
-            opacity: .65;
-            cursor: not-allowed;
-        }
         .spending-alert-on-btn {
             background-color: #f97316;
             color: #fff;
@@ -1520,47 +1500,6 @@ function openVoiceRoomBanModal(venueId) {
     document.getElementById('voiceRoomBanModal').style.display = 'block';
 }
 
-window.closeVoiceRoom = function (venueId, button) {
-    if (!confirm('确定要关闭该场地语音房吗？房间内用户将收到“因挂播,已被后台关播”的提示。')) {
-        return;
-    }
-
-    const originalText = button ? button.textContent : '关播';
-
-    if (button) {
-        button.disabled = true;
-        button.textContent = '关播中...';
-    }
-
-    const formData = new FormData();
-    formData.append('action', 'close_voice_room');
-    formData.append('venue_id', venueId);
-
-    fetch('https://open.rcwulian.cn/api/venue/VenuesManagement.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.code === 0 || data.code === 200) {
-            alert(data.msg || '语音房已关播');
-            loadVenues();
-        } else {
-            alert(data.msg || '关播失败');
-        }
-    })
-    .catch(err => {
-        console.error('语音房关播失败:', err);
-        alert('关播请求异常，请检查网络或服务器日志');
-    })
-    .finally(() => {
-        if (button && document.body.contains(button)) {
-            button.disabled = false;
-            button.textContent = originalText;
-        }
-    });
-};
-
 window.setVoiceRoomUnban = function (venueId) {
     if (!confirm('确定要解除该场地语音房封禁吗？')) {
         return;
@@ -1871,11 +1810,6 @@ ${showVoiceRoomSceneBtn ? `
         ${isVoiceRoomBanned
             ? `<button class="voice-room-unban-btn" onclick="setVoiceRoomUnban(${venue.id})">解除语音房封禁</button>`
             : `<button class="voice-room-ban-btn" onclick="openVoiceRoomBanModal(${venue.id})">封禁语音房</button>`
-        }
-
-        ${[1, 2].includes(Number(window.role)) && venue.venue_room_id
-            ? `<button class="voice-room-close-btn" onclick="closeVoiceRoom(${venue.id}, this)">关播</button>`
-            : ''
         }
 
         ${Number(venue.is_disabled_sound || 0) === 1

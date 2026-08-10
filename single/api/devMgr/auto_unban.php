@@ -641,7 +641,7 @@ try {
     $expiredMuteTotal = intval($expiredMuteRow['total'] ?? 0);
 
     if ($expiredMuteTotal <= 0) {
-        logMessage("ℹ️ 没有到期禁言记录需要清理");
+        // logMessage("ℹ️ 没有到期禁言记录需要清理");
     } else {
         $deletedRows = executeSql(
             $conn,
@@ -679,7 +679,7 @@ try {
     );
 
     if (empty($expiredOldMuteUsers)) {
-        logMessage("ℹ️ 没有到期的旧逻辑禁言记录需要恢复");
+        // logMessage("ℹ️ 没有到期的旧逻辑禁言记录需要恢复");
     } else {
         foreach ($expiredOldMuteUsers as $row) {
             $logId = (int)$row['id'];

@@ -53,7 +53,7 @@
 (() => {
 'use strict';
 const API='/api/operat/entry_vehicle_products.php';
-const UPLOAD='/api/operat/entry_vehicle_upload.php';
+const UPLOAD='https://rcwulian.cn/app/img/userimg/upload_profile.php';
 const $=id=>document.getElementById(id);
 const state={page:1,pageSize:20,total:0,totalPage:0,q:'',status:'',list:[],busy:false};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -76,7 +76,7 @@ function payload(){return{id:Number($('f_id').value||0),effect_name:$('f_name').
 async function save(){if(state.busy)return;const body=payload();if(!body.effect_name||!body.purchase_id||!body.effect_image_url||!body.effect_animation_url){toast('请填写所有必填项');return}state.busy=true;$('save').disabled=true;try{await api(body.id?'update':'create',{method:'POST',body});toast(body.id?'保存成功':'新增成功');state.busy=false;$('mask').classList.remove('show');load()}catch(e){toast(e.message)}finally{state.busy=false;$('save').disabled=false}}
 async function toggle(id,status){try{await api('toggle_status',{method:'POST',body:{id,status}});toast(status?'已上架':'已下架');load()}catch(e){toast(e.message)}}
 async function remove(id){if(!confirm('确定删除该商品吗？已有购买记录的商品不能删除，只能下架。'))return;try{await api('delete',{method:'POST',body:{id}});toast('删除成功');load()}catch(e){toast(e.message)}}
-async function upload(file,kind,target){if(!file)return;const fd=new FormData();fd.append('file',file);fd.append('kind',kind);try{toast('正在上传...');const res=await fetch(UPLOAD,{method:'POST',credentials:'include',body:fd});const json=await res.json();if(!json.ok)throw new Error(json.msg||'上传失败');$(target).value=json.data.url;toast('上传成功')}catch(e){toast(e.message||'上传失败')}}
+async function upload(file,kind,target){if(!file)return;const fd=new FormData();fd.append('file',file);try{toast('正在上传...');const res=await fetch(UPLOAD,{method:'POST',body:fd});if(!res.ok)throw new Error(`HTTP 错误：${res.status}`);const json=await res.json();if(Number(json.code)!==0||!json.url)throw new Error(json.msg||'上传失败');$(target).value=json.url;toast('上传成功')}catch(e){toast(e.message||'上传失败')}}
 $('search').onclick=()=>{state.q=$('q').value.trim();state.status=$('status').value;state.page=1;load()};$('reset').onclick=()=>{$('q').value='';$('status').value='';state.q='';state.status='';state.page=1;load()};$('create').onclick=openCreate;$('close').onclick=close;$('cancel').onclick=close;$('save').onclick=save;$('mask').onclick=e=>{if(e.target===$('mask'))close()};$('pageSize').onchange=e=>{state.pageSize=Number(e.target.value);state.page=1;load()};$('prev').onclick=()=>{if(state.page>1){state.page--;load()}};$('next').onclick=()=>{if(state.page<state.totalPage){state.page++;load()}};$('uploadImage').onclick=()=>{$('imageFile').value='';$('imageFile').click()};$('uploadAnimation').onclick=()=>{$('animationFile').value='';$('animationFile').click()};$('imageFile').onchange=e=>upload(e.target.files[0],'image','f_image');$('animationFile').onchange=e=>upload(e.target.files[0],'animation','f_animation');$('q').onkeydown=e=>{if(e.key==='Enter')$('search').click()};load();
 })();
 </script>
