@@ -1541,10 +1541,21 @@ async function clearEnergy(userId) {
 
   if (amount === null) return;
 
+  const amountText = String(amount).trim();
+  let clearAmount = null;
+
+  if (amountText !== '') {
+    clearAmount = Number(amountText);
+    if (!Number.isFinite(clearAmount) || clearAmount <= 0) {
+      await showAppAlert('清除能量必须是大于0的数字', '输入错误', 'warning');
+      return;
+    }
+  }
+
   const confirmed = await showAppConfirm(
-    amount.trim() === ''
+    amountText === ''
       ? `确认清除用户 ${userId} 的全部能量？`
-      : `确认清除用户 ${userId} 的 ${amount.trim()} 能量？`,
+      : `确认清除用户 ${userId} 的 ${clearAmount} 能量？`,
     '确认清除',
     'danger'
   );
@@ -1554,8 +1565,8 @@ async function clearEnergy(userId) {
   const params = new URLSearchParams();
   params.append('uid', userId);
 
-  if (amount.trim() !== '') {
-    params.append('amount', amount.trim());
+  if (clearAmount !== null) {
+    params.append('amount', String(clearAmount));
   }
 
   try {

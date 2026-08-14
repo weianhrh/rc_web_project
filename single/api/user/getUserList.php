@@ -30,11 +30,30 @@ $username = $user['username'];
 // ✅ 处理 POST 请求：清除能量（支持指定数量）
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId       = $_POST['uid'] ?? null;
-    $energyAmount = isset($_POST['amount']) ? floatval($_POST['amount']) : null;
+    $amountProvided = array_key_exists('amount', $_POST);
+    $rawEnergyAmount = $amountProvided ? $_POST['amount'] : null;
+    $energyAmount = null;
 
     if (!$userId) {
         echo json_encode(['code' => 1003, 'msg' => '缺少用户ID']);
         exit;
+    }
+
+    // 指定清除数量时，只允许大于 0 的有限数字。
+    // 必须在后端校验，避免通过抓包提交负数导致“减负数反而增加能量”。
+    if ($amountProvided) {
+        if (!is_scalar($rawEnergyAmount)
+            || trim((string)$rawEnergyAmount) === ''
+            || !is_numeric($rawEnergyAmount)) {
+            echo json_encode(['code' => 1004, 'msg' => '清除能量必须是大于0的数字']);
+            exit;
+        }
+
+        $energyAmount = (float)$rawEnergyAmount;
+        if (!is_finite($energyAmount) || $energyAmount <= 0) {
+            echo json_encode(['code' => 1004, 'msg' => '清除能量必须是大于0的数字']);
+            exit;
+        }
     }
 
     // 查询当前能量
@@ -42,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $database->query($sql, [$userId, $venue_id]);
     $currentEnergy = $result ? floatval($result[0]['energy']) : 0;
 
-    if ($energyAmount !== null) {
+    if ($amountProvided) {
         $newEnergy = max(0, $currentEnergy - $energyAmount);
         $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
         $database->query($updateSql, [$newEnergy, $userId, $venue_id]);

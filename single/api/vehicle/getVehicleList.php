@@ -40,6 +40,7 @@ $sql = "SELECT
             bind_site, 
             bind_city, 
             sharing_status, 
+            is_banned,
             driver, 
             start_status, 
             billing_rules, 

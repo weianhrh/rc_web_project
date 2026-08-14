@@ -383,6 +383,13 @@ function getDeviceStatusTag(device) {
     className: 'offline'
   };
 }
+
+function getSharingStatusText(device) {
+  const sharingStatus = device.sharing_status || '-';
+  return Number(device.is_banned) === 1
+    ? `${sharingStatus}(已封禁)`
+    : sharingStatus;
+}
     // 显示设备信息 
     function displayDevices(devices) { 
       const deviceList = document.getElementById('device-list');  
@@ -403,7 +410,7 @@ function getDeviceStatusTag(device) {
 <span>序列号: ${device.serial_number}</span>
 
     <span>车辆状态: ${device.vehicle_status}</span>  
-    <span>共享状态: ${device.sharing_status}</span>  
+    <span>共享状态: ${getSharingStatusText(device)}</span>  
     <span>分享标题: ${device.share_name}</span>  
     <span>前图传: ${device.image_device_serial}</span>  
     ${device.bk_image_device_serial ? `<span>后图传: ${device.bk_image_device_serial}</span>` : ''} 

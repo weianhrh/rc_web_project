@@ -132,11 +132,29 @@ if ($action === 'gift_energy') {
     // 获取必要的参数
     $userId = $_POST['user_id'] ?? null;
     $venueId = $_POST['venue_id'] ?? null;
-    $energyAmount = $_POST['energy_amount'] ?? null;
+    $amountProvided = array_key_exists('energy_amount', $_POST);
+    $rawEnergyAmount = $amountProvided ? $_POST['energy_amount'] : null;
+    $energyAmount = null;
 
     if (!$userId || !$venueId) {
         echo json_encode(['code' => 1002, 'msg' => '缺少必要参数', 'data' => []]);
         exit;
+    }
+
+    // 指定清除数量时，只允许大于 0 的有限数字，禁止减负数反向增加能量。
+    if ($amountProvided) {
+        if (!is_scalar($rawEnergyAmount)
+            || trim((string)$rawEnergyAmount) === ''
+            || !is_numeric($rawEnergyAmount)) {
+            echo json_encode(['code' => 1002, 'msg' => '清除能量必须是大于0的数字', 'data' => []]);
+            exit;
+        }
+
+        $energyAmount = (float)$rawEnergyAmount;
+        if (!is_finite($energyAmount) || $energyAmount <= 0) {
+            echo json_encode(['code' => 1002, 'msg' => '清除能量必须是大于0的数字', 'data' => []]);
+            exit;
+        }
     }
 
     // 检查用户是否存在
@@ -153,7 +171,7 @@ if ($action === 'gift_energy') {
     $result = $database->query($querySql, [$userId, $venueId]);
     $currentEnergy = $result ? $result[0]['energy'] : 0;
 
-    if ($energyAmount) {
+    if ($amountProvided) {
         // 如果指定了清除数量，则进行减法
         $newEnergy = max(0, $currentEnergy - $energyAmount);
         $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
