@@ -607,7 +607,7 @@
 
 <div class="venue-row venue-row-sub">
   <span id="invite-wrap" class="venue-invite-wrap hidden">
-    邀请码:
+    场地推广邀请码:
     <b id="venue-invite-code">----</b>
     <button id="copy-invite-btn" class="copy-invite-btn" type="button">复制</button>
   </span>
@@ -642,9 +642,9 @@
         <div class="metric-value" id="queue-length">¥0.00</div>
     </div>
 
-    <div class="metric-item">
-        <div class="metric-label">投诉待处理</div>
-        <div class="metric-value" id="reservationCount">0</div>
+    <div class="metric-item" onclick="window.location.href='/res/Promotion_Reward.html'" style="cursor: pointer;">
+        <div class="metric-label">推广收益</div>
+        <div class="metric-value" id="promotionIncome">¥0.00</div>
     </div>
 
     <div class="metric-item">
@@ -683,19 +683,12 @@
                         document.getElementById('totalPayment').textContent = `¥${data.data.totalPayment ?? '0.00'}`;
                         document.getElementById('devicePayment').textContent = `¥${data.data.devicePayment ?? '0.00'}`;
                         document.getElementById('giftPayment').textContent = `¥${data.data.giftPayment ?? '0.00'}`;
+                        document.getElementById('promotionIncome').textContent = `¥${data.data.promotionIncome ?? '0.00'}`;
                         renderVenueLevel(data.data.venue_level, data.data.withdraw_ratio);
                         if (data.data.queue_length == null) {
                             data.data.queue_length = 0;
                         }
                         document.getElementById('queue-length').textContent = `¥${"0.00"}`;
-                        
-                        const reportCount = data.data.reportCount ?? 0;
-                        document.getElementById('reservationCount').textContent = `${reportCount}`;
-                        if (reportCount >= 1) {
-                            document.getElementById('reservationCount').style.color = 'red';
-                        } else {
-                            document.getElementById('reservationCount').style.color = '';
-                        }
                         
                         document.getElementById('orderCount').textContent = `${data.data.orderCount ?? 0} 单`;
                 }
@@ -703,9 +696,8 @@
             .catch(error => {
                 console.error(' 数据加载失败:', error);
             });
-            
-            
-              // ✅ 根据场地ID生成4位邀请码：个位->100x；十位->10xx；百位->1xxx；四位及以上直接取后4位
+
+        // ✅ 根据场地ID生成4位邀请码：个位->100x；十位->10xx；百位->1xxx；四位及以上直接取后4位
   function genInviteCode(venueId) {
     const n = parseInt(venueId, 10);
     if (!Number.isFinite(n) || n <= 0) return "----";

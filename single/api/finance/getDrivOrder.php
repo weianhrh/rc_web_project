@@ -151,6 +151,7 @@ if ($order_type === 'guardian') {
     echo json_encode([
         'code' => 0,
         'msg' => '',
+        'role_id' => $role_id,
         'order_type' => 'guardian',
         'count' => $totalCount,
         'has_more' => $hasMore,
@@ -246,6 +247,7 @@ if (!in_array($role_id, [1, 2], true)) {
     echo json_encode([
         'code' => 0,
         'msg' => '',
+        'role_id' => $role_id,
         'order_type' => 'gift',
         'count' => $totalCount,
         'data' => $data ?: []
@@ -299,6 +301,11 @@ $sql = "SELECT
             o.serial_number,
             o.status,
             o.payment_amount,
+            o.promotion_amount,
+            ROUND(
+                COALESCE(o.payment_amount, 0) - COALESCE(o.promotion_amount, 0),
+                2
+            ) AS actual_arrival_amount,
             o.billing_rules,
             o.pays_type,
             o.start_time,
@@ -444,6 +451,7 @@ if ($fast) {
 echo json_encode([
     'code' => 0,
     'msg' => '',
+    'role_id' => $role_id,
     'count' => $totalCount,
     'has_more' => $hasMore,
     'fast' => $fast,
@@ -452,4 +460,4 @@ echo json_encode([
 
 $database->close();
 exit; 
-?> 
+?>

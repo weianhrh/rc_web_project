@@ -291,6 +291,10 @@ $sql = "SELECT
             o.*,
             COALESCE(u.nickname, '') AS nickname,
             o.payment_amount AS venue_income,
+            ROUND(
+                COALESCE(o.payment_amount, 0) - COALESCE(o.promotion_amount, 0),
+                2
+            ) AS actual_arrival_amount,
             'device' AS order_type
         FROM orders o
         LEFT JOIN users u ON o.uid = u.uid
@@ -308,14 +312,27 @@ $countSql = "SELECT COUNT(*) AS count FROM orders o $whereSql";
 $countResult = $database->query($countSql, $params);
 $totalCount = is_array($countResult) && isset($countResult[0]['count']) ? (int)$countResult[0]['count'] : 0;
 
-$sumSql = "SELECT COALESCE(SUM(o.payment_amount), 0) AS total_income FROM orders o $whereSql";
+$sumSql = "SELECT
+                ROUND(COALESCE(SUM(o.payment_amount), 0), 2) AS total_income,
+                ROUND(COALESCE(SUM(o.promotion_amount), 0), 2) AS total_promotion_amount,
+                ROUND(
+                    COALESCE(SUM(o.payment_amount), 0)
+                    - COALESCE(SUM(o.promotion_amount), 0),
+                    2
+                ) AS total_actual_income
+           FROM orders o
+           $whereSql";
 logMessage('[device] ' . $sumSql . ' | params=' . json_encode($params, JSON_UNESCAPED_UNICODE));
 
 $sumResult = $database->query($sumSql, $params);
 $totalIncome = 0.00;
+$totalPromotionAmount = 0.00;
+$totalActualIncome = 0.00;
 
-if (is_array($sumResult) && isset($sumResult[0]['total_income'])) {
-    $totalIncome = round((float)$sumResult[0]['total_income'], 2);
+if (is_array($sumResult) && isset($sumResult[0])) {
+    $totalIncome = round((float)($sumResult[0]['total_income'] ?? 0), 2);
+    $totalPromotionAmount = round((float)($sumResult[0]['total_promotion_amount'] ?? 0), 2);
+    $totalActualIncome = round((float)($sumResult[0]['total_actual_income'] ?? 0), 2);
 }
 
 echo json_encode([
@@ -326,6 +343,8 @@ echo json_encode([
     'count' => $totalCount,
     'data'  => $data ?: [],
     'total_income' => $totalIncome,
+    'total_promotion_amount' => $totalPromotionAmount,
+    'total_actual_income' => $totalActualIncome,
     'income_visible_from' => $isIncomeLimitedUser ? $incomeVisibleFrom : ''
 ], JSON_UNESCAPED_UNICODE);
 

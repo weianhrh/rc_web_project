@@ -236,6 +236,10 @@ body {
   font-weight: 900;
 }
 
+.actual-arrival-label {
+  margin-top: 7px;
+}
+
 /* 状态标签 */
 .status-badge {
   display: inline-flex !important;
@@ -800,6 +804,7 @@ body {
         let totalOrders = [];
         let totalCount = 0;
         let orderCache = []; // 用于缓存所有订单数据
+        let currentRoleId = 0;
 
  
         let hasMorePage = false;
@@ -866,6 +871,7 @@ function searchOrders(resetPage = true) {
         })
         .then(data => {
             if (data.code === 0) {
+                currentRoleId = Number(data.role_id || 0);
                 const list = Array.isArray(data.data) ? data.data : [];
 
                 totalOrders = list.sort((a, b) => {
@@ -1199,6 +1205,13 @@ if (order.order_type === 'gift') {
                 // }
 const hasRefundRecord = order.refund_status === 'applied' || order.refund_status === 'approved';
 
+const actualArrivalHtml = Number(currentRoleId) === 1
+  ? `
+      <span class="order-money-label actual-arrival-label">场地实际到账</span>
+      <span class="order-money-value">¥ ${parseFloat(order.actual_arrival_amount ?? order.payment_amount ?? 0).toFixed(2)}</span>
+    `
+  : '';
+
 let refundBtnHtml = `
   <button class="form-button ${hasRefundRecord ? 'cancel-refund-btn' : 'refund-btn'}"
           data-order-id="${order.order_id}"
@@ -1232,6 +1245,7 @@ card.innerHTML = `
     <div class="order-money">
       <span class="order-money-label">支付金额</span>
       <span class="order-money-value">¥ ${parseFloat(order.payment_amount || 0).toFixed(2)}</span>
+      ${actualArrivalHtml}
     </div>
 
     <div class="order-actions">

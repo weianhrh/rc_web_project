@@ -338,13 +338,32 @@
             return num.toFixed(2);
         }
 
-        function getActualArrivalHtml(paymentAmount) {
-            if (Number(currentRoleId) !== 4) {
+        function getActualArrivalHtml(order, orderType) {
+            const roleId = Number(currentRoleId);
+            const paymentAmount = Number(order.payment_amount || 0);
+
+            // role_id=4 保留原来的设备/礼物支付金额 × 80% 口径
+            if (roleId === 4) {
+                const actualAmount = paymentAmount * 0.8;
+
+                return `
+                    <div class="field">
+                        <div class="label">实际到账金额:</div>
+                        <div class="value payment-amount">${formatMoney(actualAmount)} 元</div>
+                    </div>
+                `;
+            }
+
+            // role_id=3 仅设备订单按 payment_amount - promotion_amount 展示
+            if (roleId !== 3 || orderType !== 'device') {
                 return '';
             }
-        
-            const actualAmount = Number(paymentAmount || 0) * 0.8;
-        
+
+            const promotionAmount = Number(order.promotion_amount || 0);
+            const actualAmount = order.actual_arrival_amount == null
+                ? paymentAmount - promotionAmount
+                : Number(order.actual_arrival_amount || 0);
+
             return `
                 <div class="field">
                     <div class="label">实际到账金额:</div>
@@ -424,18 +443,23 @@
 function updateTotalAmount(data) {
     const totalNum = Number(data.total_income || 0);
     const total = formatMoney(totalNum);
-    const actualTotal = formatMoney(totalNum * 0.8);
+    const promotionTotal = Number(data.total_promotion_amount || 0);
+    const actualTotalNum = data.total_actual_income == null
+        ? totalNum - promotionTotal
+        : Number(data.total_actual_income || 0);
+    const actualTotal = formatMoney(actualTotalNum);
 
     const totalAmountEl = document.getElementById('total-amount');
 
     if (currentOrderType === 'gift') {
         totalAmountEl.textContent = `累计礼物收益：${total} 元`;
+    } else if (Number(currentRoleId) === 4) {
+        const role4ActualTotal = formatMoney(totalNum * 0.8);
+        totalAmountEl.textContent = `累计设备收入：${total} 元　实际到账累计：${role4ActualTotal} 元`;
+    } else if (Number(currentRoleId) === 3) {
+        totalAmountEl.textContent = `累计设备收入：${total} 元　实际到账累计：${actualTotal} 元`;
     } else {
-        if (Number(currentRoleId) === 4) {
-            totalAmountEl.textContent = `累计设备收入：${total} 元　实际到账累计：${actualTotal} 元`;
-        } else {
-            totalAmountEl.textContent = `累计设备收入：${total} 元`;
-        }
+        totalAmountEl.textContent = `累计设备收入：${total} 元`;
     }
 }
 
@@ -510,7 +534,7 @@ function updateTotalAmount(data) {
                         <div class="label">支付金额:</div>
                         <div class="value payment-amount">${formatMoney(order.payment_amount)} 元</div>
                     </div>
-                    ${getActualArrivalHtml(order.payment_amount)}
+                    ${getActualArrivalHtml(order, 'device')}
                     <div class="field">
                         <div class="label">支付类型:</div>
                         <div class="value">${escapeHtml(order.pays_type)}</div>
@@ -557,7 +581,7 @@ function updateTotalAmount(data) {
                         <div class="label">支付金额:</div>
                         <div class="value payment-amount">${formatMoney(order.payment_amount)}</div>
                     </div>
-                    ${getActualArrivalHtml(order.payment_amount)}
+                    ${getActualArrivalHtml(order, 'gift')}
                     <div class="field">
                         <div class="label">支付类型:</div>
                         <div class="value">${escapeHtml(order.pays_type)}</div>

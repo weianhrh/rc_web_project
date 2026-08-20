@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>七夕座驾派发</title>
+  <link rel="stylesheet" href="/res/fa/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4f7cff;
+      --primary-dark: #3f68df;
+      --page-bg: #f5f7ff;
+      --card-bg: #fff;
+      --text: #172033;
+      --muted: #718096;
+      --border: #e5ebf5;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 10px 28px rgba(91, 140, 255, .1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 16px;
+      color: var(--text);
+      background: linear-gradient(135deg, #f8faff 0%, #eef3ff 100%);
+    }
+
+    .page {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, .98);
+      border: 1px solid rgba(229, 235, 245, .9);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .title {
+      position: relative;
+      padding-left: 12px;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .title::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 4px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--primary);
+      transform: translateY(-50%);
+    }
+
+    .sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: #2f5fd0;
+      background: #eef4ff;
+      border: 1px solid #dce7ff;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f8fbff;
+      border: 1px solid #dfe8f8;
+    }
+
+    .field {
+      min-width: 150px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.wide {
+      min-width: 220px;
+      flex: 1;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      height: 38px;
+      padding: 0 12px;
+      border: 1px solid #d6e0f0;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 124, 255, .12);
+    }
+
+    .check {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 10px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .check input {
+      width: 16px;
+      height: 16px;
+    }
+
+    .btn {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 0;
+      border-radius: 9px;
+      padding: 0 16px;
+      color: #fff;
+      background: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .18s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .btn-light {
+      color: #3f68df;
+      background: #eef4ff;
+    }
+
+    .btn-light:hover {
+      background: #e2ebff;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #fff, #fbfdff);
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .metric .value {
+      margin-top: 8px;
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--border);
+      padding: 11px 10px;
+      text-align: left;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #526174;
+      background: #f7faff;
+      font-weight: 800;
+    }
+
+    tr:hover td {
+      background: #fafcff;
+    }
+
+    .amount {
+      color: #0f766e;
+      font-weight: 900;
+    }
+
+    .tag {
+      display: inline-flex;
+      height: 24px;
+      align-items: center;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .tag-pending {
+      color: #9a5b00;
+      background: #fff7df;
+    }
+
+    .tag-granted {
+      color: #047857;
+      background: #dcfce7;
+    }
+
+    .empty {
+      padding: 34px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed #d6e0f0;
+      border-radius: 12px;
+      background: #fbfdff;
+    }
+
+    .loading {
+      opacity: .62;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <div class="header">
+        <div>
+          <div class="title">七夕座驾派发</div>
+          <div class="sub">筛选七夕当天实际消费满额用户，由管理员统一发放 7 天活动座驾。</div>
+        </div>
+        <div class="status-pill"><span class="dot"></span><span id="statusText">待查询</span></div>
+      </div>
+
+      <div class="filters">
+        <div class="field">
+          <label>活动日期</label>
+          <input id="activityDate" type="date" value="2026-08-19">
+        </div>
+        <div class="field">
+          <label>消费门槛</label>
+          <input id="minAmount" type="number" min="0" step="0.01" value="200">
+        </div>
+        <div class="field wide">
+          <label>发放座驾</label>
+          <select id="productId"></select>
+        </div>
+        <div class="field">
+          <label>发放状态</label>
+          <select id="grantStatus">
+            <option value="pending">仅未发放</option>
+            <option value="granted">仅已发放</option>
+            <option value="all">全部达标</option>
+          </select>
+        </div>
+        <div class="field wide">
+          <label>搜索用户</label>
+          <input id="keyword" type="text" placeholder="UID / 昵称 / 手机号">
+        </div>
+        <label class="check"><input id="autoEquip" type="checkbox" checked> 自动设为当前座驾</label>
+        <button class="btn" id="searchBtn"><i class="fas fa-search"></i> 查询</button>
+        <button class="btn btn-light" id="selectAllBtn"><i class="fas fa-check-square"></i> 全选</button>
+        <button class="btn btn-danger" id="grantBtn"><i class="fas fa-paper-plane"></i> 发放选中</button>
+      </div>
+
+      <div class="summary">
+        <div class="metric"><div class="label">达标用户</div><div class="value" id="eligibleUsers">0</div></div>
+        <div class="metric"><div class="label">未发用户</div><div class="value" id="pendingUsers">0</div></div>
+        <div class="metric"><div class="label">已发用户</div><div class="value" id="grantedUsers">0</div></div>
+        <div class="metric"><div class="label">达标消费</div><div class="value" id="eligibleAmount">0.00</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="hint" id="tableHint">请先查询达标用户</div>
+        <button class="btn btn-light" id="refreshBtn"><i class="fas fa-sync-alt"></i> 刷新</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:42px"><input id="headCheck" type="checkbox"></th>
+              <th>UID</th>
+              <th>昵称</th>
+              <th>手机号</th>
+              <th>消费金额</th>
+              <th>订单数</th>
+              <th>最后消费时间</th>
+              <th>状态</th>
+              <th>发放时间</th>
+              <th>操作人</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="emptyBox">暂无数据</div>
+    </section>
+  </main>
+
+  <script>
+    const api = '/api/operat/qixi_vehicle_grant.php';
+    const el = {
+      activityDate: document.getElementById('activityDate'),
+      minAmount: document.getElementById('minAmount'),
+      productId: document.getElementById('productId'),
+      grantStatus: document.getElementById('grantStatus'),
+      keyword: document.getElementById('keyword'),
+      autoEquip: document.getElementById('autoEquip'),
+      searchBtn: document.getElementById('searchBtn'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      selectAllBtn: document.getElementById('selectAllBtn'),
+      grantBtn: document.getElementById('grantBtn'),
+      headCheck: document.getElementById('headCheck'),
+      tbody: document.getElementById('tbody'),
+      emptyBox: document.getElementById('emptyBox'),
+      tableHint: document.getElementById('tableHint'),
+      statusText: document.getElementById('statusText'),
+      eligibleUsers: document.getElementById('eligibleUsers'),
+      pendingUsers: document.getElementById('pendingUsers'),
+      grantedUsers: document.getElementById('grantedUsers'),
+      eligibleAmount: document.getElementById('eligibleAmount')
+    };
+
+    let rows = [];
+
+    function setLoading(loading, text) {
+      document.body.classList.toggle('loading', loading);
+      el.statusText.textContent = text || (loading ? '处理中' : '就绪');
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[s]));
+    }
+
+    async function request(url, options) {
+      const res = await fetch(url, options);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.ok !== 1) {
+        throw new Error((data && data.msg) || '请求失败');
+      }
+      return data.data || {};
+    }
+
+    async function loadProducts() {
+      const data = await request(api + '?act=products');
+      el.productId.innerHTML = (data.list || []).map(item => {
+        const selected = Number(item.id) === 4 ? ' selected' : '';
+        return `<option value="${item.id}"${selected}>${escapeHtml(item.effect_name)}（${item.valid_days}天，ID:${item.id}）</option>`;
+      }).join('');
+    }
+
+    function params() {
+      const q = new URLSearchParams();
+      q.set('act', 'list');
+      q.set('activity_date', el.activityDate.value);
+      q.set('min_amount', el.minAmount.value || '200');
+      q.set('product_id', el.productId.value || '4');
+      q.set('grant_status', el.grantStatus.value);
+      q.set('keyword', el.keyword.value.trim());
+      return q;
+    }
+
+    async function loadList() {
+      setLoading(true, '查询中');
+      try {
+        const data = await request(api + '?' + params().toString());
+        rows = data.list || [];
+        renderSummary(data.summary || {});
+        renderRows();
+        el.statusText.textContent = '已更新';
+      } catch (error) {
+        el.statusText.textContent = '查询失败';
+        alert(error.message);
+      } finally {
+        setLoading(false, el.statusText.textContent);
+      }
+    }
+
+    function renderSummary(summary) {
+      el.eligibleUsers.textContent = summary.eligible_users || 0;
+      el.pendingUsers.textContent = summary.pending_users || 0;
+      el.grantedUsers.textContent = summary.granted_users || 0;
+      el.eligibleAmount.textContent = summary.eligible_amount || '0.00';
+    }
+
+    function renderRows() {
+      el.headCheck.checked = false;
+      el.emptyBox.style.display = rows.length ? 'none' : 'block';
+      el.tableHint.textContent = rows.length ? `当前列表 ${rows.length} 人` : '暂无达标用户';
+      el.tbody.innerHTML = rows.map(row => {
+        const disabled = row.is_granted ? 'disabled' : '';
+        const tag = row.is_granted
+          ? '<span class="tag tag-granted">已发放</span>'
+          : '<span class="tag tag-pending">待发放</span>';
+        return `<tr>
+          <td><input class="row-check" type="checkbox" value="${row.uid}" ${disabled}></td>
+          <td>${row.uid}</td>
+          <td>${escapeHtml(row.nickname || '')}</td>
+          <td>${escapeHtml(row.phone_number || '')}</td>
+          <td class="amount">${row.total_amount}</td>
+          <td>${row.order_count}</td>
+          <td>${escapeHtml(row.last_order_time || '')}</td>
+          <td>${tag}</td>
+          <td>${escapeHtml(row.granted_at || '')}</td>
+          <td>${escapeHtml(row.admin_name || row.admin_uid || '')}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function selectedUids() {
+      return Array.from(document.querySelectorAll('.row-check:checked')).map(input => Number(input.value));
+    }
+
+    async function grantSelected() {
+      const uids = selectedUids();
+      if (!uids.length) {
+        alert('请选择要发放的用户');
+        return;
+      }
+      if (!confirm(`确定给 ${uids.length} 个用户发放活动座驾吗？`)) return;
+      setLoading(true, '发放中');
+      try {
+        const data = await request(api + '?act=grant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activity_code: 'QIXI_2026',
+            activity_date: el.activityDate.value,
+            min_amount: el.minAmount.value || '200',
+            product_id: Number(el.productId.value || 4),
+            auto_equip: el.autoEquip.checked ? 1 : 0,
+            uids
+          })
+        });
+        alert(`发放完成：成功 ${data.granted.length} 人，跳过 ${data.skipped.length} 人`);
+        await loadList();
+      } catch (error) {
+        el.statusText.textContent = '发放失败';
+        alert(error.message);
+      } finally {
+        setLoading(false, el.statusText.textContent);
+      }
+    }
+
+    el.searchBtn.addEventListener('click', loadList);
+    el.refreshBtn.addEventListener('click', loadList);
+    el.grantBtn.addEventListener('click', grantSelected);
+    el.selectAllBtn.addEventListener('click', () => {
+      document.querySelectorAll('.row-check:not(:disabled)').forEach(input => input.checked = true);
+      el.headCheck.checked = true;
+    });
+    el.headCheck.addEventListener('change', () => {
+      document.querySelectorAll('.row-check:not(:disabled)').forEach(input => input.checked = el.headCheck.checked);
+    });
+    el.keyword.addEventListener('keydown', event => {
+      if (event.key === 'Enter') loadList();
+    });
+
+    (async function init() {
+      try {
+        setLoading(true, '初始化');
+        await loadProducts();
+        await loadList();
+      } catch (error) {
+        el.statusText.textContent = '初始化失败';
+        alert(error.message);
+      } finally {
+        setLoading(false, el.statusText.textContent);
+      }
+    })();
+  </script>
+</body>
+</html>

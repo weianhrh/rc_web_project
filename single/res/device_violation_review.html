@@ -6,6 +6,11 @@
   <title>违规复查</title>
   <style>
     * { box-sizing: border-box; }
+    html {
+      /* 避免不同电脑/浏览器自动放大页面中的小字号文字 */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
     body {
       margin: 0;
       font-family: Arial, "Microsoft YaHei", sans-serif;
@@ -124,11 +129,20 @@
       right: 8px;
       bottom: 8px;
       color: #fff;
-      font-size: 10px;
-      line-height: 1.35;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+      font-size: 10px !important;
+      line-height: 1.35 !important;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
       background: rgba(0,0,0,.42);
       border-radius: 7px;
       padding: 5px 7px;
+      overflow: hidden;
+    }
+    .time-bar > div {
+      font-size: inherit !important;
+      line-height: inherit !important;
+      white-space: nowrap;
     }
 
     .card-body {
