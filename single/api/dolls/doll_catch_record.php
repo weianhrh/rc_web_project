@@ -30,6 +30,76 @@ if (!$user || !$user['role_id']) {
 }
 
 // =========================
+// 将寄存中的记录直接修改为已发货
+// =========================
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = trim($_POST['action'] ?? '');
+    if ($action !== 'mark_shipped') {
+        echo json_encode(['code' => 400, 'msg' => '无效的操作', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $recordId = isset($_POST['id']) ? intval($_POST['id']) : 0;
+    if ($recordId <= 0) {
+        echo json_encode(['code' => 400, 'msg' => '记录ID不正确', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $recordResult = $database->query(
+        "SELECT id, user_id, doll_name, doll_status FROM user_doll_detail WHERE id = ? LIMIT 1",
+        [$recordId]
+    );
+    if ($recordResult === false) {
+        echo json_encode(['code' => 500, 'msg' => '查询记录失败', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if (!$recordResult) {
+        echo json_encode(['code' => 404, 'msg' => '抓中记录不存在', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $record = $recordResult[0];
+    if (intval($record['doll_status']) !== 0) {
+        echo json_encode(['code' => 409, 'msg' => '只有寄存中的记录可以直接修改为已发货', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    // WHERE 中再次限制 doll_status = 0，防止并发操作导致状态被重复覆盖。
+    $updateResult = $database->query(
+        "UPDATE user_doll_detail SET doll_status = 2 WHERE id = ? AND doll_status = 0",
+        [$recordId],
+        true
+    );
+    if ($updateResult === false) {
+        echo json_encode(['code' => 500, 'msg' => '修改状态失败', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if ($updateResult < 1) {
+        echo json_encode(['code' => 409, 'msg' => '记录状态已发生变化，请刷新后重试', 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $operator = $user['username'] ?? ($user['uid'] ?? 'unknown');
+    logMessage_log("记录ID {$recordId} 已由 {$operator} 从寄存中修改为已发货");
+
+    echo json_encode([
+        'code' => 200,
+        'msg' => '已修改为已发货',
+        'data' => [
+            'id' => $recordId,
+            'doll_status' => 2,
+            'doll_status_text' => '已发货'
+        ]
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    echo json_encode(['code' => 405, 'msg' => '不支持的请求方法', 'data' => []], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// =========================
 // 参数
 // =========================
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;

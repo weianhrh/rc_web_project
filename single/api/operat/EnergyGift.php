@@ -166,20 +166,51 @@ if ($action === 'gift_energy') {
         exit;
     }
 
-    // 查询当前能量值
-    $querySql = "SELECT energy FROM energy_records WHERE user_uid = ? AND venue_id = ?";
-    $result = $database->query($querySql, [$userId, $venueId]);
-    $currentEnergy = $result ? $result[0]['energy'] : 0;
+    // 清除余额和写入变动记录必须在同一个事务中完成，避免余额已变更但日志缺失。
+    $database->beginTransaction();
+    try {
+        $querySql = "SELECT energy FROM energy_records WHERE user_uid = ? AND venue_id = ? FOR UPDATE";
+        $result = $database->query($querySql, [$userId, $venueId]);
+        if ($result === false) {
+            throw new Exception('查询当前能量失败');
+        }
 
-    if ($amountProvided) {
-        // 如果指定了清除数量，则进行减法
-        $newEnergy = max(0, $currentEnergy - $energyAmount);
-        $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$newEnergy, $userId, $venueId], true);
-    } else {
-        // 如果没有指定清除数量，则清零
-        $updateSql = "UPDATE energy_records SET energy = 0 WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$userId, $venueId], true);
+        $currentEnergy = $result ? (float)$result[0]['energy'] : 0.0;
+        $newEnergy = $amountProvided
+            ? max(0, $currentEnergy - $energyAmount)
+            : 0.0;
+
+        if ($result) {
+            $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
+            $updateResult = $database->query($updateSql, [$newEnergy, $userId, $venueId], true);
+            if ($updateResult === false) {
+                throw new Exception('更新能量失败');
+            }
+        }
+
+        // 只记录实际发生的减少量；清除数量大于余额时，以实际余额为准。
+        $removedEnergy = $currentEnergy - $newEnergy;
+        if ($removedEnergy > 0) {
+            $reason = '代理清除能量，操作人员：' . $username;
+            $changeSql = "INSERT INTO energy_changes
+                (user_uid, venue_id, energy_change, balance_after_change, reason, balance_before_change)
+                VALUES (?, ?, ?, ?, ?, ?)";
+            $changeResult = $database->query(
+                $changeSql,
+                [$userId, $venueId, -$removedEnergy, $newEnergy, $reason, $currentEnergy],
+                true
+            );
+            if ($changeResult === false) {
+                throw new Exception('写入能量变动记录失败');
+            }
+        }
+
+        $database->commit();
+    } catch (Throwable $e) {
+        $database->rollBack();
+        error_log('clear_energy failed: ' . $e->getMessage());
+        echo json_encode(['code' => 1005, 'msg' => '清除能量失败', 'data' => []]);
+        exit;
     }
 
     echo json_encode([
@@ -315,9 +346,35 @@ elseif ($action === 'clear_all_energy') {
         exit;
     }
 
-    // 全场地清零
-    $updateSql = "UPDATE energy_records SET energy = 0 WHERE user_uid = ? AND venue_id IN (SELECT id FROM venues)";
-    $database->query($updateSql, [$userId], true);
+    // 先按每个场地记录清零前余额，再统一清零；两步必须同时成功。
+    $database->beginTransaction();
+    try {
+        $reason = '代理全场地清零，操作人员：' . $username;
+        $logSql = "INSERT INTO energy_changes
+            (user_uid, venue_id, energy_change, balance_after_change, reason, balance_before_change)
+            SELECT user_uid, venue_id, -energy, 0, ?, energy
+            FROM energy_records
+            WHERE user_uid = ?
+              AND venue_id IN (SELECT id FROM venues)
+              AND energy > 0";
+        $logResult = $database->query($logSql, [$reason, $userId], true);
+        if ($logResult === false) {
+            throw new Exception('写入全场地清零记录失败');
+        }
+
+        $updateSql = "UPDATE energy_records SET energy = 0 WHERE user_uid = ? AND venue_id IN (SELECT id FROM venues)";
+        $updateResult = $database->query($updateSql, [$userId], true);
+        if ($updateResult === false) {
+            throw new Exception('全场地清零失败');
+        }
+
+        $database->commit();
+    } catch (Throwable $e) {
+        $database->rollBack();
+        error_log('clear_all_energy failed: ' . $e->getMessage());
+        echo json_encode(['code'=>1005, 'msg'=>'全场地能量清零失败', 'data'=>[]]);
+        exit;
+    }
 
     echo json_encode(['code'=>0, 'msg'=>'全场地能量清零成功','data'=>[]]);
 }

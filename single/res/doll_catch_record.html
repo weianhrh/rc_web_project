@@ -235,6 +235,10 @@ body {
 
 .card-head-right {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
 }
 
 .item-title {
@@ -266,6 +270,31 @@ body {
 .badge.green  { background: rgba(34,197,94,.12); color: #16a34a; }
 .badge.red    { background: rgba(239,68,68,.10); color: #dc2626; }
 .badge.gray   { background: rgba(148,163,184,.12); color: #64748b; }
+
+.mark-shipped-btn {
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid rgba(6,182,212,.28);
+    border-radius: 8px;
+    background: rgba(6,182,212,.10);
+    color: #0891b2;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: all .2s ease;
+}
+
+.mark-shipped-btn:hover:not(:disabled) {
+    background: #0891b2;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.mark-shipped-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
 
 .tag-line {
     display: flex;
@@ -762,6 +791,9 @@ function buildCard(item) {
     const imageHtml = item.doll_image
         ? `<img class="item-cover" src="${escapeHtml(item.doll_image)}" alt="${escapeHtml(item.doll_name || '娃娃图片')}">`
         : `<div class="item-cover empty-cover">暂无图片</div>`;
+    const shippedActionHtml = String(item.doll_status) === '0'
+        ? `<button type="button" class="mark-shipped-btn" data-record-id="${escapeHtml(item.id)}" data-doll-name="${escapeHtml(item.doll_name || '未命名娃娃')}">直接改为已发货</button>`
+        : '';
 
     return `
         <article class="mini-card">
@@ -781,6 +813,7 @@ function buildCard(item) {
 
                         <div class="card-head-right">
                             <span class="${badgeClass(item.doll_status)}">${escapeHtml(item.doll_status_text || '未知')}</span>
+                            ${shippedActionHtml}
                         </div>
                     </div>
 
@@ -825,6 +858,45 @@ function buildCard(item) {
             </div>
         </article>
     `;
+}
+
+async function markRecordAsShipped(button) {
+    const recordId = button.dataset.recordId;
+    const dollName = button.dataset.dollName || '该娃娃';
+    if (!recordId) return;
+
+    const confirmed = window.confirm(`确定将记录ID ${recordId}（${dollName}）直接修改为已发货吗？`);
+    if (!confirmed) return;
+
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = '处理中...';
+
+    try {
+        const params = new URLSearchParams({
+            action: 'mark_shipped',
+            id: recordId
+        });
+        const response = await fetch('/api/dolls/doll_catch_record.php', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+        const json = await response.json();
+
+        if (json.code !== 200) {
+            throw new Error(json.msg || '修改失败');
+        }
+
+        window.alert(json.msg || '已修改为已发货');
+        await loadData();
+    } catch (error) {
+        console.error('markRecordAsShipped error:', error);
+        window.alert(error.message || '修改失败，请检查网络或登录状态');
+        button.disabled = false;
+        button.textContent = originalText;
+    }
 }
 
         function renderStats(stats) {
@@ -969,6 +1041,10 @@ async function loadData() {
             document.getElementById('page_size').value = '12';
             currentPage = 1;
             loadData();
+        });
+        document.getElementById('cardGrid').addEventListener('click', event => {
+            const button = event.target.closest('.mark-shipped-btn');
+            if (button) markRecordAsShipped(button);
         });
         bindStatClicks();
         loadData();

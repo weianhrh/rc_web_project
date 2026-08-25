@@ -56,20 +56,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // 查询当前能量
-    $sql = "SELECT energy FROM energy_records WHERE user_uid = ? AND venue_id = ?";
-    $result = $database->query($sql, [$userId, $venue_id]);
-    $currentEnergy = $result ? floatval($result[0]['energy']) : 0;
+    // 清除余额和写入能量变动记录必须同时成功。
+    $database->beginTransaction();
+    try {
+        $sql = "SELECT energy FROM energy_records WHERE user_uid = ? AND venue_id = ? FOR UPDATE";
+        $result = $database->query($sql, [$userId, $venue_id]);
+        if ($result === false) {
+            throw new Exception('查询当前能量失败');
+        }
+
+        $currentEnergy = $result ? floatval($result[0]['energy']) : 0.0;
+        $newEnergy = $amountProvided
+            ? max(0, $currentEnergy - $energyAmount)
+            : 0.0;
+
+        if ($result) {
+            $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
+            $updateResult = $database->query($updateSql, [$newEnergy, $userId, $venue_id], true);
+            if ($updateResult === false) {
+                throw new Exception('更新能量失败');
+            }
+        }
+
+        // energy_change 使用负数表示减少，并记录准确的变动前后余额。
+        $removedEnergy = $currentEnergy - $newEnergy;
+        if ($removedEnergy > 0) {
+            $reason = '场地清除能量，操作人员：' . $username;
+            $changeSql = "INSERT INTO energy_changes
+                (user_uid, venue_id, energy_change, balance_after_change, reason, balance_before_change)
+                VALUES (?, ?, ?, ?, ?, ?)";
+            $changeResult = $database->query(
+                $changeSql,
+                [$userId, $venue_id, -$removedEnergy, $newEnergy, $reason, $currentEnergy],
+                true
+            );
+            if ($changeResult === false) {
+                throw new Exception('写入能量变动记录失败');
+            }
+        }
+
+        $database->commit();
+    } catch (Throwable $e) {
+        $database->rollBack();
+        error_log('getUserList clear energy failed: ' . $e->getMessage());
+        echo json_encode(['code' => 1005, 'msg' => '清除能量失败']);
+        exit;
+    }
 
     if ($amountProvided) {
-        $newEnergy = max(0, $currentEnergy - $energyAmount);
-        $updateSql = "UPDATE energy_records SET energy = ? WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$newEnergy, $userId, $venue_id]);
-        $msg = "已减少 $energyAmount 单位能量";
+        $msg = '已减少 ' . ($currentEnergy - $newEnergy) . ' 单位能量';
     } else {
-        $updateSql = "UPDATE energy_records SET energy = 0 WHERE user_uid = ? AND venue_id = ?";
-        $database->query($updateSql, [$userId, $venue_id]);
-        $msg = "已清空能量";
+        $msg = '已清空能量，本次实际减少 ' . ($currentEnergy - $newEnergy) . ' 单位';
     }
 
     echo json_encode(['code' => 0, 'msg' => '清除能量成功', 'detail' => $msg]);
