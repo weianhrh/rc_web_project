@@ -150,48 +150,16 @@ $todaySelfTotal = (int)($todayRow['self_cnt'] ?? 0);
 $inviteDetail = [];
 $inviteDetailTotal = 0;
 $inviteDetailSelfTotal = 0;
-$inviteDetailAmountTotal = '0.00';
-$inviteDetailOtherVenueAmountTotal = '0.00';
 if ($hasDetailDate) {
   $detailSql = "
     SELECT
       users.invitation_code,
-      COUNT(DISTINCT users.uid) AS total,
-      COUNT(DISTINCT CASE WHEN od.total_amount > 0 THEN users.uid END) AS consuming_users,
-      COALESCE(SUM(od.order_count), 0) AS invited_day_orders,
-      CAST(COALESCE(SUM(od.total_amount), 0) AS CHAR) AS invited_day_amount,
-      CAST(COALESCE(SUM(CASE
-        WHEN COALESCE(v.id, v2.id, 0) > 0
-         AND od.reservation_id = COALESCE(v.id, v2.id, 0)
-        THEN od.total_amount ELSE 0 END), 0) AS CHAR) AS promotion_venue_amount,
-      CAST(COALESCE(SUM(CASE
-        WHEN COALESCE(v.id, v2.id, 0) > 0
-         AND od.reservation_id <> COALESCE(v.id, v2.id, 0)
-        THEN od.total_amount ELSE 0 END), 0) AS CHAR) AS other_venue_amount,
-      COALESCE(SUM(CASE
-        WHEN COALESCE(v.id, v2.id, 0) > 0
-         AND od.reservation_id <> COALESCE(v.id, v2.id, 0)
-        THEN od.order_count ELSE 0 END), 0) AS other_venue_orders,
+      COUNT(*) AS total,
       COALESCE(v.venue_name, v2.venue_name, '') AS venue_name,
       COALESCE(v.id, v2.id, 0) AS venue_id,
       uic.uid AS inviter_uid,
       COALESCE(inviter.nickname, '') AS inviter_nickname
     FROM users
-    LEFT JOIN (
-      SELECT
-        o.uid,
-        o.reservation_id,
-        COUNT(*) AS order_count,
-        COALESCE(SUM(COALESCE(NULLIF(o.checkout_amount, 0), o.payment_amount, 0)), 0) AS total_amount
-      FROM orders o
-      WHERE o.start_time >= '{$detail_date} 00:00:00'
-        AND o.start_time < DATE_ADD('{$detail_date} 00:00:00', INTERVAL 1 DAY)
-        AND o.status = '已完成'
-        AND (o.pays_type IS NULL OR o.pays_type <> '能量')
-        AND (o.note IS NULL OR o.note <> 'gift')
-      GROUP BY o.uid, o.reservation_id
-    ) od
-      ON od.uid = users.uid
     LEFT JOIN venue_invite_codes vic
       ON vic.invite_code = users.invitation_code AND vic.is_enabled = 1
     LEFT JOIN venues v
@@ -206,21 +174,10 @@ if ($hasDetailDate) {
       AND {$timeField} < DATE_ADD('{$detail_date} 00:00:00', INTERVAL 1 DAY)
       AND {$inviteCondition}
     GROUP BY users.invitation_code, venue_name, venue_id, uic.uid, inviter.nickname
-    ORDER BY invited_day_amount DESC, total DESC, users.invitation_code ASC
+    ORDER BY total DESC, users.invitation_code ASC
     LIMIT 300
   ";
   $inviteDetail = $database->query($detailSql) ?: [];
-  foreach ($inviteDetail as &$detailRow) {
-    $detailRow['invited_day_amount'] = number_format((float)($detailRow['invited_day_amount'] ?? 0), 2, '.', '');
-    $detailRow['promotion_venue_amount'] = number_format((float)($detailRow['promotion_venue_amount'] ?? 0), 2, '.', '');
-    $detailRow['other_venue_amount'] = number_format((float)($detailRow['other_venue_amount'] ?? 0), 2, '.', '');
-    $totalAmount = (float)$detailRow['invited_day_amount'];
-    $otherAmount = (float)$detailRow['other_venue_amount'];
-    $detailRow['other_venue_rate'] = $totalAmount > 0 ? number_format(($otherAmount / $totalAmount) * 100, 1, '.', '') : '0.0';
-    $inviteDetailAmountTotal = number_format((float)$inviteDetailAmountTotal + (float)$detailRow['invited_day_amount'], 2, '.', '');
-    $inviteDetailOtherVenueAmountTotal = number_format((float)$inviteDetailOtherVenueAmountTotal + $otherAmount, 2, '.', '');
-  }
-  unset($detailRow);
 
   $detailSummarySql = "
     SELECT
@@ -513,7 +470,7 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
         <div class="hd-left">
           <span class="layui-badge-dot" style="background:#8b5cf6"></span>
           <span><?= htmlspecialchars($detail_date) ?> 邀请码注册明细</span>
-          <span class="hd-sub">推广 <?= $inviteDetailTotal ?> 人 / 自行 <?= $inviteDetailSelfTotal ?> 人 / 推广用户当天消费 ¥<?= htmlspecialchars($inviteDetailAmountTotal) ?> / 非推广场地消费 ¥<?= htmlspecialchars($inviteDetailOtherVenueAmountTotal) ?></span>
+          <span class="hd-sub">推广 <?= $inviteDetailTotal ?> 人 / 自行 <?= $inviteDetailSelfTotal ?> 人</span>
         </div>
         <button class="layui-btn layui-btn-primary layui-btn-sm" onclick="clearInviteDetail()">关闭明细</button>
       </div>
@@ -529,12 +486,6 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
                 <th>对应场地</th>
                 <th>场地ID</th>
                 <th>邀请注册人数</th>
-                <th>当天消费用户</th>
-                <th>当天订单数</th>
-                <th>当天消费金额</th>
-                <th>本推广场地消费</th>
-                <th>非推广场地消费</th>
-                <th>外流占比</th>
                 <th>邀请码归属UID</th>
                 <th>归属昵称</th>
               </tr>
@@ -547,12 +498,6 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
                   <td><?= htmlspecialchars((string)($item['venue_name'] ?: '-')) ?></td>
                   <td><?= ((int)($item['venue_id'] ?? 0)) > 0 ? (int)$item['venue_id'] : '-' ?></td>
                   <td class="num"><?= (int)$item['total'] ?> 人</td>
-                  <td><?= (int)($item['consuming_users'] ?? 0) ?> 人</td>
-                  <td><?= (int)($item['invited_day_orders'] ?? 0) ?> 单</td>
-                  <td class="num">¥<?= htmlspecialchars((string)($item['invited_day_amount'] ?? '0.00')) ?></td>
-                  <td>¥<?= htmlspecialchars((string)($item['promotion_venue_amount'] ?? '0.00')) ?></td>
-                  <td class="num">¥<?= htmlspecialchars((string)($item['other_venue_amount'] ?? '0.00')) ?> / <?= (int)($item['other_venue_orders'] ?? 0) ?> 单</td>
-                  <td><?= htmlspecialchars((string)($item['other_venue_rate'] ?? '0.0')) ?>%</td>
                   <td><?= $item['inviter_uid'] ? (int)$item['inviter_uid'] : '-' ?></td>
                   <td><?= htmlspecialchars((string)($item['inviter_nickname'] ?: '-')) ?></td>
                 </tr>

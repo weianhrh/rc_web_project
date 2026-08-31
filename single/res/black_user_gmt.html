@@ -138,6 +138,10 @@
     /* 输入增强 */
     .modal-row label { align-self: flex-start; padding-top: 2px; }
     textarea.input{ height: auto; min-height: 120px; line-height: 1.5; padding: 10px 12px; resize: vertical; }
+    .help-text{ color:#64748b; font-size:12px; line-height:1.6; margin-top:6px; }
+    .danger-panel{ background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:10px 12px; color:#9a3412; font-size:13px; line-height:1.6; }
+    .bulk-actions{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .bulk-actions .btn{ white-space:normal; line-height:1.35; }
     .s-item.disabled { opacity: .55; cursor: not-allowed; }
     .s-item.disabled .meta::after { content: " · 不可拉黑"; color: #ef4444; }
     .input.invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.15); }
@@ -151,6 +155,7 @@
       .input { height: 36px; padding: 6px 10px; font-size: 14px; }
       select.input, .page-size { height: 36px; }
       .btn { height: 36px; padding: 6px 10px; font-size: 14px; }
+      .bulk-actions { grid-template-columns:1fr; }
     }
 
     /* UID 联想下拉 */
@@ -199,6 +204,7 @@
         </select>
         <button id="btnSearch" class="btn btn-outline">搜索</button>
         <button id="btnAdd" class="btn btn-primary">添加拉黑</button>
+        <button id="btnBatchUnblock" class="btn btn-danger">一键取消拉黑</button>
         <!-- 仅 role_id == 1 可见 -->
         <button id="btnAssign" class="btn btn-outline" hidden>指定添加</button>
       </div>
@@ -291,6 +297,31 @@
         <button class="btn btn-outline" data-close>再想想</button>
         <button class="btn btn-danger" id="confirmDel">确认删除</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 批量取消拉黑 Modal -->
+  <div class="modal" id="batchUnblockModal" aria-hidden="true" role="dialog">
+    <div class="modal-content" role="document">
+      <div class="title">一键取消拉黑</div>
+      <div class="modal-row">
+        <label for="unblockUids">用户 UID</label>
+        <div>
+          <textarea id="unblockUids" class="input" rows="6" placeholder="每行一个 UID，或单行用逗号分隔&#10;例如：148995, 148996"></textarea>
+          <div class="help-text">支持换行、英文/中文逗号、空格或 Tab 分隔；自动去重，一次最多 500 个 UID。</div>
+        </div>
+      </div>
+      <div class="modal-row" id="batchVenueRow">
+        <label for="batchVenueId">操作场地</label>
+        <select id="batchVenueId" class="input"><option value="">加载中…</option></select>
+      </div>
+      <div class="danger-panel">请确认取消范围。后两项影响范围较大，点击后还会再次确认。</div>
+      <div class="bulk-actions">
+        <button class="btn btn-primary" id="confirmBatchVenue">多个 UID<br>此场地取消</button>
+        <button class="btn btn-danger" id="confirmUidAllVenues">指定 UID<br>全场地取消</button>
+        <button class="btn btn-danger" id="confirmVenueAll">此场地<br>全部用户取消</button>
+      </div>
+      <div class="btns"><button class="btn btn-outline" data-close>关闭</button></div>
     </div>
   </div>
 
@@ -462,7 +493,7 @@
     // Modal 控制
     function openModal(sel){ const el = $(sel); if(el){ el.style.display = 'flex'; el.setAttribute('aria-hidden','false'); } }
     function closeModal(sel){ const el = $(sel); if(el){ el.style.display = 'none'; el.setAttribute('aria-hidden','true'); } }
-    $$('[data-close]').forEach(b => b.addEventListener('click', ()=>{ ['#addModal','#assignModal','#delModal'].forEach(closeModal); }));
+    $$('[data-close]').forEach(b => b.addEventListener('click', ()=>{ ['#addModal','#assignModal','#delModal','#batchUnblockModal'].forEach(closeModal); }));
 
     // 事件
 $('#btnAdd').addEventListener('click', ()=>{
@@ -482,6 +513,70 @@ $('#btnAssign').addEventListener('click', ()=>{
   openModal('#assignModal');
   loadVenuesIntoSelect($('#venue_id'));
   setTimeout(()=> $('#assignUid').focus(), 50);
+});
+
+$('#btnBatchUnblock').addEventListener('click', ()=>{
+  $('#unblockUids').value = '';
+  openModal('#batchUnblockModal');
+  if(isPlatformAdmin()){
+    $('#batchVenueRow').hidden = false;
+    loadVenuesIntoSelect($('#batchVenueId'));
+  }else{
+    $('#batchVenueRow').hidden = true;
+  }
+  setTimeout(()=> $('#unblockUids').focus(), 50);
+});
+
+function parsedUnblockUids(){
+  return [...new Set($('#unblockUids').value.split(/[\s,，]+/).map(v=>v.trim()).filter(Boolean))];
+}
+
+function selectedBatchVenue(){
+  return isPlatformAdmin() ? Number($('#batchVenueId').value) : Number(state.venueId);
+}
+
+async function submitBatchUnblock(action, extra = {}){
+  try{
+    const resp = await fetch(API.UNBLOCK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action, ...extra })
+    });
+    const json = await resp.json();
+    if(json.code !== 0) throw new Error(json.msg || '操作失败');
+    toast(json.msg || '取消拉黑完成');
+    closeModal('#batchUnblockModal');
+    state.page = 1;
+    await loadList();
+  }catch(err){ toast(err.message || '网络错误', false); }
+}
+
+$('#confirmBatchVenue').addEventListener('click', async ()=>{
+  const uids = parsedUnblockUids();
+  const venue_id = selectedBatchVenue();
+  if(!uids.length){ toast('请输入至少一个 UID', false); return; }
+  if(uids.some(uid => !/^\d+$/.test(uid) || Number(uid) < 1)){ toast('UID 只能是正整数', false); return; }
+  if(uids.length > 500){ toast('一次最多处理 500 个 UID', false); return; }
+  if(!venue_id){ toast('请选择场地', false); return; }
+  await submitBatchUnblock('batch_venue', { uids, venue_id });
+});
+
+$('#confirmUidAllVenues').addEventListener('click', async ()=>{
+  if(!isPlatformAdmin()){ toast('只有平台管理员可以执行全场地取消', false); return; }
+  const uids = parsedUnblockUids();
+  if(uids.length !== 1 || !/^\d+$/.test(uids[0]) || Number(uids[0]) < 1){
+    toast('全场地取消每次只能输入一个正确的 UID', false); return;
+  }
+  if(!confirm(`确认取消 UID ${uids[0]} 在全部场地的拉黑？`)) return;
+  await submitBatchUnblock('uid_all_venues', { uid: Number(uids[0]) });
+});
+
+$('#confirmVenueAll').addEventListener('click', async ()=>{
+  const venue_id = selectedBatchVenue();
+  if(!venue_id){ toast('请选择场地', false); return; }
+  if(!confirm(`确认取消场地 ${venue_id} 的全部用户拉黑？此操作影响该场地所有拉黑记录。`)) return;
+  await submitBatchUnblock('venue_all', { venue_id });
 });
 
     // 添加（当前场地）- 原因必填
@@ -651,7 +746,7 @@ $('#confirmAssign').addEventListener('click', async ()=>{
     $('#pageSize').addEventListener('change', ()=>{ state.pageSize = Number($('#pageSize').value); state.page = 1; loadList(); });
 
     // 点击遮罩关闭
-    ['addModal','assignModal','delModal'].forEach(id => {
+    ['addModal','assignModal','delModal','batchUnblockModal'].forEach(id => {
       const el = document.getElementById(id);
       el.addEventListener('click', (e)=>{ if(e.target === el) closeModal('#'+id); });
     });
@@ -721,6 +816,7 @@ $('#confirmAssign').addEventListener('click', async ()=>{
          $('#btnAssign').hidden = !admin;
          $('#venueFilter').hidden = !admin;
          $('#confirmAddAll').hidden = !admin;
+         $('#confirmUidAllVenues').hidden = !admin;
         
          if(admin){
            await loadVenuesForFilter($('#venueFilter'));
