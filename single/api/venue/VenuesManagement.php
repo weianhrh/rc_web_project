@@ -1,6 +1,7 @@
 <?php 
 //  /api/venue/VenuesManagement.php
 require_once '../Database.php';  
+require_once '../RedisHelper.php';
  
 // 创建数据库连接 
 $database = new Database(); 
@@ -430,6 +431,21 @@ elseif ($action === 'unban_venue') {
 
         $ban_id = $ban['id'];
 
+        // 解封前记录该场地当前绑定的全部车辆，用于提交后清理 Redis 封禁缓存
+        $vehicleSerialNumbers = [];
+        $vehicleSql = "SELECT serial_number FROM vehicles WHERE bind_site = ?";
+        $stmt = $conn->prepare($vehicleSql);
+        $stmt->bind_param('i', $venue_id);
+        $stmt->execute();
+        $vehicleResult = $stmt->get_result();
+
+        while ($vehicle = $vehicleResult->fetch_assoc()) {
+            $serialNumber = trim((string)($vehicle['serial_number'] ?? ''));
+            if ($serialNumber !== '') {
+                $vehicleSerialNumbers[] = $serialNumber;
+            }
+        }
+
         // 2️⃣ 写入解封留存表
         $logSql = "
             INSERT INTO venue_unban_logs 
@@ -460,9 +476,64 @@ elseif ($action === 'unban_venue') {
         $stmt->bind_param('i', $venue_id);
         $stmt->execute();
 
+        // 5️⃣ 解封该场地当前绑定的全部车辆
+        $updateVehiclesSql = "
+            UPDATE vehicles
+            SET is_banned = 0,
+                sharing_status = '正在共享',
+                start_status = 'true'
+            WHERE bind_site = ?
+        ";
+        $stmt = $conn->prepare($updateVehiclesSql);
+        $stmt->bind_param('i', $venue_id);
+        $stmt->execute();
+        $unbannedVehicleCount = $stmt->affected_rows;
+
+        // 6️⃣ 结束这些车辆仍在生效的封禁记录
+        $updateDeviceBansSql = "
+            UPDATE device_bans db
+            INNER JOIN vehicles v ON v.serial_number = db.serial_number
+            SET db.status = 2,
+                db.ban_end_time = NOW()
+            WHERE v.bind_site = ?
+              AND db.status = 1
+        ";
+        $stmt = $conn->prepare($updateDeviceBansSql);
+        $stmt->bind_param('i', $venue_id);
+        $stmt->execute();
+        $closedDeviceBanCount = $stmt->affected_rows;
+
         $conn->commit();
 
-        echo json_encode(['code' => 0, 'msg' => '解封成功']);
+        // 数据库事务成功后再清理封禁缓存，缓存异常不回滚已经完成的数据库解封
+        $cacheWarning = null;
+        try {
+            $redisHelper = new RedisHelper();
+            $redisHelper->connect();
+            $redisHelper->selectDb(1);
+            $redisHelper->delete('venue_ban:' . $venue_id);
+
+            foreach ($vehicleSerialNumbers as $serialNumber) {
+                $redisHelper->delete('device_ban:' . $serialNumber);
+            }
+
+            $redisHelper->close();
+        } catch (Throwable $redisException) {
+            $cacheWarning = '数据库已解封，但 Redis 封禁缓存清理失败';
+            error_log($cacheWarning . ': venue_id=' . $venue_id . ', error=' . $redisException->getMessage());
+        }
+
+        echo json_encode([
+            'code' => 0,
+            'msg' => '解封成功，已同步解封场地下全部车辆',
+            'data' => [
+                'venue_id' => intval($venue_id),
+                'vehicle_total' => count($vehicleSerialNumbers),
+                'vehicles_updated' => $unbannedVehicleCount,
+                'device_bans_closed' => $closedDeviceBanCount,
+                'cache_warning' => $cacheWarning
+            ]
+        ], JSON_UNESCAPED_UNICODE);
     } catch (Exception $e) {
         $conn->rollback();
         echo json_encode(['code' => 500, 'msg' => $e->getMessage()]);
@@ -1157,4 +1228,4 @@ elseif ($action === 'loadingdata') {
         } 
     } 
 } 
-?> 
+?>

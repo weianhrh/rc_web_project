@@ -7,13 +7,10 @@ $period = $_GET['period'] ?? 'day';    // day | week | month
 $start_date = trim($_GET['start_date'] ?? '');
 $end_date   = trim($_GET['end_date'] ?? '');
 $detail_date = trim($_GET['detail_date'] ?? '');
-$detail_start = trim($_GET['detail_start'] ?? '');
-$detail_end = trim($_GET['detail_end'] ?? '');
 
 function isValidDateYmd($s) { return preg_match('/^\d{4}-\d{2}-\d{2}$/', $s); }
 $hasRange = isValidDateYmd($start_date) && isValidDateYmd($end_date);
 $hasDetailDate = isValidDateYmd($detail_date);
-$hasDetailRange = isValidDateYmd($detail_start) && isValidDateYmd($detail_end);
 
 // 注册统计字段
 $timeField  = 'users.created_at';
@@ -155,20 +152,7 @@ $inviteDetailTotal = 0;
 $inviteDetailSelfTotal = 0;
 $inviteDetailAmountTotal = '0.00';
 $inviteDetailOtherVenueAmountTotal = '0.00';
-$detailStartAt = '';
-$detailEndAt = '';
-$detailTitle = '';
-if ($hasDetailRange) {
-  $detailStartAt = $detail_start . ' 00:00:00';
-  $detailEndAt = date('Y-m-d H:i:s', strtotime($detail_end . ' 00:00:00 +1 day'));
-  $detailTitle = $detail_start === $detail_end ? $detail_start : ($detail_start . ' ~ ' . $detail_end);
-} elseif ($hasDetailDate) {
-  $detailStartAt = $detail_date . ' 00:00:00';
-  $detailEndAt = date('Y-m-d H:i:s', strtotime($detail_date . ' 00:00:00 +1 day'));
-  $detailTitle = $detail_date;
-}
-$hasDetail = $detailStartAt !== '' && $detailEndAt !== '';
-if ($hasDetail) {
+if ($hasDetailDate) {
   $detailSql = "
     SELECT
       users.invitation_code,
@@ -200,8 +184,8 @@ if ($hasDetail) {
         COUNT(*) AS order_count,
         COALESCE(SUM(COALESCE(NULLIF(o.checkout_amount, 0), o.payment_amount, 0)), 0) AS total_amount
       FROM orders o
-      WHERE o.start_time >= '{$detailStartAt}'
-        AND o.start_time < '{$detailEndAt}'
+      WHERE o.start_time >= '{$detail_date} 00:00:00'
+        AND o.start_time < DATE_ADD('{$detail_date} 00:00:00', INTERVAL 1 DAY)
         AND o.status = '已完成'
         AND (o.pays_type IS NULL OR o.pays_type <> '能量')
         AND (o.note IS NULL OR o.note <> 'gift')
@@ -218,8 +202,8 @@ if ($hasDetail) {
       ON uic.invite_code = users.invitation_code
     LEFT JOIN users inviter
       ON inviter.uid = uic.uid
-    WHERE {$timeField} >= '{$detailStartAt}'
-      AND {$timeField} < '{$detailEndAt}'
+    WHERE {$timeField} >= '{$detail_date} 00:00:00'
+      AND {$timeField} < DATE_ADD('{$detail_date} 00:00:00', INTERVAL 1 DAY)
       AND {$inviteCondition}
     GROUP BY users.invitation_code, venue_name, venue_id, uic.uid, inviter.nickname
     ORDER BY invited_day_amount DESC, total DESC, users.invitation_code ASC
@@ -244,8 +228,8 @@ if ($hasDetail) {
       SUM(CASE WHEN {$inviteCondition} THEN 1 ELSE 0 END) AS invite_total,
       SUM(CASE WHEN {$inviteCondition} THEN 0 ELSE 1 END) AS self_total
     FROM users
-    WHERE {$timeField} >= '{$detailStartAt}'
-      AND {$timeField} < '{$detailEndAt}'
+    WHERE {$timeField} >= '{$detail_date} 00:00:00'
+      AND {$timeField} < DATE_ADD('{$detail_date} 00:00:00', INTERVAL 1 DAY)
   ";
   $detailSummary = $database->query($detailSummarySql)[0] ?? [];
   $inviteDetailTotal = (int)($detailSummary['invite_total'] ?? 0);
@@ -466,7 +450,7 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
         <div class="hd-left">
           <span class="layui-badge-dot" style="background:#16a34a"></span>
           <span>周期统计</span>
-          <span class="hd-sub">（点击卡片查看邀请码明细）</span>
+          <span class="hd-sub">（按天卡片可点击查看邀请码明细）</span>
         </div>
       </div>
 
@@ -497,29 +481,17 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
         <?php else: ?>
           <div class="layui-row layui-col-space12">
             <?php foreach ($data as $row):
-              $cardStart = '';
-              $cardEnd = '';
               if ($period === 'week') {
                 $label = date("m月d日", strtotime($row['start_date'])) . ' ~ ' . date("m月d日", strtotime($row['end_date']));
-                $cardStart = (string)$row['start_date'];
-                $cardEnd = (string)$row['end_date'];
               } elseif ($period === 'month') {
                 $label = date("Y年m月", strtotime($row['label'] . '-01'));
-                $cardStart = (string)$row['label'] . '-01';
-                $cardEnd = date('Y-m-t', strtotime($cardStart));
               } else {
                 $label = date("m月d日", strtotime($row['label']));
-                $cardStart = (string)$row['label'];
-                $cardEnd = (string)$row['label'];
-              }
-              $isActiveCard = $hasDetail && $detail_start === $cardStart && $detail_end === $cardEnd;
-              if (!$hasDetailRange && $hasDetailDate && $period === 'day') {
-                $isActiveCard = $detail_date === $row['label'];
               }
             ?>
               <div class="layui-col-xs12 layui-col-sm6 layui-col-md3">
-                <div class="stat-card clickable <?= $isActiveCard ? 'active' : '' ?>"
-                  onclick="showInviteDetail('<?= htmlspecialchars($cardStart) ?>', '<?= htmlspecialchars($cardEnd) ?>')">
+                <div class="stat-card <?= ($period === 'day') ? 'clickable' : '' ?> <?= ($period === 'day' && $hasDetailDate && $detail_date === $row['label']) ? 'active' : '' ?>"
+                  <?php if ($period === 'day'): ?> onclick="showInviteDetail('<?= htmlspecialchars($row['label']) ?>')"<?php endif; ?>>
                   <div class="stat-label"><?= $label ?></div>
                   <div class="stat-num"><?= (int)$row['total'] ?> <span style="font-size:13px;color:var(--muted)">人</span></div>
                   <div class="split-row">
@@ -535,13 +507,13 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
 
     </div>
 
-    <?php if ($hasDetail): ?>
+    <?php if ($hasDetailDate): ?>
     <div class="panel-card" style="margin-top:14px;">
       <div class="panel-hd">
         <div class="hd-left">
           <span class="layui-badge-dot" style="background:#8b5cf6"></span>
-          <span><?= htmlspecialchars($detailTitle) ?> 邀请码注册明细</span>
-          <span class="hd-sub">推广 <?= $inviteDetailTotal ?> 人 / 自行 <?= $inviteDetailSelfTotal ?> 人 / 推广用户周期消费 ¥<?= htmlspecialchars($inviteDetailAmountTotal) ?> / 非推广场地消费 ¥<?= htmlspecialchars($inviteDetailOtherVenueAmountTotal) ?></span>
+          <span><?= htmlspecialchars($detail_date) ?> 邀请码注册明细</span>
+          <span class="hd-sub">推广 <?= $inviteDetailTotal ?> 人 / 自行 <?= $inviteDetailSelfTotal ?> 人 / 推广用户当天消费 ¥<?= htmlspecialchars($inviteDetailAmountTotal) ?> / 非推广场地消费 ¥<?= htmlspecialchars($inviteDetailOtherVenueAmountTotal) ?></span>
         </div>
         <button class="layui-btn layui-btn-primary layui-btn-sm" onclick="clearInviteDetail()">关闭明细</button>
       </div>
@@ -557,9 +529,9 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
                 <th>对应场地</th>
                 <th>场地ID</th>
                 <th>邀请注册人数</th>
-                <th>周期消费用户</th>
-                <th>周期订单数</th>
-                <th>周期消费金额</th>
+                <th>当天消费用户</th>
+                <th>当天订单数</th>
+                <th>当天消费金额</th>
                 <th>本推广场地消费</th>
                 <th>非推广场地消费</th>
                 <th>外流占比</th>
@@ -616,12 +588,7 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
   function goActive(){ window.location.href = buildUrl('/api/index/user_active_detail.php', {}); }
 
   function changePeriod(p){
-    window.location.href = buildUrl('/api/index/user_register_detail.php', {
-      period: p,
-      detail_date: null,
-      detail_start: null,
-      detail_end: null
-    });
+    window.location.href = buildUrl('/api/index/user_register_detail.php', {period: p, detail_date: null});
   }
 
   function applyRange(){
@@ -629,39 +596,25 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
     const e = (document.getElementById('endDate').value || '').trim();
     window.location.href = buildUrl('/api/index/user_register_detail.php', {
       start_date: s ? s : null,
-      end_date: e ? e : null,
-      detail_date: null,
-      detail_start: null,
-      detail_end: null
+      end_date: e ? e : null
     });
   }
 
   function clearRange(){
     document.getElementById('startDate').value = '';
     document.getElementById('endDate').value = '';
-    window.location.href = buildUrl('/api/index/user_register_detail.php', {
-      start_date: null,
-      end_date: null,
-      detail_date: null,
-      detail_start: null,
-      detail_end: null
-    });
+    window.location.href = buildUrl('/api/index/user_register_detail.php', {start_date: null, end_date: null, detail_date: null});
   }
 
-  function showInviteDetail(start, end){
+  function showInviteDetail(date){
     window.location.href = buildUrl('/api/index/user_register_detail.php', {
-      detail_date: null,
-      detail_start: start,
-      detail_end: end
+      period: 'day',
+      detail_date: date
     });
   }
 
   function clearInviteDetail(){
-    window.location.href = buildUrl('/api/index/user_register_detail.php', {
-      detail_date: null,
-      detail_start: null,
-      detail_end: null
-    });
+    window.location.href = buildUrl('/api/index/user_register_detail.php', {detail_date: null});
   }
 
   // Layui 日期

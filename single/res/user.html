@@ -1522,7 +1522,7 @@ async function giftEnergy(userId) {
       );
       loadUserData();
     } else {
-      await showAppAlert(data.msg || '能量赠送失败，请重试', '赠送失败', 'danger');
+      await showAppAlert(data.msg || data.message || '能量赠送失败，请重试', '赠送失败', 'danger');
     }
   } catch (err) {
     console.error('giftEnergy error:', err);

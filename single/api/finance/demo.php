@@ -214,6 +214,56 @@ while ($row = $iapGoldResult->fetch_assoc()) {
 $iapGoldStmt->close();
 
 
+// 查询官方补偿/官方代充。
+// 识别规则：余额增加、类型为“充值”，并且说明明确写有“官方代充/官方补偿”，
+// 或者渠道以“官方”开头且没有关联业务订单。这样不会只凭金额相等来猜测。
+$officialCompensationSql = "SELECT
+    id,
+    user_id AS uid,
+    change_amount,
+    description,
+    payment_channel,
+    created_at
+FROM balance_changes
+WHERE user_id IN ({$placeholders})
+  AND change_amount > 0
+  AND change_type = '充值'
+  AND (
+      description LIKE '%官方代充%'
+      OR description LIKE '%官方补偿%'
+      OR (
+          payment_channel LIKE '官方%'
+          AND (related_order_id IS NULL OR related_order_id = '')
+      )
+  )
+ORDER BY created_at ASC, id ASC";
+
+$officialCompensationStmt = $database->prepare($officialCompensationSql);
+$officialCompensationStmt->bind_param($types, ...$todayUsers);
+$officialCompensationStmt->execute();
+$officialCompensationResult = $officialCompensationStmt->get_result();
+
+$userOfficialCompensationAmounts = [];
+$userOfficialCompensationItems = [];
+while ($row = $officialCompensationResult->fetch_assoc()) {
+    $uidKey = $row['uid'];
+    $amount = floatval($row['change_amount'] ?? 0);
+    $description = trim((string)($row['description'] ?? ''));
+    $paymentChannel = trim((string)($row['payment_channel'] ?? ''));
+
+    $userOfficialCompensationAmounts[$uidKey] =
+        ($userOfficialCompensationAmounts[$uidKey] ?? 0) + $amount;
+    $userOfficialCompensationItems[$uidKey][] = [
+        'id' => intval($row['id'] ?? 0),
+        'amount' => $amount,
+        'description' => $description !== '' ? $description : '官方补偿',
+        'payment_channel' => $paymentChannel,
+        'created_at' => $row['created_at'] ?? null,
+    ];
+}
+$officialCompensationStmt->close();
+
+
 $results = [];
 while ($row = $summaryResult->fetch_assoc()) {
 $uid = $row['uid'];
@@ -226,6 +276,11 @@ $iapGoldAmount = $userIapGoldAmounts[$uid] ?? 0;
 
 // 核对用充值来源 = RechargeOrders支付成功 + 苹果内购金币折算
 $paidTotal = $rechargeOrderPaidTotal + $iapGoldAmount;
+
+        // 官方代充/补偿不是用户支付订单，但它确实增加了余额，需要作为独立资金来源参与核对。
+        $officialCompensationAmount = round($userOfficialCompensationAmounts[$uid] ?? 0, 2);
+        $officialCompensationItems = $userOfficialCompensationItems[$uid] ?? [];
+        $recognizedInflowTotal = $paidTotal + $officialCompensationAmount;
         // 普通订单消费
         $orderConsumption = $userConsumptions[$uid] ?? 0;
         
@@ -246,13 +301,32 @@ $paidTotal = $rechargeOrderPaidTotal + $iapGoldAmount;
         // 当前可核对余额 = 钱包余额 + 金币余额折算
         $totalBalanceAmount = $wallet + $goldBalanceAmount;
         
-        // 新公式：充值成功 = 总消费 + 待核销 + 当前余额折算
-        $balanceCheck = abs(($consumption + $waitingConsumption + $totalBalanceAmount) - $paidTotal) < 0.01;
+        // 原始差额不含官方补偿，保留它可以说明这笔差额为什么出现。
+        $rawDifference = round($consumption + $waitingConsumption + $totalBalanceAmount - $paidTotal, 2);
+
+        // 核对公式：用户充值 + IAP + 官方补偿 = 总消费 + 待核销 + 当前余额折算
+        $balanceCheck = abs(($consumption + $waitingConsumption + $totalBalanceAmount) - $recognizedInflowTotal) < 0.01;
         
-        $difference = round($consumption + $waitingConsumption + $totalBalanceAmount - $paidTotal, 2);
+        $difference = round($consumption + $waitingConsumption + $totalBalanceAmount - $recognizedInflowTotal, 2);
+
+        $officialCompensationRemark = '';
+        if ($officialCompensationAmount > 0) {
+            $remarkParts = [];
+            foreach ($officialCompensationItems as $item) {
+                $part = $item['description'] . ' ' . number_format($item['amount'], 2, '.', '');
+                if ($item['payment_channel'] !== '') {
+                    $part .= '（' . $item['payment_channel'] . '）';
+                }
+                if (!empty($item['created_at'])) {
+                    $part .= ' ' . $item['created_at'];
+                }
+                $remarkParts[] = $part;
+            }
+            $officialCompensationRemark = '已识别为官方补偿：' . implode('；', $remarkParts);
+        }
         
-        // 只添加 balance_check 为 false 的记录
-        if (!$balanceCheck) {
+        // 保留原有异常记录，同时展示已经被识别并解释清楚的官方补偿记录。
+        if (!$balanceCheck || $officialCompensationAmount > 0) {
             $results[] = [
                 'uid' => $uid,
                 'paid_total' => $paidTotal,
@@ -276,6 +350,12 @@ $paidTotal = $rechargeOrderPaidTotal + $iapGoldAmount;
             
                 // 当前余额合计 = 钱包余额 + 金币余额折算
                 'user_wallet' => $totalBalanceAmount,
+
+                'official_compensation_amount' => $officialCompensationAmount,
+                'official_compensation_items' => $officialCompensationItems,
+                'official_compensation_remark' => $officialCompensationRemark,
+                'recognized_inflow_total' => $recognizedInflowTotal,
+                'raw_difference' => $rawDifference,
             
                 'balance_check' => $balanceCheck,
                 'difference' => $difference,

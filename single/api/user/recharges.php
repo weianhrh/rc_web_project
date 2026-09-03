@@ -4,6 +4,15 @@ require_once '../Database.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function ret($data) {
+    // 同时返回 msg / message，兼容项目里两种前端提示字段。
+    if (is_array($data)) {
+        if (isset($data['message']) && !isset($data['msg'])) {
+            $data['msg'] = $data['message'];
+        } elseif (isset($data['msg']) && !isset($data['message'])) {
+            $data['message'] = $data['msg'];
+        }
+    }
+
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -15,11 +24,13 @@ function ret($data) {
  * energy_charge_limit.ini 示例：
  * single_limit=6
  * total_limit=10
+ * daily_gift_count_limit=3
  */
 function getEnergyChargeConfig() {
     $default = [
-        'single_limit' => 6,
-        'total_limit'  => 10,
+        'single_limit'          => 6,
+        'total_limit'           => 10,
+        'daily_gift_count_limit' => 3,
     ];
 
     $file = __DIR__ . '/energy_charge_limit.ini';
@@ -42,6 +53,11 @@ function getEnergyChargeConfig() {
         ? floatval($config['total_limit'])
         : $default['total_limit'];
 
+    $dailyGiftCountLimit = isset($config['daily_gift_count_limit'])
+        && is_numeric($config['daily_gift_count_limit'])
+        ? intval($config['daily_gift_count_limit'])
+        : $default['daily_gift_count_limit'];
+
     if ($singleLimit <= 0) {
         $singleLimit = $default['single_limit'];
     }
@@ -50,9 +66,14 @@ function getEnergyChargeConfig() {
         $totalLimit = $default['total_limit'];
     }
 
+    if ($dailyGiftCountLimit <= 0) {
+        $dailyGiftCountLimit = $default['daily_gift_count_limit'];
+    }
+
     return [
-        'single_limit' => $singleLimit,
-        'total_limit'  => $totalLimit,
+        'single_limit'           => $singleLimit,
+        'total_limit'            => $totalLimit,
+        'daily_gift_count_limit' => $dailyGiftCountLimit,
     ];
 }
 
@@ -63,6 +84,7 @@ $database = new Database();
 $chargeConfig = getEnergyChargeConfig();
 $singleLimit = $chargeConfig['single_limit'];
 $totalLimit  = $chargeConfig['total_limit'];
+$dailyGiftCountLimit = $chargeConfig['daily_gift_count_limit'];
 
 // 从会话中获取 session_token
 $session_token = $_COOKIE['session_token'] ?? null;
@@ -87,9 +109,12 @@ if (!$user || !$user['role_id']) {
     ]);
 }
 
-$role_id  = $user['role_id'];
+$role_id  = intval($user['role_id']);
 $username = $user['username'];
 $venue_id = intval($user['venue_id'] ?? 0);
+
+// 只有平台管理员 role_id=1/2 不受每日次数限制，其余角色都需要限制。
+$shouldLimitDailyGiftCount = !in_array($role_id, [1, 2], true);
 
 // 获取请求参数
 $uid = $_POST['uid'] ?? null;
@@ -131,88 +156,135 @@ if ($amount > $singleLimit) {
     ]);
 }
 
-// 获取与指定场地ID关联的最新用户余额
-$queryBalance = "SELECT id, energy FROM energy_records WHERE user_uid = ? AND venue_id = ? ORDER BY id DESC LIMIT 1";
-$resultBalance = $database->query($queryBalance, [$uid, $venue_id]);
+// 次数校验、余额更新、变动日志和次数累加必须在同一事务中完成。
+// 计数行使用 FOR UPDATE 锁定，可防止快速连点、多窗口或并发请求绕过每日 3 次限制。
+$database->beginTransaction();
 
-if ($resultBalance && count($resultBalance) > 0) {
-    $recordId = intval($resultBalance[0]['id']);
-    $energy = floatval($resultBalance[0]['energy']);
-} else {
-    // 不存在记录时初始化余额为0
-    $insertSql = "INSERT INTO energy_records (user_uid, venue_id, energy) VALUES (?, ?, 0)";
-    $insertResult = $database->query($insertSql, [$uid, $venue_id], true);
+try {
+    if ($shouldLimitDailyGiftCount) {
+        $ensureCounterSql = "INSERT INTO venue_user_daily_energy_gift_counts
+            (venue_id, user_uid, gift_date, gift_count)
+            VALUES (?, ?, CURRENT_DATE(), 0)
+            ON DUPLICATE KEY UPDATE id = id";
+        $ensureCounterResult = $database->query($ensureCounterSql, [$venue_id, $uid], true);
+        if ($ensureCounterResult === false) {
+            throw new Exception('初始化每日赠送次数失败');
+        }
 
-    if ($insertResult === false) {
-        ret([
-            'code'    => 1,
-            'success' => false,
-            'message' => '初始化能量记录失败'
-        ]);
+        $counterSql = "SELECT gift_count
+            FROM venue_user_daily_energy_gift_counts
+            WHERE venue_id = ? AND user_uid = ? AND gift_date = CURRENT_DATE()
+            FOR UPDATE";
+        $counterResult = $database->query($counterSql, [$venue_id, $uid]);
+        if ($counterResult === false || count($counterResult) === 0) {
+            throw new Exception('读取每日赠送次数失败');
+        }
+
+        $todayGiftCount = intval($counterResult[0]['gift_count']);
+        if ($todayGiftCount >= $dailyGiftCountLimit) {
+            $database->rollBack();
+            ret([
+                'code'    => 1008,
+                'success' => false,
+                'msg'     => '这个用户赠送能量次数已达上限，请联系管理员赠送',
+                'data'    => [
+                    'daily_limit' => $dailyGiftCountLimit,
+                    'today_count' => $todayGiftCount,
+                ],
+            ]);
+        }
     }
 
-    // 重新读取刚初始化的记录
+    // 锁定当前场地、当前用户最新的能量记录，保证余额计算和写入一致。
+    $queryBalance = "SELECT id, energy
+        FROM energy_records
+        WHERE user_uid = ? AND venue_id = ?
+        ORDER BY id DESC
+        LIMIT 1
+        FOR UPDATE";
     $resultBalance = $database->query($queryBalance, [$uid, $venue_id]);
+    if ($resultBalance === false) {
+        throw new Exception('读取能量记录失败');
+    }
 
-    if (!$resultBalance || count($resultBalance) <= 0) {
+    if (count($resultBalance) > 0) {
+        $recordId = intval($resultBalance[0]['id']);
+        $energy = floatval($resultBalance[0]['energy']);
+    } else {
+        // 不存在记录时初始化余额为 0。
+        $insertSql = "INSERT INTO energy_records (user_uid, venue_id, energy) VALUES (?, ?, 0)";
+        $insertResult = $database->query($insertSql, [$uid, $venue_id], true);
+        if ($insertResult === false) {
+            throw new Exception('初始化能量记录失败');
+        }
+
+        $resultBalance = $database->query($queryBalance, [$uid, $venue_id]);
+        if ($resultBalance === false || count($resultBalance) === 0) {
+            throw new Exception('读取初始化后的能量记录失败');
+        }
+
+        $recordId = intval($resultBalance[0]['id']);
+        $energy = floatval($resultBalance[0]['energy']);
+    }
+
+    $newWallet = $amount + $energy;
+
+    // 总能量上限：判断本次赠送后的余额。
+    if ($newWallet > $totalLimit) {
+        $database->rollBack();
         ret([
             'code'    => 1,
             'success' => false,
-            'message' => '读取能量记录失败'
+            'message' => '总能量超过限额，当前余额：' . $energy . '，本次充值：' . $amount . '，总上限：' . $totalLimit,
         ]);
     }
 
-    $recordId = intval($resultBalance[0]['id']);
-    $energy = floatval($resultBalance[0]['energy']);
-}
+    // 只更新最新一条余额记录，避免历史重复记录被同时增加。
+    $updateSql = "UPDATE energy_records SET energy = energy + ? WHERE id = ?";
+    $updateResult = $database->query($updateSql, [$amount, $recordId], true);
+    if ($updateResult === false) {
+        throw new Exception('更新能量余额失败');
+    }
 
-$newWallet = $amount + $energy;
+    $balanceChangeSql = "INSERT INTO energy_changes
+        (user_uid, venue_id, energy_change, balance_after_change, reason, balance_before_change)
+        VALUES (?, ?, ?, ?, ?, ?)";
+    $reason = '代理充值，充值人员：' . $username . '，角色ID：' . $role_id;
+    $balanceChangeResult = $database->query(
+        $balanceChangeSql,
+        [$uid, $venue_id, $amount, $newWallet, $reason, $energy],
+        true
+    );
+    if ($balanceChangeResult === false) {
+        throw new Exception('写入能量变动记录失败');
+    }
 
-// 总能量上限，从文件读取
-// 注意：这里要判断充值后的余额，而不是只判断充值前余额
-if ($newWallet > $totalLimit) {
+    if ($shouldLimitDailyGiftCount) {
+        $increaseCounterSql = "UPDATE venue_user_daily_energy_gift_counts
+            SET gift_count = gift_count + 1
+            WHERE venue_id = ? AND user_uid = ? AND gift_date = CURRENT_DATE()";
+        $increaseCounterResult = $database->query($increaseCounterSql, [$venue_id, $uid], true);
+        if ($increaseCounterResult === false) {
+            throw new Exception('更新每日赠送次数失败');
+        }
+    }
+
+    $database->commit();
+} catch (Throwable $e) {
+    $database->rollBack();
+    error_log('recharges gift_energy failed: ' . $e->getMessage());
     ret([
         'code'    => 1,
         'success' => false,
-        'message' => '总能量超过限额，当前余额：' . $energy . '，本次充值：' . $amount . '，总上限：' . $totalLimit
+        'message' => '能量赠送失败，请稍后重试',
     ]);
 }
-
-// 更新余额记录，只更新最新那条，避免同一个用户同场地有多条记录时全部被加钱
-$sql = "UPDATE energy_records SET energy = energy + ? WHERE id = ?";
-$params = [$amount, $recordId];
-$result = $database->query($sql, $params, true);
-
-if ($result === false) {
-    ret([
-        'code'    => 1,
-        'success' => false,
-        'message' => '充值失败'
-    ]);
-}
-
-// 记录余额变动
-$balanceChangeSql = "INSERT INTO energy_changes 
-    (user_uid, venue_id, energy_change, balance_after_change, reason, balance_before_change) 
-    VALUES (?, ?, ?, ?, ?, ?)";
-
-$reason = '代理充值，充值人员：' . $username;
-
-$balanceChangeParams = [
-    $uid,
-    $venue_id,
-    $amount,
-    $newWallet,
-    $reason,
-    $energy
-];
-
-$database->query($balanceChangeSql, $balanceChangeParams, true);
 
 ret([
     'code'    => 0,
     'success' => true,
-    'message' => '充值成功，总能量余额：' . $newWallet
+    'message' => $newWallet,
+    'data'    => [
+        'daily_limit' => $shouldLimitDailyGiftCount ? $dailyGiftCountLimit : null,
+    ],
 ]);
-
-$database->close();

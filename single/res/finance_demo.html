@@ -232,6 +232,15 @@
     .badge.bad{ color: var(--danger); border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
     .badge.warn{ color: var(--warn); border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
 
+    .remark-cell{
+      min-width: 220px;
+      max-width: 360px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: normal;
+    }
+
     .row-bad{
       outline: 2px solid rgba(239,68,68,.20);
       box-shadow: 0 10px 20px rgba(239,68,68,.08);
@@ -399,11 +408,13 @@
             <tr>
               <th style="width:120px;">UID</th>
               <th>充值成功</th>
+              <th>官方补偿</th>
               <th>待核销金额</th>
 <th>消费金额(含礼物)</th>
 <th>当前余额(含金币)</th>
               <th>差额</th>
               <th style="width:140px;">核对结果</th>
+              <th>备注</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -411,7 +422,7 @@
       </div>
 
       <div class="hint" style="margin-top:12px;">
-        公式：差额 = 消费金额(订单消费 + 礼物消费) + 待核销金额 + 当前余额(wallet + gold_balance/10) - 充值成功；核对通过：差额≈0（误差 &lt; 0.01）。
+        公式：差额 = 消费金额(订单消费 + 礼物消费) + 待核销金额 + 当前余额(wallet + gold_balance/10) - 充值成功 - 官方补偿；核对通过：差额≈0（误差 &lt; 0.01）。官方补偿根据 balance_changes 的“官方代充/官方补偿”说明，或“官方*”渠道且无关联订单来识别。
       </div>
     </div>
 
@@ -426,11 +437,14 @@
       </div>
 
       <div class="modal-row"><strong>充值成功</strong><span id="mPaid">-</span></div>
+      <div class="modal-row"><strong>官方补偿</strong><span id="mOfficialCompensation">-</span></div>
        <div class="modal-row"><strong>待核销金额</strong><span id="dConsume">-</span></div>
       <div class="modal-row"><strong>消费金额</strong><span id="mConsume">-</span></div>
       <div class="modal-row"><strong>当前余额</strong><span id="mWallet">-</span></div>
+      <div class="modal-row"><strong>原始差额</strong><span id="mRawDiff">-</span></div>
       <div class="modal-row"><strong>差额</strong><span id="mDiff">-</span></div>
       <div class="modal-row"><strong>核对结果</strong><span id="mCheck">-</span></div>
+      <div class="modal-row"><strong>备注</strong><span id="mRemark">-</span></div>
 
       <div class="modal-actions">
         <button class="btn primary" id="btnCopyLine">复制本行数据</button>
@@ -465,6 +479,19 @@ function setDefaultRangeToday(){
   function fmtMoney(n){
     const x = Number(n || 0);
     return x.toLocaleString("zh-CN", {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+
+  function escapeHtml(value){
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function hasOfficialCompensation(row){
+    return Number(row.official_compensation_amount || 0) > 0;
   }
 
   function setError(msg){
@@ -533,7 +560,7 @@ function setDefaultRangeToday(){
 
     if(!data.length){
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td colspan="6" style="color:var(--secondary);padding:16px;">暂无数据</td>`;
+      tr.innerHTML = `<td colspan="9" style="color:var(--secondary);padding:16px;">暂无数据</td>`;
       tbody.appendChild(tr);
       return;
     }
@@ -545,10 +572,13 @@ function setDefaultRangeToday(){
 
       const diff = Number(row.difference||0);
       const diffCls = badgeClassByDiff(diff);
+      const hasCompensation = hasOfficialCompensation(row);
+      const remark = row.official_compensation_remark || "-";
 
       tr.innerHTML = `
         <td><b>${row.uid}</b></td>
         <td class="money">${fmtMoney(row.paid_total)}</td>
+        <td class="money">${hasCompensation ? `<span class="badge warn">${fmtMoney(row.official_compensation_amount)}</span>` : "-"}</td>
         <td class="money">${fmtMoney(row.waiting_consumption)}</td>
         <td class="money">${fmtMoney(row.total_consumption)}</td>
         <td class="money">${fmtMoney(row.user_wallet)}</td>
@@ -557,10 +587,11 @@ function setDefaultRangeToday(){
         </td>
         <td>
           ${row.balance_check
-            ? `<span class="badge ok">正常</span>`
+            ? `<span class="badge ok">${hasCompensation ? "正常（含补偿）" : "正常"}</span>`
             : `<span class="badge bad">异常</span>`
           }
         </td>
+        <td class="remark-cell">${escapeHtml(remark)}</td>
       `;
 
       tr.addEventListener("click", ()=> openModal(row));
@@ -632,16 +663,19 @@ const res = await fetch(url, {
 
   function exportCsv(){
     const rows = [
-      ["uid","paid_total","total_consumption","user_wallet","difference","balance_check"]
+      ["uid","paid_total","official_compensation_amount","total_consumption","user_wallet","raw_difference","difference","balance_check","remark"]
     ];
     for(const x of viewData){
       rows.push([
         x.uid,
         x.paid_total,
+        x.official_compensation_amount || 0,
         x.total_consumption,
         x.user_wallet,
+        x.raw_difference ?? x.difference,
         x.difference,
-        x.balance_check ? "true" : "false"
+        x.balance_check ? "true" : "false",
+        x.official_compensation_remark || ""
       ]);
     }
     const csv = rows.map(r => r.map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(",")).join("\n");
@@ -662,12 +696,15 @@ const res = await fetch(url, {
 
     el("mTitle").textContent = `UID ${row.uid} · 核对明细`;
     el("mPaid").textContent = fmtMoney(row.paid_total);
+    el("mOfficialCompensation").textContent = fmtMoney(row.official_compensation_amount);
     el("mConsume").textContent = fmtMoney(row.total_consumption);
     el("mWallet").textContent = fmtMoney(row.user_wallet);
+    el("mRawDiff").textContent = fmtMoney(row.raw_difference ?? row.difference);
     el("mDiff").textContent = fmtMoney(row.difference);
+    el("mRemark").textContent = row.official_compensation_remark || "-";
 
     el("mCheck").innerHTML = row.balance_check
-      ? `<span class="badge ok">正常</span>`
+      ? `<span class="badge ok">${hasOfficialCompensation(row) ? "正常（含官方补偿）" : "正常"}</span>`
       : `<span class="badge bad">异常</span>`;
 
     el("detailModal").style.display = "flex";
@@ -682,7 +719,9 @@ const res = await fetch(url, {
     const r = lastClickedRow;
     const text =
       `uid=${r.uid}, paid_total=${r.paid_total}, total_consumption=${r.total_consumption}, ` +
-      `user_wallet=${r.user_wallet}, difference=${r.difference}, balance_check=${r.balance_check}`;
+      `user_wallet=${r.user_wallet}, official_compensation_amount=${r.official_compensation_amount || 0}, ` +
+      `raw_difference=${r.raw_difference ?? r.difference}, difference=${r.difference}, ` +
+      `balance_check=${r.balance_check}, remark=${r.official_compensation_remark || ""}`;
     navigator.clipboard?.writeText(text).then(()=> {
       // 轻提示：不弹 alert，避免打断
       el("btnCopyLine").textContent = "已复制";

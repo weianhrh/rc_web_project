@@ -4,7 +4,10 @@ require_once '../Database.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function jsonOut($code, $msg, $data = []) {
-    echo json_encode(['code' => $code, 'msg' => $msg, 'data' => $data], JSON_UNESCAPED_UNICODE);
+    echo json_encode(
+        ['code' => $code, 'msg' => $msg, 'data' => $data],
+        JSON_UNESCAPED_UNICODE
+    );
     exit;
 }
 
@@ -15,164 +18,134 @@ function isValidDateYmd($value) {
 $database = new Database();
 
 try {
-    $session_token = $_COOKIE['session_token'] ?? null;
-    if (!$session_token) {
-        jsonOut(1001, 'Login required or session expired');
+    $sessionToken = $_COOKIE['session_token'] ?? null;
+    if (!$sessionToken) {
+        jsonOut(1001, '用户未登录或会话已过期');
     }
 
-    $user = $database->getUserBySessionToken($session_token);
-    if (!$user || empty($user['uid'])) {
-        jsonOut(1001, 'Current account has no user UID for invite reward preview');
+    $user = $database->getUserBySessionToken($sessionToken);
+    if (!$user || empty($user['role_id'])) {
+        jsonOut(1001, '用户未登录或无权访问');
     }
 
-    $inviter_uid = (int)$user['uid'];
+    // 推广收益按当前后台账号绑定的场地归属，与首页 DailySummaryStatsv2.php 保持一致。
+    $venueId = (int)($user['venue_id'] ?? 0);
+    if ($venueId <= 0) {
+        jsonOut(1002, '当前账号未绑定有效场地');
+    }
+
     $date = trim($_GET['date'] ?? date('Y-m-d'));
     if (!isValidDateYmd($date)) {
-        jsonOut(400, 'Invalid date format');
+        jsonOut(400, '日期格式不正确');
     }
 
-    $start_dt = $date . ' 00:00:00';
-    $end_dt = $date . ' 23:59:59';
+    $startAt = $date . ' 00:00:00';
+    $endAt = $date . ' 23:59:59';
 
-    $profile = $database->query(
-        "SELECT invite_code, promotion_level FROM user_invite_codes WHERE uid = ? AND status = 'active' LIMIT 1",
-        [(string)$inviter_uid]
+    $venueRows = $database->query(
+        "SELECT venue_name, invite_code FROM venues WHERE id = ? LIMIT 1",
+        [$venueId]
     );
-
-    if (!$profile) {
-        jsonOut(200, 'ok', [
-            'date' => $date,
-            'inviter_uid' => $inviter_uid,
-            'invite_code' => '',
-            'promotion_level' => 'DEFAULT',
-            'summary' => [
-                'estimated_reward_amount' => 0,
-                'valid_order_count' => 0,
-                'valid_order_amount' => 0,
-                'reward_rate_percent' => 0,
-            ],
-            'list' => [],
-        ]);
+    if ($venueRows === false || count($venueRows) === 0) {
+        jsonOut(1003, '当前绑定场地不存在');
     }
 
-    $promotion_level = $profile[0]['promotion_level'] ?: 'DEFAULT';
-    $invite_code = $profile[0]['invite_code'] ?? '';
+    $venueName = (string)($venueRows[0]['venue_name'] ?? '');
+    $venueInviteCode = (string)($venueRows[0]['invite_code'] ?? '');
 
-    $rule = $database->query(
-        "SELECT id, reward_rate, min_order_amount, max_reward_per_order, settle_days
-         FROM invite_reward_rules
-         WHERE level_code = ?
-           AND status = 'active'
-           AND (start_time IS NULL OR start_time <= ?)
-           AND (end_time IS NULL OR end_time >= ?)
-         ORDER BY id DESC
-         LIMIT 1",
-        [$promotion_level, $end_dt, $start_dt]
-    );
+    // recorded_at 是推广收益实际生成时间；invitation_venue_id 是收益归属场地。
+    // 这两个筛选条件与首页推广收益卡片完全一致。
+    $sql = "SELECT
+                pos.id,
+                pos.order_id,
+                pos.reservation_id,
+                pos.uid,
+                pos.payment_amount,
+                pos.promotion_amount,
+                pos.start_time,
+                pos.end_time,
+                pos.invitation_code,
+                pos.invitation_venue_id,
+                pos.recorded_at,
+                u.nickname AS invitee_nickname,
+                consumer_venue.venue_name AS consumer_venue_name
+            FROM promotion_order_statistics pos
+            LEFT JOIN users u
+                   ON u.uid = pos.uid
+            LEFT JOIN venues consumer_venue
+                   ON consumer_venue.id = pos.reservation_id
+            WHERE pos.invitation_venue_id = ?
+              AND pos.recorded_at >= ?
+              AND pos.recorded_at <= ?
+            ORDER BY pos.recorded_at DESC, pos.id DESC";
 
-    if (!$rule && $promotion_level !== 'DEFAULT') {
-        $rule = $database->query(
-            "SELECT id, reward_rate, min_order_amount, max_reward_per_order, settle_days
-             FROM invite_reward_rules
-             WHERE level_code = 'DEFAULT'
-               AND status = 'active'
-               AND (start_time IS NULL OR start_time <= ?)
-               AND (end_time IS NULL OR end_time >= ?)
-             ORDER BY id DESC
-             LIMIT 1",
-            [$end_dt, $start_dt]
-        );
-        $promotion_level = 'DEFAULT';
+    $rows = $database->query($sql, [$venueId, $startAt, $endAt]);
+    if ($rows === false) {
+        jsonOut(500, '推广收益流水查询失败');
     }
 
-    if (!$rule) {
-        jsonOut(500, 'No active invite reward rule found');
-    }
-
-    $rule_id = (int)$rule[0]['id'];
-    $reward_rate = (float)$rule[0]['reward_rate'];
-    $min_order_amount = (float)$rule[0]['min_order_amount'];
-    $max_reward_per_order = $rule[0]['max_reward_per_order'];
-
-    $sql = "
-        SELECT
-            o.order_id,
-            o.reservation_id AS venue_id,
-            o.uid AS invitee_uid,
-            u.nickname AS invitee_nickname,
-            o.payment_amount AS order_amount,
-            o.pays_type,
-            o.end_time,
-            irl.reward_status AS generated_status
-        FROM orders o
-        JOIN invite_relations ir
-          ON ir.invitee_uid = o.uid
-         AND ir.status = 'active'
-         AND ir.inviter_uid = ?
-        LEFT JOIN users u ON u.uid = o.uid
-        LEFT JOIN invite_reward_logs irl ON irl.order_id = o.order_id
-        WHERE HEX(o.status) = 'E5B7B2E5AE8CE68890'
-          AND o.payment_amount >= ?
-          AND o.end_time >= ?
-          AND o.end_time <= ?
-          AND o.uid IS NOT NULL
-          AND o.reservation_id IS NOT NULL
-          AND HEX(o.pays_type) <> 'E883BDE9878F'
-        ORDER BY o.end_time DESC
-    ";
-
-    $orders = $database->query($sql, [(string)$inviter_uid, (string)$min_order_amount, $start_dt, $end_dt]);
-    if ($orders === false) {
-        jsonOut(500, 'Failed to query invite reward preview details');
-    }
-
-    $total_order_amount = 0.0;
-    $total_reward_amount = 0.0;
+    $totalPaymentAmount = 0.0;
+    $totalPromotionAmount = 0.0;
     $list = [];
 
-    foreach ($orders as $row) {
-        $order_amount = (float)$row['order_amount'];
-        $reward_amount = round($order_amount * $reward_rate, 2);
-        if ($max_reward_per_order !== null && $max_reward_per_order !== '') {
-            $reward_amount = min($reward_amount, (float)$max_reward_per_order);
-        }
+    foreach ($rows as $row) {
+        $paymentAmount = (float)($row['payment_amount'] ?? 0);
+        $promotionAmount = (float)($row['promotion_amount'] ?? 0);
+        $rewardRatePercent = $paymentAmount > 0
+            ? round(($promotionAmount / $paymentAmount) * 100, 2)
+            : 0.0;
 
-        $total_order_amount += $order_amount;
-        $total_reward_amount += $reward_amount;
+        $totalPaymentAmount += $paymentAmount;
+        $totalPromotionAmount += $promotionAmount;
 
         $list[] = [
-            'order_id' => $row['order_id'],
-            'venue_id' => (int)$row['venue_id'],
-            'invitee_uid' => (int)$row['invitee_uid'],
-            'invitee_nickname' => $row['invitee_nickname'] ?? '',
-            'order_amount' => number_format($order_amount, 2, '.', ''),
-            'reward_rate' => number_format($reward_rate, 4, '.', ''),
-            'reward_rate_percent' => round($reward_rate * 100, 2),
-            'estimated_reward_amount' => number_format($reward_amount, 2, '.', ''),
-            'pays_type' => $row['pays_type'],
+            'id' => (int)$row['id'],
+            'order_id' => (string)$row['order_id'],
+            'venue_id' => (int)$row['reservation_id'],
+            'consumer_venue_name' => (string)($row['consumer_venue_name'] ?? ''),
+            'invitee_uid' => (int)$row['uid'],
+            'invitee_nickname' => (string)($row['invitee_nickname'] ?? ''),
+            'order_amount' => number_format($paymentAmount, 2, '.', ''),
+            'reward_amount' => number_format($promotionAmount, 2, '.', ''),
+            'reward_rate_percent' => $rewardRatePercent,
+            'invitation_code' => (string)($row['invitation_code'] ?? ''),
+            'invitation_venue_id' => (int)$row['invitation_venue_id'],
+            'start_time' => $row['start_time'],
             'end_time' => $row['end_time'],
-            'generated_status' => $row['generated_status'] ?? null,
+            'recorded_at' => $row['recorded_at'],
+
+            // 兼容旧页面字段，防止前端缓存未及时更新时显示异常。
+            'estimated_reward_amount' => number_format($promotionAmount, 2, '.', ''),
+            'generated_status' => 'settled',
+            'pays_type' => '',
         ];
     }
 
+    $overallRatePercent = $totalPaymentAmount > 0
+        ? round(($totalPromotionAmount / $totalPaymentAmount) * 100, 2)
+        : 0.0;
+
     jsonOut(200, 'ok', [
         'date' => $date,
-        'inviter_uid' => $inviter_uid,
-        'invite_code' => $invite_code,
-        'promotion_level' => $promotion_level,
-        'rule_id' => $rule_id,
+        'venue_id' => $venueId,
+        'venue_name' => $venueName,
+        'invite_code' => $venueInviteCode,
         'summary' => [
-            'estimated_reward_amount' => round($total_reward_amount, 2),
+            'settled_reward_amount' => round($totalPromotionAmount, 2),
+            'settled_order_count' => count($list),
+            'settled_order_amount' => round($totalPaymentAmount, 2),
+            'reward_rate_percent' => $overallRatePercent,
+
+            // 兼容旧页面字段。
+            'estimated_reward_amount' => round($totalPromotionAmount, 2),
             'valid_order_count' => count($list),
-            'valid_order_amount' => round($total_order_amount, 2),
-            'reward_rate' => $reward_rate,
-            'reward_rate_percent' => round($reward_rate * 100, 2),
+            'valid_order_amount' => round($totalPaymentAmount, 2),
         ],
         'list' => $list,
     ]);
 } catch (Throwable $e) {
     error_log('GetInviteRewardPreview error: ' . $e->getMessage());
-    jsonOut(500, 'Server error');
+    jsonOut(500, '服务器内部错误');
 } finally {
     $database->close();
 }
