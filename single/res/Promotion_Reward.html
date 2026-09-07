@@ -29,10 +29,12 @@
     button { height: 38px; border: none; border-radius: 8px; padding: 0 14px; cursor: pointer; font-size: 14px; color: #fff; background: var(--primary); }
     button:hover { opacity: .9; }
     .btn-secondary { background: #6b7280; }
+    .btn-tab { background: #eef2ff; color: var(--primary); border: 1px solid #dbe4ff; }
+    .btn-tab.active { background: var(--primary); color: #fff; }
     .msg { margin-top: 12px; padding: 10px 12px; border-radius: 8px; display: none; font-size: 14px; line-height: 1.6; }
     .msg.ok { display: block; background: #e9f8f1; color: #137a4b; border: 1px solid #bcebd6; }
     .msg.err { display: block; background: #fff0f0; color: #c62828; border: 1px solid #ffcaca; }
-    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .metric { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: #fff; }
     .metric .k { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
     .metric .v { font-size: 22px; font-weight: 800; color: #111827; }
@@ -48,10 +50,18 @@
     .order-id { max-width: 260px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
     .state { text-align: center; color: var(--muted); padding: 26px 0; font-size: 14px; }
     .badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: #e9f8f1; color: #137a4b; }
+    .badge.pending { background: #fff7e6; color: #ad6800; }
+    .badge.settled { background: #eef2ff; color: #3157c8; }
+    .table-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 12px; }
+    .table-head h3 { margin-bottom: 0; }
+    .link-btn { height: 30px; padding: 0 10px; border-radius: 6px; font-size: 13px; }
+    .back-btn { display: none; background: #6b7280; }
+    .back-btn.show { display: inline-flex; align-items: center; }
     @media (max-width: 768px) {
       body { padding: 12px; }
       .summary { grid-template-columns: 1fr; }
       .toolbar { display: grid; grid-template-columns: 1fr; }
+      .table-head { align-items: flex-start; flex-direction: column; }
       .form-item { width: 100%; }
     }
   </style>
@@ -61,32 +71,29 @@
     <div class="title">推广收益流水</div>
 
     <div class="card">
-      <h3>已结算流水查询</h3>
+      <h3>推广收益动态预估</h3>
       <div class="toolbar">
         <div class="form-item">
-          <label for="previewDate">收益生成日期</label>
+          <label for="previewDate">消费日期</label>
           <input id="previewDate" type="date">
         </div>
-        <button type="button" id="queryBtn">查询</button>
+        <button type="button" id="queryBtn">查询所选日期</button>
         <button type="button" class="btn-secondary" id="todayBtn">今天</button>
       </div>
       <div id="msg" class="msg"></div>
-      <div class="subline" id="accountInfo">按推广收益实际生成时间查询，与主页推广收益统计口径一致。</div>
+      <div class="subline" id="accountInfo">按当前场地邀请码推广来的历史用户，统计所选日期在其他场地完成的真实消费，并按 10% 动态预估推广收益。</div>
     </div>
 
     <div class="card">
+      <h3>所选日期动态预估收益</h3>
       <div class="summary">
         <div class="metric primary">
-          <div class="k">已结算推广收益</div>
+          <div class="k">动态预估推广收益</div>
           <div class="v" id="estimatedReward">0.00 元</div>
         </div>
         <div class="metric">
-          <div class="k">结算订单数</div>
+          <div class="k">预估订单数</div>
           <div class="v" id="validOrderCount">0</div>
-        </div>
-        <div class="metric">
-          <div class="k">订单实付金额</div>
-          <div class="v" id="validOrderAmount">0.00 元</div>
         </div>
         <div class="metric success">
           <div class="k">综合推广比例</div>
@@ -96,22 +103,51 @@
     </div>
 
     <div class="card">
-      <h3>收入明细</h3>
+      <h3>历史未结算推广收益</h3>
+      <div class="summary">
+        <div class="metric primary">
+          <div class="k">未结算推广收益</div>
+          <div class="v" id="pendingReward">0.00 元</div>
+        </div>
+        <div class="metric">
+          <div class="k">未结算订单数</div>
+          <div class="v" id="pendingOrderCount">0</div>
+        </div>
+        <div class="metric success">
+          <div class="k">历史综合比例</div>
+          <div class="v" id="pendingRewardRate">0%</div>
+        </div>
+      </div>
+      <div class="subline" id="pendingInfo">历史未结算数据来自已落地的 pending 推广收益明细，不包含所选日期动态预估。</div>
+    </div>
+
+    <div class="card">
+      <h3>已结算推广收益记录</h3>
+      <div class="summary">
+        <div class="metric primary">
+          <div class="k">已结算推广收益</div>
+          <div class="v" id="settledReward">0.00 元</div>
+        </div>
+        <div class="metric">
+          <div class="k">已结算订单数</div>
+          <div class="v" id="settledOrderCount">0</div>
+        </div>
+        <div class="metric success">
+          <div class="k">已结算综合比例</div>
+          <div class="v" id="settledRewardRate">0%</div>
+        </div>
+      </div>
+      <div class="subline" id="settledInfo">已结算数据来自平台确认后的推广收益记录，可点击下方日期查看明细。</div>
+    </div>
+
+    <div class="card">
+      <div class="table-head">
+        <h3 id="tableTitle">按天汇总</h3>
+        <button type="button" class="back-btn" id="backSummaryBtn">返回按天汇总</button>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>订单结束时间</th>
-              <th>被邀请人</th>
-              <th>消费场地</th>
-              <th>邀请码</th>
-              <th>订单实付金额</th>
-              <th>推广比例</th>
-              <th>推广收益</th>
-              <th>收益生成时间</th>
-              <th>订单号</th>
-            </tr>
-          </thead>
+          <thead id="thead"></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -129,11 +165,26 @@ const els = {
   accountInfo: document.getElementById('accountInfo'),
   estimatedReward: document.getElementById('estimatedReward'),
   validOrderCount: document.getElementById('validOrderCount'),
-  validOrderAmount: document.getElementById('validOrderAmount'),
   rewardRate: document.getElementById('rewardRate'),
+  pendingReward: document.getElementById('pendingReward'),
+  pendingOrderCount: document.getElementById('pendingOrderCount'),
+  pendingRewardRate: document.getElementById('pendingRewardRate'),
+  pendingInfo: document.getElementById('pendingInfo'),
+  settledReward: document.getElementById('settledReward'),
+  settledOrderCount: document.getElementById('settledOrderCount'),
+  settledRewardRate: document.getElementById('settledRewardRate'),
+  settledInfo: document.getElementById('settledInfo'),
+  tableTitle: document.getElementById('tableTitle'),
+  backSummaryBtn: document.getElementById('backSummaryBtn'),
+  thead: document.getElementById('thead'),
   tbody: document.getElementById('tbody'),
   state: document.getElementById('state')
 };
+
+let dynamicRows = [];
+let pendingRows = [];
+let settledRows = [];
+let dailyRows = [];
 
 function pad(n){ return String(n).padStart(2, '0'); }
 function ymd(d){ const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`; }
@@ -142,29 +193,164 @@ function esc(v){ return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','
 function showMsg(type, text){ els.msg.className = `msg ${type}`; els.msg.textContent = text; }
 function clearMsg(){ els.msg.className = 'msg'; els.msg.textContent = ''; }
 
-function renderRows(rows){
+function renderHead(type){
+  if (type === 'detail') {
+    els.thead.innerHTML = `
+      <tr>
+        <th>订单结束/生成时间</th>
+        <th>被邀请人</th>
+        <th>邀请码</th>
+        <th>推广比例</th>
+        <th>推广收益</th>
+        <th>状态</th>
+        <th>订单号</th>
+      </tr>`;
+    return;
+  }
+  els.thead.innerHTML = `
+    <tr>
+      <th>日期</th>
+      <th>类型</th>
+      <th>推广收益</th>
+      <th>订单数</th>
+      <th>综合推广比例</th>
+      <th>操作</th>
+    </tr>`;
+}
+
+function rateText(row){
+  const explicitRate = row.reward_rate_percent;
+  if (explicitRate !== undefined && explicitRate !== null && explicitRate !== '') {
+    return `${Number(explicitRate || 0)}%`;
+  }
+  const amount = Number(row.order_amount || 0);
+  if (amount <= 0) return '0%';
+  return `${(Number(row.reward_amount || 0) / amount * 100).toFixed(2)}%`;
+}
+
+function buildDailyRows(selectedDate, summary, pendingHistory){
+  const rows = [{
+    type: 'dynamic',
+    date: selectedDate,
+    typeText: '所选日期动态预估',
+    reward_amount: summary.reward_amount ?? summary.settled_reward_amount ?? 0,
+    order_count: summary.order_count ?? summary.settled_order_count ?? 0,
+    reward_rate_percent: summary.reward_rate_percent || 0
+  }];
+  (pendingHistory.by_date || []).forEach(row => {
+    rows.push({
+      type: 'pending',
+      date: row.reward_date,
+      typeText: '历史待结算',
+      reward_amount: row.reward_amount,
+      order_count: row.order_count,
+      order_amount: row.order_amount,
+      reward_rate_percent: row.reward_rate_percent
+    });
+  });
+  return rows;
+}
+
+function appendSettledDailyRows(rows, settledHistory){
+  (settledHistory.by_date || []).forEach(row => {
+    rows.push({
+      type: 'settled',
+      date: row.reward_date,
+      typeText: '已结算',
+      reward_amount: row.reward_amount,
+      order_count: row.order_count,
+      order_amount: row.order_amount,
+      reward_rate_percent: row.reward_rate_percent,
+      settled_at: row.last_settled_at,
+      settlement_batch_ids: row.settlement_batch_ids
+    });
+  });
+  return rows;
+}
+
+function renderSummary(){
+  renderHead('summary');
+  els.tableTitle.textContent = '按天汇总';
+  els.backSummaryBtn.classList.remove('show');
+  if (!dailyRows.length) {
+    els.tbody.innerHTML = '';
+    els.state.textContent = '暂无推广收益汇总';
+    return;
+  }
+  els.tbody.innerHTML = dailyRows.map((row, idx) => {
+    const badgeClass = row.type === 'settled' ? 'badge settled' : (row.type === 'pending' ? 'badge pending' : 'badge');
+    return `
+      <tr>
+        <td>${esc(row.date)}</td>
+        <td><span class="${badgeClass}">${esc(row.typeText)}</span></td>
+        <td class="amount">+${money(row.reward_amount)}</td>
+        <td>${Number(row.order_count || 0)} 单</td>
+        <td>${rateText(row)}</td>
+        <td><button type="button" class="link-btn" data-detail-index="${idx}">查看明细</button></td>
+      </tr>`;
+  }).join('');
+  els.state.textContent = `共 ${dailyRows.length} 天汇总`;
+}
+
+function renderRows(rows, type){
+  renderHead('detail');
+  els.backSummaryBtn.classList.add('show');
   if (!rows.length) {
     els.tbody.innerHTML = '';
-    els.state.textContent = '暂无已结算推广收益明细';
+    const emptyText = {
+      dynamic: '该日暂无动态推广收益明细',
+      pending: '该日暂无历史未结算推广收益明细',
+      settled: '该日暂无已结算推广收益明细'
+    };
+    els.state.textContent = emptyText[type] || '该日暂无推广收益明细';
     return;
   }
   els.tbody.innerHTML = rows.map(row => {
     const nickname = row.invitee_nickname ? ` / ${esc(row.invitee_nickname)}` : '';
-    const venueName = row.consumer_venue_name ? ` / ${esc(row.consumer_venue_name)}` : '';
+    const timeText = type === 'settled' ? (row.settled_at || row.recorded_at) : (type === 'pending' ? row.recorded_at : row.end_time);
+    const badgeText = type === 'settled' ? '已结算' : (type === 'pending' ? '待结算' : '动态预估');
+    const badgeClass = type === 'settled' ? 'badge settled' : (type === 'pending' ? 'badge pending' : 'badge');
     return `
       <tr>
-        <td>${esc(row.end_time)}</td>
+        <td>${esc(timeText)}</td>
         <td>${esc(row.invitee_uid)}${nickname}</td>
-        <td>${esc(row.venue_id)}${venueName}</td>
         <td>${esc(row.invitation_code)}</td>
-        <td>${money(row.order_amount)}</td>
         <td>${Number(row.reward_rate_percent || 0)}%</td>
         <td class="amount">+${money(row.reward_amount)}</td>
-        <td>${esc(row.recorded_at)}</td>
+        <td><span class="${badgeClass}">${badgeText}</span></td>
         <td><span class="order-id" title="${esc(row.order_id)}">${esc(row.order_id)}</span></td>
       </tr>`;
   }).join('');
   els.state.textContent = `共 ${rows.length} 条明细`;
+}
+
+async function showDailyDetail(index){
+  const row = dailyRows[index];
+  if (!row) return;
+  const detailTitleMap = {
+    dynamic: `${row.date} 动态预估明细`,
+    pending: `${row.date} 历史未结算明细`,
+    settled: `${row.date} 已结算明细`
+  };
+  els.tableTitle.textContent = detailTitleMap[row.type] || `${row.date} 推广收益明细`;
+  els.backSummaryBtn.classList.add('show');
+  els.tbody.innerHTML = '';
+  els.state.textContent = '明细加载中...';
+  try {
+    const url = new URL(API, window.location.origin);
+    url.searchParams.set('mode', 'detail');
+    url.searchParams.set('detail_type', row.type);
+    url.searchParams.set('detail_date', row.date);
+    const res = await fetch(url.toString(), { credentials: 'include', headers: { 'Accept': 'application/json' }});
+    const json = await res.json();
+    if (!json || json.code !== 200) {
+      throw new Error((json && json.msg) || '明细查询失败');
+    }
+    renderRows((json.data && json.data.list) || [], row.type);
+  } catch (err) {
+    showMsg('err', err.message || '明细加载失败，请刷新重试');
+    els.state.textContent = '明细加载失败';
+  }
 }
 
 async function loadPreview(){
@@ -181,14 +367,30 @@ async function loadPreview(){
       throw new Error((json && json.msg) || '查询失败');
     }
     const data = json.data || {};
-    const summary = data.summary || {};
-    const rows = data.list || [];
-    els.estimatedReward.textContent = money(summary.settled_reward_amount);
-    els.validOrderCount.textContent = String(summary.settled_order_count || 0);
-    els.validOrderAmount.textContent = money(summary.settled_order_amount);
+    const todayPreview = data.today_preview || {};
+    const pendingHistory = data.pending_history || {};
+    const settledHistory = data.settled_history || {};
+    const summary = todayPreview.summary || data.summary || {};
+    const pendingSummary = pendingHistory.summary || {};
+    const settledSummary = settledHistory.summary || {};
+    dynamicRows = todayPreview.list || data.list || [];
+    pendingRows = pendingHistory.list || [];
+    settledRows = settledHistory.list || [];
+    dailyRows = appendSettledDailyRows(buildDailyRows(date, summary, pendingHistory), settledHistory);
+
+    els.estimatedReward.textContent = money(summary.reward_amount ?? summary.settled_reward_amount);
+    els.validOrderCount.textContent = String(summary.order_count ?? summary.settled_order_count ?? 0);
     els.rewardRate.textContent = `${Number(summary.reward_rate_percent || 0)}%`;
-    els.accountInfo.textContent = `收益归属场地：${data.venue_name || '-'}（ID：${data.venue_id || '-'}）　邀请码：${data.invite_code || '-'}。按收益生成时间统计，与主页推广收益一致。`;
-    renderRows(rows);
+    els.pendingReward.textContent = money(pendingSummary.reward_amount);
+    els.pendingOrderCount.textContent = String(pendingSummary.order_count || 0);
+    els.pendingRewardRate.textContent = `${Number(pendingSummary.reward_rate_percent || 0)}%`;
+    els.pendingInfo.textContent = `历史未结算数据来自已落地的 pending 推广收益明细，不包含所选日期动态预估。当前未结算 ${Number(pendingSummary.order_count || 0)} 条。`;
+    els.settledReward.textContent = money(settledSummary.reward_amount);
+    els.settledOrderCount.textContent = String(settledSummary.order_count || 0);
+    els.settledRewardRate.textContent = `${Number(settledSummary.reward_rate_percent || 0)}%`;
+    els.settledInfo.textContent = `已结算推广收益来自平台确认后的 settled 记录。当前展示最近 ${Number(settledSummary.order_count || 0)} 条已结算明细对应的汇总。`;
+    els.accountInfo.textContent = `收益归属场地：${data.venue_name || '-'}（ID：${data.venue_id || '-'}）　邀请码：${data.invite_code || '-'}。口径：历史推广用户在其他场地完成消费，按 payment_amount × 10% 动态预估。`;
+    renderSummary();
   } catch (err) {
     showMsg('err', err.message || '网络异常，请刷新重试');
     els.state.textContent = '加载失败';
@@ -197,6 +399,12 @@ async function loadPreview(){
 
 els.queryBtn.addEventListener('click', loadPreview);
 els.todayBtn.addEventListener('click', () => { els.previewDate.value = ymd(new Date()); loadPreview(); });
+els.backSummaryBtn.addEventListener('click', renderSummary);
+els.tbody.addEventListener('click', event => {
+  const btn = event.target.closest('[data-detail-index]');
+  if (!btn) return;
+  showDailyDetail(Number(btn.dataset.detailIndex));
+});
 els.previewDate.value = ymd(new Date());
 loadPreview();
 </script>

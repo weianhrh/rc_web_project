@@ -291,13 +291,32 @@ $sql = "SELECT
             o.*,
             COALESCE(u.nickname, '') AS nickname,
             o.payment_amount AS venue_income,
+            CASE
+                WHEN COALESCE(invite_venue.id, invite_venue_fallback.id, 0) > 0
+                 AND COALESCE(invite_venue.id, invite_venue_fallback.id, 0) <> o.reservation_id
+                THEN ROUND(COALESCE(o.payment_amount, 0) * 0.10, 2)
+                ELSE 0
+            END AS promotion_amount,
             ROUND(
-                COALESCE(o.payment_amount, 0) - COALESCE(o.promotion_amount, 0),
+                COALESCE(o.payment_amount, 0) -
+                CASE
+                    WHEN COALESCE(invite_venue.id, invite_venue_fallback.id, 0) > 0
+                     AND COALESCE(invite_venue.id, invite_venue_fallback.id, 0) <> o.reservation_id
+                    THEN ROUND(COALESCE(o.payment_amount, 0) * 0.10, 2)
+                    ELSE 0
+                END,
                 2
             ) AS actual_arrival_amount,
             'device' AS order_type
         FROM orders o
         LEFT JOIN users u ON o.uid = u.uid
+        LEFT JOIN venue_invite_codes vic
+               ON vic.invite_code = u.invitation_code
+              AND vic.is_enabled = 1
+        LEFT JOIN venues invite_venue
+               ON invite_venue.id = vic.venue_id
+        LEFT JOIN venues invite_venue_fallback
+               ON invite_venue_fallback.invite_code = u.invitation_code
         $whereSql
         ORDER BY o.start_time DESC
         LIMIT ?, ?";
@@ -314,13 +333,35 @@ $totalCount = is_array($countResult) && isset($countResult[0]['count']) ? (int)$
 
 $sumSql = "SELECT
                 ROUND(COALESCE(SUM(o.payment_amount), 0), 2) AS total_income,
-                ROUND(COALESCE(SUM(o.promotion_amount), 0), 2) AS total_promotion_amount,
+                ROUND(COALESCE(SUM(
+                    CASE
+                        WHEN COALESCE(invite_venue.id, invite_venue_fallback.id, 0) > 0
+                         AND COALESCE(invite_venue.id, invite_venue_fallback.id, 0) <> o.reservation_id
+                        THEN ROUND(COALESCE(o.payment_amount, 0) * 0.10, 2)
+                        ELSE 0
+                    END
+                ), 0), 2) AS total_promotion_amount,
                 ROUND(
                     COALESCE(SUM(o.payment_amount), 0)
-                    - COALESCE(SUM(o.promotion_amount), 0),
+                    - COALESCE(SUM(
+                        CASE
+                            WHEN COALESCE(invite_venue.id, invite_venue_fallback.id, 0) > 0
+                             AND COALESCE(invite_venue.id, invite_venue_fallback.id, 0) <> o.reservation_id
+                            THEN ROUND(COALESCE(o.payment_amount, 0) * 0.10, 2)
+                            ELSE 0
+                        END
+                    ), 0),
                     2
                 ) AS total_actual_income
            FROM orders o
+           LEFT JOIN users u ON o.uid = u.uid
+           LEFT JOIN venue_invite_codes vic
+                  ON vic.invite_code = u.invitation_code
+                 AND vic.is_enabled = 1
+           LEFT JOIN venues invite_venue
+                  ON invite_venue.id = vic.venue_id
+           LEFT JOIN venues invite_venue_fallback
+                  ON invite_venue_fallback.invite_code = u.invitation_code
            $whereSql";
 logMessage('[device] ' . $sumSql . ' | params=' . json_encode($params, JSON_UNESCAPED_UNICODE));
 

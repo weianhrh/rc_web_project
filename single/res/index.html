@@ -623,7 +623,7 @@
 
 <div class="metrics-grid">
     <div class="metric-item">
-        <div class="metric-label">今日收益</div>
+        <div class="metric-label">预估今日收益</div>
         <div class="metric-value" id="totalPayment">¥0.00</div>
     </div>
 
@@ -643,7 +643,7 @@
     </div>
 
     <div class="metric-item" onclick="window.location.href='/res/Promotion_Reward.html'" style="cursor: pointer;">
-        <div class="metric-label">推广收益</div>
+        <div class="metric-label">预估推广收益</div>
         <div class="metric-value" id="promotionIncome">¥0.00</div>
     </div>
 
@@ -944,6 +944,11 @@ Promise.all([
     historyItemEl.style.display = '';
   }
 
+  const promotionSettlementItemEl = document.getElementById('PromotionRewardSettlementAdmin');
+  if (promotionSettlementItemEl && !(roleId === 1 || roleId === 2)) {
+    promotionSettlementItemEl.style.display = 'none';
+  }
+
 
   // badge 更新逻辑
   fetch('/api/devMgr/getFaultDevices.php')
@@ -1147,3 +1152,4 @@ document.addEventListener('DOMContentLoaded', function initAnchorAuthModal() {
 </div>
 </body>
 </html>
+

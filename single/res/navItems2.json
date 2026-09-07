@@ -135,6 +135,14 @@
         "icon": "fas fa-award"
     },
     {
+        "id": "PromotionRewardSettlementAdmin",
+        "label": "推广结算",
+        "title": "推广结算",
+        "href": "Promotion_Reward_Settlement_Admin.html",
+        "page": "Promotion_Reward_Settlement_Admin.html",
+        "icon": "fas fa-file-invoice-dollar"
+    },
+    {
         "id": "item_1779265692617",
         "label": "直播认证",
         "title": "直播认证",

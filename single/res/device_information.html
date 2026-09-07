@@ -833,6 +833,30 @@ user023968912_80039"></textarea>
   </div>
 </div>
 
+<div class="cmd-group cmd-group-full">
+  <div class="cmd-group-title">设备序列号查询</div>
+  <div class="tip-box">
+    给当前 room_id 发送查询命令：+SN-，设备收到后将返回序列号。
+  </div>
+  <div class="actions">
+    <button class="edit-btn" type="button" data-send="query_sn">查询设备序列号</button>
+  </div>
+</div>
+
+<div class="cmd-group cmd-group-full">
+  <div class="cmd-group-title">自定义命令</div>
+  <div class="tip-box">
+    输入设备支持的完整原始命令，系统不会自动添加 JSON、命令前缀或结束符。
+  </div>
+  <div class="row-1">
+    <label class="muted">命令内容</label>
+    <input id="cmd_custom_message" maxlength="1024" autocomplete="off" spellcheck="false" placeholder="例如：+SN-" />
+  </div>
+  <div class="actions">
+    <button class="edit-btn" type="button" data-send="custom">发送自定义命令</button>
+  </div>
+</div>
+
 <div class="cmd-group cmd-group-half">
           <div class="cmd-group-title">抓图上传</div>
           <div class="row">
@@ -989,6 +1013,7 @@ user023968912_80039"></textarea>
     const cOtaForce = document.getElementById('cmd_ota_force');
     const cHardwareOtaUrl = document.getElementById('cmd_hardware_ota_url');
     const cVoltageUploadUrl = document.getElementById('cmd_voltage_upload_url');
+    const cCustomMessage = document.getElementById('cmd_custom_message');
     let currentControlRow = null;
     
     const syncFields = [fDeviceId, fRoomId, fStreamId];
@@ -1032,6 +1057,12 @@ function buildCommandText(type) {
 
     case 'sub_off':
       return JSON.stringify({ type: 'cfg_sub', data: { enable: 0 } });
+
+    case 'query_sn':
+      return '+SN-';
+
+    case 'custom':
+      return (cCustomMessage.value || '').trim();
 
     case 'capture':
       return JSON.stringify({
@@ -1099,6 +1130,7 @@ function openControlModal(row) {
   cOtaForce.value = '0';
   cHardwareOtaUrl.value = 'https://rcwulian.cn/OTA/zxb.bin';
   cVoltageUploadUrl.value = 'http://rcwulian.cn/app/dump/dump_post.php';
+  cCustomMessage.value = '';
   refreshCaptureUploadUrl();
   document.getElementById('wifiHistoryBox').style.display = 'none';
   document.getElementById('otaHistoryBox').style.display = 'none';
@@ -1129,7 +1161,7 @@ async function sendDeviceCommandByType(type, triggerBtn = null) {
   const message = buildCommandText(type);
 
   if (!message) {
-    showToast('指令生成失败');
+    showToast(type === 'custom' ? '请输入自定义命令' : '指令生成失败');
     return;
   }
 
@@ -1170,6 +1202,8 @@ const successTextMap = {
   rotate_off: '横屏显示已发送',
   sub_on: '推子码流已发送',
   sub_off: '推主码流已发送',
+  query_sn: '序列号查询指令已发送，等待设备返回',
+  custom: '自定义命令已发送',
   capture: '抓图上传已发送',
   wifi: 'WIFI设置已发送',
   ota: '摄像头 OTA 升级已发送',

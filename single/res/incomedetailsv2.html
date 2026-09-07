@@ -354,8 +354,9 @@
                 `;
             }
 
-            // role_id=3 仅设备订单按 payment_amount - promotion_amount 展示
-            if (roleId !== 3 || orderType !== 'device') {
+            // 设备订单按 payment_amount - promotion_amount 展示预估收益。
+            // promotion_amount 为 NULL 时按 0 处理，预估收益等于支付金额。
+            if (orderType !== 'device') {
                 return '';
             }
 
@@ -366,7 +367,7 @@
 
             return `
                 <div class="field">
-                    <div class="label">实际到账金额:</div>
+                    <div class="label">预估收益:</div>
                     <div class="value payment-amount">${formatMoney(actualAmount)} 元</div>
                 </div>
             `;
@@ -456,10 +457,8 @@ function updateTotalAmount(data) {
     } else if (Number(currentRoleId) === 4) {
         const role4ActualTotal = formatMoney(totalNum * 0.8);
         totalAmountEl.textContent = `累计设备收入：${total} 元　实际到账累计：${role4ActualTotal} 元`;
-    } else if (Number(currentRoleId) === 3) {
-        totalAmountEl.textContent = `累计设备收入：${total} 元　实际到账累计：${actualTotal} 元`;
     } else {
-        totalAmountEl.textContent = `累计设备收入：${total} 元`;
+        totalAmountEl.textContent = `累计设备收入：${total} 元　预估收益累计：${actualTotal} 元`;
     }
 }
 
@@ -534,7 +533,6 @@ function updateTotalAmount(data) {
                         <div class="label">支付金额:</div>
                         <div class="value payment-amount">${formatMoney(order.payment_amount)} 元</div>
                     </div>
-                    ${getActualArrivalHtml(order, 'device')}
                     <div class="field">
                         <div class="label">支付类型:</div>
                         <div class="value">${escapeHtml(order.pays_type)}</div>
@@ -551,6 +549,7 @@ function updateTotalAmount(data) {
                         <div class="label">驾驶时间:</div>
                         <div class="value datetime">${escapeHtml(order.start_time)} - ${escapeHtml(order.end_time)}</div>
                     </div>
+                    ${getActualArrivalHtml(order, 'device')}
                 `;
                 incomeDetailsContainer.appendChild(orderItem);
             });

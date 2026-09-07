@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>推广收益流水</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #5b8cff;
+      --success: #22a06b;
+      --danger: #f44336;
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #333;
+      --muted: #777;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; }
+    .page { max-width: 1200px; margin: 0 auto; }
+    .title { font-size: 24px; font-weight: 700; margin-bottom: 18px; }
+    .card { background: var(--card); border-radius: 12px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(0,0,0,.05); }
+    .card h3 { font-size: 18px; margin-bottom: 14px; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+    .form-item { width: 180px; }
+    .form-item label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input { width: 100%; height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; font-size: 14px; outline: none; background: #fff; }
+    input:focus { border-color: var(--primary); }
+    button { height: 38px; border: none; border-radius: 8px; padding: 0 14px; cursor: pointer; font-size: 14px; color: #fff; background: var(--primary); }
+    button:hover { opacity: .9; }
+    .btn-secondary { background: #6b7280; }
+    .msg { margin-top: 12px; padding: 10px 12px; border-radius: 8px; display: none; font-size: 14px; line-height: 1.6; }
+    .msg.ok { display: block; background: #e9f8f1; color: #137a4b; border: 1px solid #bcebd6; }
+    .msg.err { display: block; background: #fff0f0; color: #c62828; border: 1px solid #ffcaca; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric { border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: #fff; }
+    .metric .k { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+    .metric .v { font-size: 22px; font-weight: 800; color: #111827; }
+    .metric.primary .v { color: var(--primary); }
+    .metric.success .v { color: var(--success); }
+    .subline { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px 8px; text-align: left; font-size: 14px; white-space: nowrap; }
+    th { background: #f8f9fc; color: #555; font-weight: 600; }
+    tbody tr:hover { background: #fbfcff; }
+    .amount { color: var(--success); font-weight: 800; }
+    .order-id { max-width: 260px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
+    .state { text-align: center; color: var(--muted); padding: 26px 0; font-size: 14px; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: #e9f8f1; color: #137a4b; }
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      .summary { grid-template-columns: 1fr; }
+      .toolbar { display: grid; grid-template-columns: 1fr; }
+      .form-item { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="title">推广收益流水</div>
+
+    <div class="card">
+      <h3>已结算流水查询</h3>
+      <div class="toolbar">
+        <div class="form-item">
+          <label for="previewDate">收益生成日期</label>
+          <input id="previewDate" type="date">
+        </div>
+        <button type="button" id="queryBtn">查询</button>
+        <button type="button" class="btn-secondary" id="todayBtn">今天</button>
+      </div>
+      <div id="msg" class="msg"></div>
+      <div class="subline" id="accountInfo">按推广收益实际生成时间查询，与主页推广收益统计口径一致。</div>
+    </div>
+
+    <div class="card">
+      <div class="summary">
+        <div class="metric primary">
+          <div class="k">已结算推广收益</div>
+          <div class="v" id="estimatedReward">0.00 元</div>
+        </div>
+        <div class="metric">
+          <div class="k">结算订单数</div>
+          <div class="v" id="validOrderCount">0</div>
+        </div>
+        <div class="metric">
+          <div class="k">订单实付金额</div>
+          <div class="v" id="validOrderAmount">0.00 元</div>
+        </div>
+        <div class="metric success">
+          <div class="k">综合推广比例</div>
+          <div class="v" id="rewardRate">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>收入明细</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>订单结束时间</th>
+              <th>被邀请人</th>
+              <th>消费场地</th>
+              <th>邀请码</th>
+              <th>订单实付金额</th>
+              <th>推广比例</th>
+              <th>推广收益</th>
+              <th>收益生成时间</th>
+              <th>订单号</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div id="state" class="state">加载中...</div>
+    </div>
+  </div>
+
+<script>
+const API = '/api/promotion/GetInviteRewardPreview.php';
+const els = {
+  previewDate: document.getElementById('previewDate'),
+  queryBtn: document.getElementById('queryBtn'),
+  todayBtn: document.getElementById('todayBtn'),
+  msg: document.getElementById('msg'),
+  accountInfo: document.getElementById('accountInfo'),
+  estimatedReward: document.getElementById('estimatedReward'),
+  validOrderCount: document.getElementById('validOrderCount'),
+  validOrderAmount: document.getElementById('validOrderAmount'),
+  rewardRate: document.getElementById('rewardRate'),
+  tbody: document.getElementById('tbody'),
+  state: document.getElementById('state')
+};
+
+function pad(n){ return String(n).padStart(2, '0'); }
+function ymd(d){ const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`; }
+function money(n){ return `${Number(n || 0).toFixed(2)} 元`; }
+function esc(v){ return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+function showMsg(type, text){ els.msg.className = `msg ${type}`; els.msg.textContent = text; }
+function clearMsg(){ els.msg.className = 'msg'; els.msg.textContent = ''; }
+
+function renderRows(rows){
+  if (!rows.length) {
+    els.tbody.innerHTML = '';
+    els.state.textContent = '暂无已结算推广收益明细';
+    return;
+  }
+  els.tbody.innerHTML = rows.map(row => {
+    const nickname = row.invitee_nickname ? ` / ${esc(row.invitee_nickname)}` : '';
+    const venueName = row.consumer_venue_name ? ` / ${esc(row.consumer_venue_name)}` : '';
+    return `
+      <tr>
+        <td>${esc(row.end_time)}</td>
+        <td>${esc(row.invitee_uid)}${nickname}</td>
+        <td>${esc(row.venue_id)}${venueName}</td>
+        <td>${esc(row.invitation_code)}</td>
+        <td>${money(row.order_amount)}</td>
+        <td>${Number(row.reward_rate_percent || 0)}%</td>
+        <td class="amount">+${money(row.reward_amount)}</td>
+        <td>${esc(row.recorded_at)}</td>
+        <td><span class="order-id" title="${esc(row.order_id)}">${esc(row.order_id)}</span></td>
+      </tr>`;
+  }).join('');
+  els.state.textContent = `共 ${rows.length} 条明细`;
+}
+
+async function loadPreview(){
+  clearMsg();
+  const date = els.previewDate.value || ymd(new Date());
+  els.state.textContent = '加载中...';
+  els.tbody.innerHTML = '';
+  try {
+    const url = new URL(API, window.location.origin);
+    url.searchParams.set('date', date);
+    const res = await fetch(url.toString(), { credentials: 'include', headers: { 'Accept': 'application/json' }});
+    const json = await res.json();
+    if (!json || json.code !== 200) {
+      throw new Error((json && json.msg) || '查询失败');
+    }
+    const data = json.data || {};
+    const summary = data.summary || {};
+    const rows = data.list || [];
+    els.estimatedReward.textContent = money(summary.settled_reward_amount);
+    els.validOrderCount.textContent = String(summary.settled_order_count || 0);
+    els.validOrderAmount.textContent = money(summary.settled_order_amount);
+    els.rewardRate.textContent = `${Number(summary.reward_rate_percent || 0)}%`;
+    els.accountInfo.textContent = `收益归属场地：${data.venue_name || '-'}（ID：${data.venue_id || '-'}）　邀请码：${data.invite_code || '-'}。按收益生成时间统计，与主页推广收益一致。`;
+    renderRows(rows);
+  } catch (err) {
+    showMsg('err', err.message || '网络异常，请刷新重试');
+    els.state.textContent = '加载失败';
+  }
+}
+
+els.queryBtn.addEventListener('click', loadPreview);
+els.todayBtn.addEventListener('click', () => { els.previewDate.value = ymd(new Date()); loadPreview(); });
+els.previewDate.value = ymd(new Date());
+loadPreview();
+</script>
+</body>
+</html>

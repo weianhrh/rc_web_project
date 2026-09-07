@@ -1207,7 +1207,7 @@ const hasRefundRecord = order.refund_status === 'applied' || order.refund_status
 
 const actualArrivalHtml = Number(currentRoleId) === 1
   ? `
-      <span class="order-money-label actual-arrival-label">场地实际到账</span>
+      <span class="order-money-label actual-arrival-label">场地预估收益</span>
       <span class="order-money-value">¥ ${parseFloat(order.actual_arrival_amount ?? order.payment_amount ?? 0).toFixed(2)}</span>
     `
   : '';

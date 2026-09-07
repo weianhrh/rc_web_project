@@ -91,6 +91,7 @@ $reservationCount = $database->query($reservationCountSql, $reservationParams)[0
 $totalPaymentSql = "SELECT COALESCE(SUM(payment_amount), 0) AS total_payment
                     FROM orders
                     WHERE end_time >= ? AND end_time <= ?
+                      AND status = '已完成'
                       AND pays_type != '能量'
                       AND (note <> 'gift' OR note IS NULL)" .
                     ($venue_id ? " AND reservation_id = ?" : "");
@@ -102,16 +103,27 @@ if ($venue_id) {
 
 $orderTotalPayment = $database->query($totalPaymentSql, $paymentParams)[0]['total_payment'] ?? '0.00';
 
-// 推广扣除：累计当前场地当天已结束订单的 promotion_amount
-$promotionDeductionSql = "SELECT COALESCE(SUM(promotion_amount), 0) AS promotion_deduction
-                          FROM orders
-                          WHERE end_time >= ? AND end_time <= ?
-                            AND pays_type != '能量'
-                            AND (note <> 'gift' OR note IS NULL)" .
-                         ($venue_id ? " AND reservation_id = ?" : "");
+// 今日推广扣除动态预估：
+// 当前场地被消费的真实驾驶订单，如果消费用户来自其他场地邀请码，则当前场地收益需扣除 payment_amount * 10%。
+// 不依赖 orders.promotion_amount 是否已落表，避免今日首页收益滞后。
+$promotionDeductionSql = "SELECT COALESCE(SUM(ROUND(o.payment_amount * 0.10, 2)), 0) AS promotion_deduction
+                          FROM orders o
+                          INNER JOIN users u
+                                  ON u.uid = o.uid
+                          INNER JOIN venues promotion_venue
+                                  ON promotion_venue.invite_code = u.invitation_code
+                          WHERE o.end_time >= ? AND o.end_time <= ?
+                            AND o.status = '已完成'
+                            AND o.pays_type != '能量'
+                            AND (o.note <> 'gift' OR o.note IS NULL)
+                            AND u.invitation_code IS NOT NULL
+                            AND u.invitation_code <> ''
+                            AND u.invitation_code <> '0000'" .
+                         ($venue_id ? " AND o.reservation_id = ? AND promotion_venue.id <> ?" : " AND o.reservation_id IS NOT NULL AND o.reservation_id > 0 AND promotion_venue.id <> o.reservation_id");
 
 $promotionDeductionParams = [$todayStart, $todayEnd];
 if ($venue_id) {
+    $promotionDeductionParams[] = $venue_id;
     $promotionDeductionParams[] = $venue_id;
 }
 
@@ -153,18 +165,31 @@ $giftPayment = number_format(((float)$venueGiftTotal / 10) * 0.6, 2, '.', '');
 
 
 // 扣除前收益 = 国内设备扣除前收益 + 礼物收益
-// 今日收益 = 国内设备扣除后收益 + 礼物收益，避免再次重复扣除 promotion_amount
+// 预估今日收益 = 国内设备扣除动态推广收益后 + 礼物收益
 // role_id=4 时，国内设备部分已先按 80% 计算
 $totalPaymentBeforeDeductionRaw = $devicePaymentBeforeDeductionRaw + (float)$giftPayment;
 $totalPaymentBeforeDeduction = number_format($totalPaymentBeforeDeductionRaw, 2, '.', '');
 $totalPayment = number_format($devicePaymentRaw + (float)$giftPayment, 2, '.', '');
 
-// 推广收益：按 invitation_venue_id 归属到当前登录场地。
-// 统计 recorded_at，表示今天实际生成的满 24 小时推广收益；不能按原订单 end_time 统计。
-$promotionIncomeSql = "SELECT COALESCE(SUM(promotion_amount), 0) AS promotion_income
-                       FROM promotion_order_statistics
-                       WHERE recorded_at >= ? AND recorded_at <= ?" .
-                      ($venue_id ? " AND invitation_venue_id = ?" : "");
+// 当天推广收益动态预估：
+// 当前场地邀请码推广来的历史用户，今天在其他场地完成真实驾驶消费，按 payment_amount * 10% 预估。
+$promotionIncomeSql = "SELECT COALESCE(SUM(ROUND(o.payment_amount * 0.10, 2)), 0) AS promotion_income
+                       FROM orders o
+                       INNER JOIN users u
+                               ON u.uid = o.uid
+                       INNER JOIN venues promotion_venue
+                               ON promotion_venue.invite_code = u.invitation_code
+                       WHERE o.end_time >= ? AND o.end_time <= ?
+                         AND o.status = '已完成'
+                         AND o.pays_type != '能量'
+                         AND (o.note <> 'gift' OR o.note IS NULL)
+                         AND u.invitation_code IS NOT NULL
+                         AND u.invitation_code <> ''
+                         AND u.invitation_code <> '0000'
+                         AND o.reservation_id IS NOT NULL
+                         AND o.reservation_id > 0
+                         AND promotion_venue.id <> o.reservation_id" .
+                      ($venue_id ? " AND promotion_venue.id = ?" : "");
 
 $promotionIncomeParams = [$todayStart, $todayEnd];
 if ($venue_id) {
