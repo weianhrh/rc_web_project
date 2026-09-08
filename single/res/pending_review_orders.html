@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>待复核订单</title>
+  <style>
+    :root {
+      --page-bg: #f5f7fb;
+      --card-bg: #fff;
+      --border: #d9dde5;
+      --border-light: #e8ebf0;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #2f7df6;
+      --warning: #d97706;
+      --warning-bg: #fff7ed;
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(47, 125, 246, 0.05), transparent 34%),
+        radial-gradient(circle at 80% 12%, rgba(148, 163, 184, 0.10), transparent 36%),
+        var(--page-bg);
+      color: var(--text);
+      padding: 14px 16px 36px;
+    }
+
+    .page {
+      width: min(1060px, 100%);
+      margin: 0 auto;
+    }
+
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+
+    .page-desc {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: #fff;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .card {
+      background: rgba(255,255,255,.97);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .count-text {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 360px) auto auto;
+      gap: 8px;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .search-input {
+      width: 100%;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 0 11px;
+      outline: none;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(47,125,246,.10);
+    }
+
+    .notice {
+      margin: 12px 18px 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(217,119,6,.22);
+      border-radius: 9px;
+      background: var(--warning-bg);
+      color: #92400e;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      padding-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 920px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 13px 18px;
+      text-align: left;
+      border-top: 1px solid var(--border-light);
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    th {
+      background: #fbfcfe;
+      color: #64748b;
+      font-weight: 800;
+    }
+
+    .order-id {
+      font-weight: 800;
+      color: #1f2937;
+      word-break: break-all;
+    }
+
+    .money {
+      color: var(--warning);
+      font-size: 15px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+      height: 24px;
+      padding: 0 9px;
+      border: 1px solid rgba(217,119,6,.22);
+      border-radius: 999px;
+      background: var(--warning-bg);
+      color: #b45309;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .remark {
+      color: #92400e;
+      line-height: 1.55;
+      min-width: 240px;
+    }
+
+    .empty {
+      display: none;
+      padding: 42px 18px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 12px 18px 16px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .page-info {
+      color: var(--muted);
+      font-size: 12px;
+      margin-right: 4px;
+    }
+
+    .pager .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 12px 10px 28px; }
+      .page-head { align-items: stretch; }
+      .page-title { font-size: 22px; }
+      .toolbar { grid-template-columns: 1fr auto auto; padding: 10px 12px; }
+      .notice { margin: 10px 12px 0; }
+      .card-head { padding: 13px 12px; }
+      .pager { padding: 10px 12px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">待复核订单</h1>
+        <div class="page-desc">展示当前场地仍处于待复核状态的订单。</div>
+      </div>
+      <button class="btn" type="button" onclick="goBack()">返回</button>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">订单列表</div>
+        <div class="count-text" id="count-text">共 0 笔</div>
+      </div>
+
+      <div class="toolbar">
+        <input id="order-id" class="search-input" type="text" placeholder="输入订单号查询" />
+        <button class="btn primary" type="button" onclick="searchList()">查询</button>
+        <button class="btn" type="button" onclick="resetSearch()">重置</button>
+      </div>
+
+      <div class="notice">备注：该订单存在支付纠纷，等待客服复核</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>订单号</th>
+              <th>待复核金额</th>
+              <th>状态</th>
+              <th>进入复核时间</th>
+              <th>最后更新时间</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty">暂无待复核订单</div>
+      </div>
+
+      <div class="pager">
+        <span class="page-info" id="page-info">第 1 / 1 页</span>
+        <button class="btn" id="prev-btn" type="button" onclick="changePage(-1)">上一页</button>
+        <button class="btn" id="next-btn" type="button" onclick="changePage(1)">下一页</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+  const API_URL = '../api/finance/orderLockRecords.php';
+  const FIXED_REMARK = '该订单存在支付纠纷，等待客服复核';
+  const pageSize = 20;
+  let currentPage = 1;
+  let totalCount = 0;
+  let totalPage = 1;
+
+  function qs(name) {
+    return new URLSearchParams(window.location.search).get(name) || '';
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function money(value) {
+    const num = Number(value || 0);
+    return Number.isFinite(num) ? num.toFixed(2) : '0.00';
+  }
+
+  function goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.href = 'PaymentDisbursement_optimized.html';
+  }
+
+  function buildUrl() {
+    const url = new URL(API_URL, window.location.href);
+    url.searchParams.set('action', 'list');
+    url.searchParams.set('status', '1');
+    url.searchParams.set('page', String(currentPage));
+    url.searchParams.set('limit', String(pageSize));
+
+    const venueId = qs('venue_id');
+    const orderId = document.getElementById('order-id').value.trim();
+    if (venueId) url.searchParams.set('venue_id', venueId);
+    if (orderId) url.searchParams.set('order_id', orderId);
+
+    return url.toString();
+  }
+
+  async function loadList() {
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">加载中...</td></tr>';
+    empty.style.display = 'none';
+
+    try {
+      const response = await fetch(buildUrl(), { credentials: 'include' });
+      const result = await response.json();
+
+      if (Number(result.code) !== 0) {
+        throw new Error(result.msg || '加载失败');
+      }
+
+      totalCount = Number(result.count || 0);
+      totalPage = Math.max(1, Math.ceil(totalCount / pageSize));
+      if (currentPage > totalPage) currentPage = totalPage;
+
+      const rows = Array.isArray(result.data) ? result.data : [];
+      renderRows(rows);
+      renderPager();
+    } catch (error) {
+      tbody.innerHTML = '';
+      empty.textContent = error.message || '加载失败';
+      empty.style.display = 'block';
+      totalCount = 0;
+      totalPage = 1;
+      renderPager();
+    }
+  }
+
+  function renderRows(rows) {
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty');
+
+    if (!rows.length) {
+      tbody.innerHTML = '';
+      empty.textContent = '暂无待复核订单';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = rows.map(item => `
+      <tr>
+        <td><span class="order-id">${escapeHtml(item.order_id || '-')}</span></td>
+        <td><span class="money">¥${escapeHtml(money(item.lock_amount))}</span></td>
+        <td><span class="status">待复核</span></td>
+        <td>${escapeHtml(item.create_at || '-')}</td>
+        <td>${escapeHtml(item.update_at || '-')}</td>
+        <td><div class="remark">${escapeHtml(FIXED_REMARK)}</div></td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPager() {
+    document.getElementById('count-text').textContent = `共 ${totalCount} 笔`;
+    document.getElementById('page-info').textContent = `第 ${currentPage} / ${totalPage} 页`;
+    document.getElementById('prev-btn').disabled = currentPage <= 1;
+    document.getElementById('next-btn').disabled = currentPage >= totalPage;
+  }
+
+  function changePage(step) {
+    const next = currentPage + step;
+    if (next < 1 || next > totalPage) return;
+    currentPage = next;
+    loadList();
+  }
+
+  function searchList() {
+    currentPage = 1;
+    loadList();
+  }
+
+  function resetSearch() {
+    document.getElementById('order-id').value = '';
+    currentPage = 1;
+    loadList();
+  }
+
+  document.getElementById('order-id').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') searchList();
+  });
+
+  window.addEventListener('DOMContentLoaded', loadList);
+</script>
+</body>
+</html>

@@ -206,6 +206,7 @@ try {
 
     $order_id = trim($_GET['order_id'] ?? '');
     $venue_id = (int)($_GET['venue_id'] ?? 0);
+    $status = isset($_GET['status']) && $_GET['status'] !== '' ? (int)$_GET['status'] : 0;
 
     $where = ['1=1'];
     $params = [];
@@ -213,6 +214,11 @@ try {
     if ($order_id !== '') {
         $where[] = 'olr.order_id LIKE ?';
         $params[] = '%' . $order_id . '%';
+    }
+
+    if ($status > 0) {
+        $where[] = 'olr.status = ?';
+        $params[] = $status;
     }
 
     if ($canViewAll) {

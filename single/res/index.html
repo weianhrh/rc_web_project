@@ -10,9 +10,17 @@
 
     <style>
         :root {
-            --primary: #5b8cff;
-            --secondary: #7f8fa4;
-            --shadow: 0 4px 24px rgba(91,140,255,0.08);
+            --primary: #1677ff;
+            --primary-strong: #0958d9;
+            --success: #15945f;
+            --warning: #b76b00;
+            --ink: #172033;
+            --secondary: #667085;
+            --muted: #98a2b3;
+            --surface: #ffffff;
+            --soft: #f7f9fc;
+            --line: #e4e9f2;
+            --shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
         }
 
         * {
@@ -23,87 +31,171 @@
         }
 
         body {
-            background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+            background: #f4f6fa;
             min-height: 100vh;
-            padding: 16px;
+            padding: 18px;
+            color: var(--ink);
         }
 
         /* 主卡片容器 */
         .dashboard-card {
-            background: #ffffff;
-            border-radius: 24px;
-            padding: 24px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 20px;
             box-shadow: var(--shadow);
+            max-width: 1280px;
+            margin: 0 auto;
         }
 
         /* 数据指标区 */
         .metrics-container {
             padding-bottom: 20px;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid var(--line);
         }
 
         .card-title {
             font-size: 16px;
-            color: #333;
-            margin-bottom: 24px;
+            color: var(--ink);
+            margin-bottom: 18px;
             font-weight: 600;
         }
 
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
         }
 
         .metric-item {
-            background: #f8f9ff;
-            border-radius: 12px;
-            padding: 16px;
+            position: relative;
+            min-height: 112px;
+            background: linear-gradient(180deg, #fff 0%, #f9fbff 100%);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px 14px 16px;
+            overflow: hidden;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+        }
+
+        .metric-item::after {
+            content: "";
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(22, 119, 255, .08);
+        }
+
+        .metric-item:hover {
+            transform: translateY(-2px);
+            border-color: #cfe0ff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+        }
+
+        .metric-item.main-metric {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #0f6fff 0%, #0b8f86 100%);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        .metric-item.main-metric::after {
+            width: 82px;
+            height: 82px;
+            right: -20px;
+            bottom: -22px;
+            background: rgba(255, 255, 255, .16);
+        }
+
+        .metric-item.main-metric .metric-label,
+        .metric-item.main-metric .metric-value {
+            color: #fff;
+        }
+
+        .metric-item.promo-metric {
+            cursor: pointer;
+            border-color: #bad7c5;
+            background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
+        }
+
+        .metric-item.promo-metric::after {
+            background: rgba(21, 148, 95, .1);
+        }
+
+        .metric-icon {
+            position: absolute;
+            right: 20px;
+            bottom: 18px;
+            z-index: 1;
+            color: rgba(22, 119, 255, .42);
+            font-size: 20px;
+        }
+
+        .main-metric .metric-icon {
+            color: rgba(255, 255, 255, .7);
+            font-size: 26px;
+        }
+
+        .promo-metric .metric-icon {
+            color: rgba(21, 148, 95, .48);
         }
 
         .metric-label {
             color: var(--secondary);
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 8px;
+            font-weight: 700;
+            line-height: 1.3;
         }
 
         .metric-value {
             color: var(--primary);
-            font-size: 24px;
-            font-weight: 700;
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.2;
         }
 
        /* 导航区 */
         .nav-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr); /* 每行 4 个 */
+          grid-template-columns: repeat(6, minmax(0, 1fr));
           gap: 12px;
-          padding-top: 24px;
+          padding-top: 20px;
         }
 
         .nav-card {
-            position: relative; /* ✅ 添加这一句 */
+            position: relative;
             background: #fff;
-            border-radius: 12px;
-            padding: 16px;
+            border-radius: 8px;
+            padding: 16px 10px;
             text-align: center;
-            transition: transform 0.2s ease;
-            border: 1px solid rgba(0,0,0,0.05);
+            transition: transform 0.16s ease, box-shadow .16s ease, border-color .16s ease;
+            border: 1px solid var(--line);
+            cursor: pointer;
+            min-height: 86px;
         }
 
         .nav-card:hover {
             transform: translateY(-2px);
+            border-color: #cfe0ff;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, .07);
         }
 
         .nav-icon {
-            font-size: 24px;
+            font-size: 22px;
             color: var(--primary);
             margin-bottom: 8px;
         }
 
         .nav-text {
-            color: #666;
-            font-size: 10px;
+            color: #344054;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.35;
         }
 
           #venue-status.green {
@@ -139,6 +231,26 @@
 
 /* ✅ 手机端：右侧“场地ID”换到下一行，避免挤在标题行 */
 @media (max-width: 1080px) {
+  body {
+    padding: 12px;
+  }
+
+  .dashboard-card {
+    padding: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-item.main-metric {
+    grid-column: span 2;
+  }
+
+  .nav-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .card-title {
     flex-wrap: wrap;              /* 允许换行 */
     row-gap: 6px;
@@ -586,6 +698,24 @@
   }
 }
 
+@media (max-width: 560px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-item.main-metric {
+    grid-column: span 1;
+  }
+
+  .metric-value {
+    font-size: 22px;
+  }
+
+  .nav-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
     </style>
 </head>
 <body>
@@ -622,34 +752,40 @@
 
 
 <div class="metrics-grid">
-    <div class="metric-item">
+    <div class="metric-item main-metric">
         <div class="metric-label">预估今日收益</div>
         <div class="metric-value" id="totalPayment">¥0.00</div>
+        <i class="fas fa-chart-line metric-icon"></i>
     </div>
 
 
     <div class="metric-item">
         <div class="metric-label">礼物收益</div>
         <div class="metric-value" id="giftPayment">¥0.00</div>
+        <i class="fas fa-gift metric-icon"></i>
     </div>
 
     <div class="metric-item">
         <div class="metric-label">国内设备收益</div>
         <div class="metric-value" id="devicePayment">¥0.00</div>
+        <i class="fas fa-car-side metric-icon"></i>
     </div>
     <div class="metric-item">
         <div class="metric-label">海外设备收益</div>
         <div class="metric-value" id="queue-length">¥0.00</div>
+        <i class="fas fa-globe-asia metric-icon"></i>
     </div>
 
-    <div class="metric-item" onclick="window.location.href='/res/Promotion_Reward.html'" style="cursor: pointer;">
+    <div class="metric-item promo-metric" onclick="window.location.href='/res/Promotion_Reward.html'">
         <div class="metric-label">预估推广收益</div>
         <div class="metric-value" id="promotionIncome">¥0.00</div>
+        <i class="fas fa-award metric-icon"></i>
     </div>
 
     <div class="metric-item">
         <div class="metric-label">订单数</div>
         <div class="metric-value" id="orderCount">0单</div>
+        <i class="fas fa-receipt metric-icon"></i>
     </div>
 </div>
         </div>

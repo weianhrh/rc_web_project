@@ -1,8 +1,18 @@
 <?php
-require_once '../Database.php';
+require_once __DIR__ . '/../Database.php';
 
 header('Content-Type: application/json; charset=utf-8');
 date_default_timezone_set('Asia/Shanghai');
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    echo json_encode([
+        'code' => 403,
+        'msg' => '该任务仅允许服务器计划任务执行',
+        'data' => [],
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
 
 function jsonOut($code, $msg, $data = []) {
     echo json_encode([
@@ -20,8 +30,10 @@ function isValidDateYmd($value) {
 $database = new Database();
 
 try {
-    $targetDate = isset($_GET['date']) && $_GET['date'] !== ''
-        ? trim($_GET['date'])
+    $promotionDeductionEffectiveDate = '2026-09-07';
+    $cliOptions = getopt('', ['date:']);
+    $targetDate = !empty($cliOptions['date'])
+        ? trim($cliOptions['date'])
         : date('Y-m-d', strtotime('-1 day'));
 
     $dateObject = DateTime::createFromFormat('!Y-m-d', $targetDate);
@@ -31,6 +43,7 @@ try {
 
     $startTime = $targetDate . ' 00:00:00';
     $endTime = $dateObject->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
+    $usePromotionDeduction = ($targetDate >= $promotionDeductionEffectiveDate);
 
     $venues = $database->query("SELECT id FROM venues");
     if ($venues === false) {
@@ -40,22 +53,55 @@ try {
     $inserted = 0;
     $updated = 0;
     $skippedChecked = 0;
+    $skippedLegacyMissing = 0;
     $failed = 0;
+    $totalRevenueBeforeDeduction = 0.0;
+    $totalPromotionDeduction = 0.0;
     $totalRevenue = 0.0;
     $details = [];
 
     foreach ($venues as $venue) {
         $venueId = (int)$venue['id'];
 
-        $totalPaymentSql = "
-            SELECT COALESCE(SUM(payment_amount), 0) AS total_payment
-            FROM orders
-            WHERE end_time >= ?
-              AND end_time < ?
-              AND reservation_id = ?
-              AND status = '已完成'
-              AND pays_type != '能量'
-        ";
+        if ($usePromotionDeduction) {
+            $totalPaymentSql = "
+                SELECT
+                    COALESCE(SUM(o.payment_amount), 0) AS revenue_before_deduction,
+                    COALESCE(SUM(
+                        CASE
+                            WHEN u.invitation_code IS NOT NULL
+                             AND u.invitation_code <> ''
+                             AND u.invitation_code <> '0000'
+                             AND promotion_venue.id IS NOT NULL
+                             AND promotion_venue.id <> o.reservation_id
+                            THEN ROUND(o.payment_amount * 0.10, 2)
+                            ELSE 0
+                        END
+                    ), 0) AS promotion_deduction
+                FROM orders o
+                LEFT JOIN users u
+                       ON u.uid = o.uid
+                LEFT JOIN venues promotion_venue
+                       ON promotion_venue.invite_code = u.invitation_code
+                WHERE o.end_time >= ?
+                  AND o.end_time < ?
+                  AND o.reservation_id = ?
+                  AND o.status = '已完成'
+                  AND o.pays_type != '能量'
+            ";
+        } else {
+            $totalPaymentSql = "
+                SELECT
+                    COALESCE(SUM(o.payment_amount), 0) AS revenue_before_deduction,
+                    0 AS promotion_deduction
+                FROM orders o
+                WHERE o.end_time >= ?
+                  AND o.end_time < ?
+                  AND o.reservation_id = ?
+                  AND o.status = '已完成'
+                  AND o.pays_type != '能量'
+            ";
+        }
         $totalPaymentResult = $database->query($totalPaymentSql, [$startTime, $endTime, $venueId]);
         if ($totalPaymentResult === false) {
             $failed++;
@@ -67,7 +113,16 @@ try {
             continue;
         }
 
-        $venueRevenue = number_format((float)($totalPaymentResult[0]['total_payment'] ?? 0), 2, '.', '');
+        $revenueBeforeDeduction = (float)($totalPaymentResult[0]['revenue_before_deduction'] ?? 0);
+        $promotionDeduction = (float)($totalPaymentResult[0]['promotion_deduction'] ?? 0);
+        $venueRevenueRaw = max(0, $revenueBeforeDeduction - $promotionDeduction);
+
+        $revenueBeforeDeductionFormatted = number_format($revenueBeforeDeduction, 2, '.', '');
+        $promotionDeductionFormatted = number_format($promotionDeduction, 2, '.', '');
+        $venueRevenue = number_format($venueRevenueRaw, 2, '.', '');
+
+        $totalRevenueBeforeDeduction += $revenueBeforeDeduction;
+        $totalPromotionDeduction += $promotionDeduction;
         $totalRevenue += (float)$venueRevenue;
 
         $checkExist = $database->query(
@@ -92,18 +147,31 @@ try {
                     'venue_id' => $venueId,
                     'daily_revenue_id' => $recordId,
                     'action' => 'skipped_checked',
+                    'revenue_before_deduction' => $revenueBeforeDeductionFormatted,
+                    'promotion_deduction' => $promotionDeductionFormatted,
                     'total_revenue' => $venueRevenue,
                 ];
                 continue;
             }
 
-            $updateSql = "
-                UPDATE DailyVenueRevenue
-                SET total_revenue = ?
-                WHERE id = ?
-                  AND is_checked = 0
-            ";
-            $result = $database->query($updateSql, [$venueRevenue, $recordId], true);
+            if ($usePromotionDeduction) {
+                $updateSql = "
+                    UPDATE DailyVenueRevenue
+                    SET revenue_before_deduction = ?,
+                        total_revenue = ?
+                    WHERE id = ?
+                      AND is_checked = 0
+                ";
+                $result = $database->query($updateSql, [$revenueBeforeDeductionFormatted, $venueRevenue, $recordId], true);
+            } else {
+                $updateSql = "
+                    UPDATE DailyVenueRevenue
+                    SET total_revenue = ?
+                    WHERE id = ?
+                      AND is_checked = 0
+                ";
+                $result = $database->query($updateSql, [$venueRevenue, $recordId], true);
+            }
             if ($result === false) {
                 $failed++;
                 $details[] = [
@@ -118,11 +186,26 @@ try {
             continue;
         }
 
-        $insertSql = "
-            INSERT INTO DailyVenueRevenue (venue_id, date, total_revenue)
-            VALUES (?, ?, ?)
-        ";
-        $result = $database->query($insertSql, [$venueId, $targetDate, $venueRevenue], true);
+        if (!$usePromotionDeduction) {
+            $skippedLegacyMissing++;
+            $details[] = [
+                'venue_id' => $venueId,
+                'action' => 'skipped_legacy_missing',
+                'reason' => '推广扣减生效日前的历史日期不补插缺失账单',
+                'revenue_before_deduction' => $revenueBeforeDeductionFormatted,
+                'promotion_deduction' => $promotionDeductionFormatted,
+                'total_revenue' => $venueRevenue,
+            ];
+            continue;
+        }
+
+        if ($usePromotionDeduction) {
+            $insertSql = "
+                INSERT INTO DailyVenueRevenue (venue_id, date, revenue_before_deduction, total_revenue)
+                VALUES (?, ?, ?, ?)
+            ";
+            $result = $database->query($insertSql, [$venueId, $targetDate, $revenueBeforeDeductionFormatted, $venueRevenue], true);
+        }
         if ($result === false) {
             $failed++;
             $details[] = [
@@ -139,11 +222,16 @@ try {
         'date' => $targetDate,
         'start_time' => $startTime,
         'end_time' => $endTime,
+        'promotion_deduction_effective_date' => $promotionDeductionEffectiveDate,
+        'use_promotion_deduction' => $usePromotionDeduction ? 1 : 0,
         'venue_count' => count($venues),
         'inserted' => $inserted,
         'updated' => $updated,
         'skipped_checked' => $skippedChecked,
+        'skipped_legacy_missing' => $skippedLegacyMissing,
         'failed' => $failed,
+        'revenue_before_deduction' => number_format($totalRevenueBeforeDeduction, 2, '.', ''),
+        'promotion_deduction' => number_format($totalPromotionDeduction, 2, '.', ''),
         'total_revenue' => number_format($totalRevenue, 2, '.', ''),
         'details' => $details,
     ]);

@@ -747,6 +747,70 @@ body {
     word-break: break-all;
   }
 }
+
+
+/* 驾驶订单累计金额：只显示金额，不累计时长 */
+.drive-amount-summary {
+  display: none;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #dbe7ff;
+  border-radius: 10px;
+  background: #f7faff;
+}
+
+.drive-amount-summary .summary-label {
+  color: #7b8aa0;
+  font-size: 13px;
+}
+
+.drive-amount-summary .summary-value {
+  color: #1f2d3d;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* 礼物订单累计：用户消费折算 + 场地礼物收益 */
+.gift-amount-summary {
+  display: none;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 24px;
+  margin: 12px 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #dbe7ff;
+  border-radius: 10px;
+  background: #f7faff;
+}
+
+.gift-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gift-amount-summary .summary-label {
+  color: #7b8aa0;
+  font-size: 13px;
+}
+
+.gift-amount-summary .summary-value {
+  color: #1f2d3d;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .gift-amount-summary {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 </style>
 </head>
 
@@ -783,6 +847,22 @@ body {
             <div class="form-item">
                 <label class="form-label">&nbsp;</label>
                 <button onclick="searchOrders()" class="form-button">查询</button>
+            </div>
+        </div>
+
+        <div class="drive-amount-summary" id="driveAmountSummary">
+            <span class="summary-label">当前条件累计支付金额</span>
+            <span class="summary-value" id="driveTotalPaymentAmount">¥ 0.00</span>
+        </div>
+
+        <div class="gift-amount-summary" id="giftAmountSummary">
+            <div class="gift-summary-item">
+                <span class="summary-label">用户消费折算累计</span>
+                <span class="summary-value" id="giftTotalConsumeAmount">¥ 0.00</span>
+            </div>
+            <div class="gift-summary-item">
+                <span class="summary-label">场地礼物收益累计</span>
+                <span class="summary-value" id="giftTotalVenueIncome">¥ 0.00</span>
             </div>
         </div>
 
@@ -855,6 +935,28 @@ function searchOrders(resetPage = true) {
     };
     document.getElementById('pageTitle').textContent = titleMap[orderType] || '订单记录查询';
 
+    const driveAmountSummary = document.getElementById('driveAmountSummary');
+    const driveTotalPaymentAmount = document.getElementById('driveTotalPaymentAmount');
+    // 驾驶订单默认无筛选条件时不显示累计；只有 UID / 场地 / 订单号至少一个条件存在才显示。
+    const hasDriveSummaryFilter = Boolean(uid || orderNumber || venueId);
+    if (driveAmountSummary && driveTotalPaymentAmount) {
+        driveAmountSummary.style.display = orderType === 'drive' && hasDriveSummaryFilter ? 'flex' : 'none';
+        if (orderType === 'drive' && hasDriveSummaryFilter) {
+            driveTotalPaymentAmount.textContent = '计算中...';
+        }
+    }
+
+    const giftAmountSummary = document.getElementById('giftAmountSummary');
+    const giftTotalConsumeAmount = document.getElementById('giftTotalConsumeAmount');
+    const giftTotalVenueIncome = document.getElementById('giftTotalVenueIncome');
+    if (giftAmountSummary && giftTotalConsumeAmount && giftTotalVenueIncome) {
+        giftAmountSummary.style.display = orderType === 'gift' ? 'flex' : 'none';
+        if (orderType === 'gift') {
+            giftTotalConsumeAmount.textContent = '计算中...';
+            giftTotalVenueIncome.textContent = '计算中...';
+        }
+    }
+
     fetch(url, {
         credentials: 'include',
         signal: orderAbortController.signal
@@ -872,6 +974,33 @@ function searchOrders(resetPage = true) {
         .then(data => {
             if (data.code === 0) {
                 currentRoleId = Number(data.role_id || 0);
+
+                if (driveAmountSummary && driveTotalPaymentAmount) {
+                    const shouldShowDriveSummary = orderType === 'drive'
+                        && hasDriveSummaryFilter
+                        && data.show_payment_summary === true;
+
+                    if (shouldShowDriveSummary) {
+                        const totalPaymentAmount = Number(data.total_payment_amount || 0);
+                        driveAmountSummary.style.display = 'flex';
+                        driveTotalPaymentAmount.textContent = `¥ ${Number.isFinite(totalPaymentAmount) ? totalPaymentAmount.toFixed(2) : '0.00'}`;
+                    } else {
+                        driveAmountSummary.style.display = 'none';
+                    }
+                }
+
+                if (giftAmountSummary && giftTotalConsumeAmount && giftTotalVenueIncome) {
+                    if (orderType === 'gift') {
+                        const totalGiftConsumeAmount = Number(data.total_gift_consume_amount || 0);
+                        const totalVenueGiftIncome = Number(data.total_venue_gift_income || 0);
+                        giftAmountSummary.style.display = 'flex';
+                        giftTotalConsumeAmount.textContent = `¥ ${Number.isFinite(totalGiftConsumeAmount) ? totalGiftConsumeAmount.toFixed(2) : '0.00'}`;
+                        giftTotalVenueIncome.textContent = `¥ ${Number.isFinite(totalVenueGiftIncome) ? totalVenueGiftIncome.toFixed(2) : '0.00'}`;
+                    } else {
+                        giftAmountSummary.style.display = 'none';
+                    }
+                }
+
                 const list = Array.isArray(data.data) ? data.data : [];
 
                 totalOrders = list.sort((a, b) => {

@@ -692,7 +692,7 @@
         <div class="amount-item"><div class="amount-icon">❄</div><div class="amount-content"><div class="amount-label">可提现:</div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">↔</div><div class="amount-content"><div class="amount-label">冻结中:<button type="button" class="frozen-detail-btn" onclick="goFrozenFundsDetail(event)">详情</button></div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">◷</div><div class="amount-content"><div class="amount-label">锁定订单:</div><div class="amount-value">--</div></div></div>
-        <div class="amount-item"><div class="amount-icon">?</div><div class="amount-content"><div class="amount-label">待复核订单:</div><div class="amount-value">--</div></div></div>
+        <div class="amount-item"><div class="amount-icon">?</div><div class="amount-content"><div class="amount-label">待复核订单:<button type="button" class="frozen-detail-btn" onclick="goPendingReviewDetail(event)">详情</button></div><div class="amount-value">--</div></div></div>
         <div class="amount-item"><div class="amount-icon">▤</div><div class="amount-content"><div class="amount-label">未核对金额:</div><div class="amount-value">--</div></div></div>
       </div>
       <input type="hidden" id="available-balance" value="0">
@@ -846,6 +846,19 @@ function getTotalDebitAmount(record) {
       window.location.href = 'venue_frozen_funds.html';
     }
 
+    function goPendingReviewDetail(event, venueId) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      const url = new URL('pending_review_orders.html', window.location.href);
+      const id = parseInt(venueId, 10);
+      if (id > 0) {
+        url.searchParams.set('venue_id', String(id));
+      }
+      window.location.href = url.toString();
+    }
+
     function renderAccountInfo(data) {
       const accountInfo = document.getElementById('account-info');
       accountInfo.innerHTML = `
@@ -866,6 +879,7 @@ function getTotalDebitAmount(record) {
         ? `<button type="button" class="check-money-btn" onclick="location.href='moeny.html'">去核对</button>`
         : '';
       const frozenDetailBtn = `<button type="button" class="frozen-detail-btn" onclick="goFrozenFundsDetail(event)">详情</button>`;
+      const pendingReviewBtn = `<button type="button" class="frozen-detail-btn" onclick="goPendingReviewDetail(event, ${parseInt(data.venue_id, 10) || 0})">详情</button>`;
 
 const feeHelp = `
   <button
@@ -897,7 +911,7 @@ const feeHelp = `
 </div>
 <div class="amount-item is-warning">
   <div class="amount-icon">?</div>
-  <div class="amount-content"><div class="amount-label">待复核订单:</div><div class="amount-value">${esc(data.lock_amount || 0)} <small>电池</small></div></div>
+  <div class="amount-content"><div class="amount-label">待复核订单:${pendingReviewBtn}</div><div class="amount-value">${esc(data.lock_amount || 0)} <small>电池</small></div></div>
 </div>
 <div class="amount-item is-warning">
   <div class="amount-icon">▤</div>

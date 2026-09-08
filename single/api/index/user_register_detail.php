@@ -155,6 +155,7 @@ $inviteDetailTotal = 0;
 $inviteDetailSelfTotal = 0;
 $inviteDetailAmountTotal = '0.00';
 $inviteDetailOtherVenueAmountTotal = '0.00';
+$inviteDetailEstimatedRewardTotal = '0.00';
 $detailStartAt = '';
 $detailEndAt = '';
 $detailTitle = '';
@@ -169,6 +170,83 @@ if ($hasDetailRange) {
 }
 $hasDetail = $detailStartAt !== '' && $detailEndAt !== '';
 if ($hasDetail) {
+  $todayDate = date('Y-m-d');
+  $yesterdayDate = date('Y-m-d', strtotime('-1 day'));
+  $detailStartDate = substr($detailStartAt, 0, 10);
+  $detailEndDate = date('Y-m-d', strtotime($detailEndAt . ' -1 second'));
+
+  $loggedRewardStartDate = $detailStartDate;
+  $loggedRewardEndDate = $detailEndDate < $yesterdayDate ? $detailEndDate : $yesterdayDate;
+  if ($loggedRewardStartDate <= $loggedRewardEndDate) {
+    $loggedRewardJoinSql = "
+      LEFT JOIN (
+        SELECT
+          vpr.invite_code,
+          ROUND(COALESCE(SUM(vpr.reward_amount), 0), 2) AS reward_amount
+        FROM venue_promotion_reward_logs vpr
+        INNER JOIN users reward_user
+                ON reward_user.uid = vpr.invitee_uid
+        WHERE vpr.reward_date >= '{$loggedRewardStartDate}'
+          AND vpr.reward_date <= '{$loggedRewardEndDate}'
+          AND vpr.reward_status IN ('pending', 'settled', 'frozen')
+          AND reward_user.created_at >= '{$detailStartAt}'
+          AND reward_user.created_at < '{$detailEndAt}'
+        GROUP BY vpr.invite_code
+      ) logged_reward
+        ON logged_reward.invite_code = users.invitation_code
+    ";
+  } else {
+    $loggedRewardJoinSql = "
+      LEFT JOIN (
+        SELECT '' AS invite_code, 0 AS reward_amount
+        WHERE 1 = 0
+      ) logged_reward
+        ON logged_reward.invite_code = users.invitation_code
+    ";
+  }
+
+  $todayStartAt = $todayDate . ' 00:00:00';
+  $tomorrowStartAt = date('Y-m-d 00:00:00', strtotime('+1 day'));
+  $dynamicStartAt = $detailStartAt > $todayStartAt ? $detailStartAt : $todayStartAt;
+  $dynamicEndAt = $detailEndAt < $tomorrowStartAt ? $detailEndAt : $tomorrowStartAt;
+  if ($dynamicStartAt < $dynamicEndAt) {
+    $dynamicRewardJoinSql = "
+      LEFT JOIN (
+        SELECT
+          dynamic_user.invitation_code,
+          ROUND(COALESCE(SUM(ROUND(o.payment_amount * 0.10, 2)), 0), 2) AS reward_amount
+        FROM orders o
+        INNER JOIN users dynamic_user
+                ON dynamic_user.uid = o.uid
+        INNER JOIN venues promotion_venue
+                ON promotion_venue.invite_code = dynamic_user.invitation_code
+        WHERE o.end_time >= '{$dynamicStartAt}'
+          AND o.end_time < '{$dynamicEndAt}'
+          AND o.status = '已完成'
+          AND o.pays_type != '能量'
+          AND (o.note <> 'gift' OR o.note IS NULL)
+          AND dynamic_user.created_at >= '{$detailStartAt}'
+          AND dynamic_user.created_at < '{$detailEndAt}'
+          AND dynamic_user.invitation_code IS NOT NULL
+          AND dynamic_user.invitation_code <> ''
+          AND dynamic_user.invitation_code <> '0000'
+          AND o.reservation_id IS NOT NULL
+          AND o.reservation_id > 0
+          AND promotion_venue.id <> o.reservation_id
+        GROUP BY dynamic_user.invitation_code
+      ) dynamic_reward
+        ON dynamic_reward.invitation_code = users.invitation_code
+    ";
+  } else {
+    $dynamicRewardJoinSql = "
+      LEFT JOIN (
+        SELECT '' AS invitation_code, 0 AS reward_amount
+        WHERE 1 = 0
+      ) dynamic_reward
+        ON dynamic_reward.invitation_code = users.invitation_code
+    ";
+  }
+
   $detailSql = "
     SELECT
       users.invitation_code,
@@ -188,6 +266,11 @@ if ($hasDetail) {
         WHEN COALESCE(v.id, v2.id, 0) > 0
          AND od.reservation_id <> COALESCE(v.id, v2.id, 0)
         THEN od.order_count ELSE 0 END), 0) AS other_venue_orders,
+      CAST(ROUND(
+        COALESCE(MAX(logged_reward.reward_amount), 0)
+        + COALESCE(MAX(dynamic_reward.reward_amount), 0),
+        2
+      ) AS CHAR) AS estimated_reward_amount,
       COALESCE(v.venue_name, v2.venue_name, '') AS venue_name,
       COALESCE(v.id, v2.id, 0) AS venue_id,
       uic.uid AS inviter_uid,
@@ -208,6 +291,8 @@ if ($hasDetail) {
       GROUP BY o.uid, o.reservation_id
     ) od
       ON od.uid = users.uid
+    {$loggedRewardJoinSql}
+    {$dynamicRewardJoinSql}
     LEFT JOIN venue_invite_codes vic
       ON vic.invite_code = users.invitation_code AND vic.is_enabled = 1
     LEFT JOIN venues v
@@ -230,11 +315,13 @@ if ($hasDetail) {
     $detailRow['invited_day_amount'] = number_format((float)($detailRow['invited_day_amount'] ?? 0), 2, '.', '');
     $detailRow['promotion_venue_amount'] = number_format((float)($detailRow['promotion_venue_amount'] ?? 0), 2, '.', '');
     $detailRow['other_venue_amount'] = number_format((float)($detailRow['other_venue_amount'] ?? 0), 2, '.', '');
+    $detailRow['estimated_reward_amount'] = number_format((float)($detailRow['estimated_reward_amount'] ?? 0), 2, '.', '');
     $totalAmount = (float)$detailRow['invited_day_amount'];
     $otherAmount = (float)$detailRow['other_venue_amount'];
     $detailRow['other_venue_rate'] = $totalAmount > 0 ? number_format(($otherAmount / $totalAmount) * 100, 1, '.', '') : '0.0';
     $inviteDetailAmountTotal = number_format((float)$inviteDetailAmountTotal + (float)$detailRow['invited_day_amount'], 2, '.', '');
     $inviteDetailOtherVenueAmountTotal = number_format((float)$inviteDetailOtherVenueAmountTotal + $otherAmount, 2, '.', '');
+    $inviteDetailEstimatedRewardTotal = number_format((float)$inviteDetailEstimatedRewardTotal + (float)$detailRow['estimated_reward_amount'], 2, '.', '');
   }
   unset($detailRow);
 
@@ -541,7 +628,7 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
         <div class="hd-left">
           <span class="layui-badge-dot" style="background:#8b5cf6"></span>
           <span><?= htmlspecialchars($detailTitle) ?> 邀请码注册明细</span>
-          <span class="hd-sub">推广 <?= $inviteDetailTotal ?> 人 / 自行 <?= $inviteDetailSelfTotal ?> 人 / 推广用户周期消费 ¥<?= htmlspecialchars($inviteDetailAmountTotal) ?> / 非推广场地消费 ¥<?= htmlspecialchars($inviteDetailOtherVenueAmountTotal) ?></span>
+          <span class="hd-sub">推广 <?= $inviteDetailTotal ?> 人 / 自行 <?= $inviteDetailSelfTotal ?> 人 / 推广用户周期消费 ¥<?= htmlspecialchars($inviteDetailAmountTotal) ?> / 非推广场地消费 ¥<?= htmlspecialchars($inviteDetailOtherVenueAmountTotal) ?> / 预估推广收益 ¥<?= htmlspecialchars($inviteDetailEstimatedRewardTotal) ?></span>
         </div>
         <button class="layui-btn layui-btn-primary layui-btn-sm" onclick="clearInviteDetail()">关闭明细</button>
       </div>
@@ -563,6 +650,7 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
                 <th>本推广场地消费</th>
                 <th>非推广场地消费</th>
                 <th>外流占比</th>
+                <th>预估推广收益</th>
                 <th>邀请码归属UID</th>
                 <th>归属昵称</th>
               </tr>
@@ -581,6 +669,7 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
                   <td>¥<?= htmlspecialchars((string)($item['promotion_venue_amount'] ?? '0.00')) ?></td>
                   <td class="num">¥<?= htmlspecialchars((string)($item['other_venue_amount'] ?? '0.00')) ?> / <?= (int)($item['other_venue_orders'] ?? 0) ?> 单</td>
                   <td><?= htmlspecialchars((string)($item['other_venue_rate'] ?? '0.0')) ?>%</td>
+                  <td class="num">¥<?= htmlspecialchars((string)($item['estimated_reward_amount'] ?? '0.00')) ?></td>
                   <td><?= $item['inviter_uid'] ? (int)$item['inviter_uid'] : '-' ?></td>
                   <td><?= htmlspecialchars((string)($item['inviter_nickname'] ?: '-')) ?></td>
                 </tr>

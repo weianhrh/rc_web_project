@@ -101,7 +101,35 @@ try {
 
     $rows = $db->query($sql, $params) ?: [];
 
-    // 4) 计数
+    // 4) 汇总：统计当前筛选条件下所有已退款订单的总驾驶时长和退款总金额。
+    // 驾驶时长按 orders.order_id 对应订单的 end_time - start_time 计算，不受分页影响。
+    $summarySql = "
+        SELECT
+            COALESCE(SUM(
+                CASE
+                    WHEN o.start_time IS NOT NULL
+                     AND o.end_time IS NOT NULL
+                     AND o.end_time >= o.start_time
+                    THEN TIMESTAMPDIFF(SECOND, o.start_time, o.end_time)
+                    ELSE 0
+                END
+            ), 0) AS total_driving_duration_seconds,
+            COALESCE(SUM(rr.refund_amount), 0) AS total_refund_amount
+        FROM refund_records rr
+        LEFT JOIN orders o ON o.order_id = rr.order_id
+        {$where}
+    ";
+    $summaryRes = $db->query($summarySql, $params) ?: [];
+    $summary = [
+        'total_driving_duration_seconds' => isset($summaryRes[0]['total_driving_duration_seconds'])
+            ? (int)$summaryRes[0]['total_driving_duration_seconds']
+            : 0,
+        'total_refund_amount' => isset($summaryRes[0]['total_refund_amount'])
+            ? (float)$summaryRes[0]['total_refund_amount']
+            : 0.0,
+    ];
+
+    // 5) 计数
     $countSql = "
         SELECT COUNT(*) AS cnt
         FROM refund_records rr
@@ -115,6 +143,7 @@ try {
         'msg'   => '',
         'count' => $total,
         'data'  => $rows,
+        'summary' => $summary,
         'page'  => $page,
         'page_size' => $pageSize,
         'visible_from' => $isDateLimitedUser ? $visibleFrom : ''

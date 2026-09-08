@@ -16,6 +16,14 @@
         "icon": "fas fa-qrcode"
     },
     {
+        "id": "PromotionRewardSettlementAdmin",
+        "label": "推广收益结算",
+        "title": "推广收益结算",
+        "href": "Promotion_Reward_Settlement_Admin.html",
+        "page": "Promotion_Reward_Settlement_Admin.html",
+        "icon": "fas fa-file-invoice-dollar"
+    },
+    {
         "id": "xls",
         "label": "订单申诉",
         "title": "订单申诉",
@@ -57,8 +65,8 @@
         "id": "OrderSelect",
         "title": "订单查询",
         "icon": "fas fa-search",
-        "page": "views\/venues\/AdminDrivingOrders",
-        "href": "views\/venues\/AdminDrivingOrders.html"
+        "page": "views/venues/AdminDrivingOrders",
+        "href": "views/venues/AdminDrivingOrders.html"
     },
     {
         "id": "VenuesManagement",

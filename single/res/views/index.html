@@ -10,6 +10,24 @@
   </div>
 
   <div class="layui-fluid">
+<div class="platform-promotion-preview" id="platformPromotionPreview">
+  <div class="promotion-metric primary">
+    <div class="promotion-metric__label">今日推广收益预估</div>
+    <div class="promotion-metric__value" id="todayPromotionReward">¥0.00</div>
+  </div>
+  <div class="promotion-metric">
+    <div class="promotion-metric__label">推广关联订单</div>
+    <div class="promotion-metric__value" id="todayPromotionOrders">0单</div>
+  </div>
+  <div class="promotion-metric">
+    <div class="promotion-metric__label">推广用户消费人数</div>
+    <div class="promotion-metric__value" id="todayPromotionInvitees">0人</div>
+  </div>
+  <div class="promotion-metric">
+    <div class="promotion-metric__label">涉及推广场地</div>
+    <div class="promotion-metric__value" id="todayPromotionVenues">0个</div>
+  </div>
+</div>
 <div class="layui-row layui-col-space15 nd-top-row">
 
 
@@ -97,16 +115,81 @@
     }
     /* ===== 全局质感：背景 + 字体层级 ===== */
 body{
-  background: radial-gradient(1200px 800px at 10% 0%, #f3f7ff 0%, #f7f8fc 45%, #f5f6fb 100%);
+  background: #f4f6fa;
 }
 
 :root{
   --nd-card:#fff;
   --nd-text:#0f172a;
   --nd-muted:#64748b;
-  --nd-border:rgba(15,23,42,.08);
-  --nd-shadow: 0 10px 30px rgba(15, 23, 42, .06);
-  --nd-radius: 16px;
+  --nd-border:#e4e9f2;
+  --nd-border-soft:#eef2f7;
+  --nd-shadow: 0 12px 30px rgba(15, 23, 42, .07);
+  --nd-radius: 8px;
+  --nd-primary:#1677ff;
+}
+
+.layadmin-header{
+  display: none;
+}
+
+.layui-fluid{
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.platform-promotion-preview{
+  display:none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:12px;
+  margin-bottom:15px;
+}
+.platform-promotion-preview.show{ display:grid; }
+.promotion-metric{
+  position:relative;
+  min-height:92px;
+  padding:14px;
+  overflow:hidden;
+  background:#fff;
+  border:1px solid var(--nd-border);
+  border-radius:var(--nd-radius);
+  box-shadow:var(--nd-shadow);
+}
+.promotion-metric.primary{
+  color:#fff;
+  background:linear-gradient(135deg, #0f6fff 0%, #0b8f86 100%);
+  border-color:transparent;
+}
+.promotion-metric:after{
+  content:"";
+  position:absolute;
+  right:-18px;
+  bottom:-24px;
+  width:76px;
+  height:76px;
+  border-radius:50%;
+  background:rgba(22,119,255,.08);
+}
+.promotion-metric.primary:after{ background:rgba(255,255,255,.16); }
+.promotion-metric__label{
+  margin-bottom:8px;
+  color:var(--nd-muted);
+  font-size:12px;
+  font-weight:700;
+}
+.promotion-metric.primary .promotion-metric__label{ color:rgba(255,255,255,.78); }
+.promotion-metric__value{
+  position:relative;
+  z-index:1;
+  color:var(--nd-text);
+  font-size:24px;
+  font-weight:850;
+  line-height:1.2;
+}
+.promotion-metric.primary .promotion-metric__value{
+  color:#fff;
+  font-size:27px;
 }
 
 /* 卡片整体更“产品化” */
@@ -119,9 +202,9 @@ body{
 
 /* 头部别像“后台标题条”，改成更轻的 */
 .layui-card-header{
-  font-weight: 600;
+  font-weight: 800;
   color: var(--nd-text);
-  background: linear-gradient(180deg, rgba(91,140,255,.10) 0%, rgba(91,140,255,0) 70%);
+  background: #f8fafd;
   border-bottom: 1px solid var(--nd-border);
 }
 
@@ -429,6 +512,7 @@ body{
     border-radius: 999px;
     font-size: 12px;
   }
+  .platform-promotion-preview{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 /* ===== 轮播外观 ===== */
 #ndCarousel{
@@ -450,6 +534,10 @@ body{
 @media (max-width: 1080px){
   #ndCarousel{ height: 200px; }
   #ndCarousel img{ height: 200px; }
+}
+@media (max-width: 560px){
+  .layui-fluid{ padding:12px; }
+  .platform-promotion-preview{ grid-template-columns: 1fr; }
 }
 
 /* ========= PC/大屏：两张卡同高，右侧日志内部滚动 ========= */
@@ -780,6 +868,26 @@ $('#logs-container').html(logsHtml || '<div class="layui-text">暂无更新日�
         },
         error: function() {
           layer.msg('数据请求失败，请检查API和网络状态');
+        }
+      });
+
+      $.ajax({
+        url: './api/index/TodayPromotionPreview.php?_=' + Date.now(),
+        type: 'GET',
+        dataType: 'json',
+        success: function(res) {
+          if (res && res.code === 0 && res.data) {
+            $('#todayPromotionReward').text('¥' + Number(res.data.reward_amount || 0).toFixed(2));
+            $('#todayPromotionOrders').text(Number(res.data.order_count || 0) + '单');
+            $('#todayPromotionInvitees').text(Number(res.data.invitee_count || 0) + '人');
+            $('#todayPromotionVenues').text(Number(res.data.promotion_venue_count || 0) + '个');
+            $('#platformPromotionPreview').addClass('show');
+          } else {
+            $('#platformPromotionPreview').removeClass('show');
+          }
+        },
+        error: function() {
+          $('#platformPromotionPreview').removeClass('show');
         }
       });
 

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>推广收益结算管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --primary: #4f7cff;
+      --success: #1f9d66;
+      --warning: #b76b00;
+      --danger: #d9363e;
+      --bg: #f5f7fb;
+      --card: #fff;
+      --border: #e5e7eb;
+      --text: #1f2937;
+      --muted: #6b7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; }
+    .page { max-width: 1360px; margin: 0 auto; }
+    .title { font-size: 24px; font-weight: 700; margin-bottom: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 18px rgba(15, 23, 42, .05); }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    h3 { font-size: 18px; font-weight: 700; }
+    .toolbar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+    .form-item { width: 170px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; outline: none; background: #fff; font-size: 14px; }
+    input, select { height: 38px; padding: 0 10px; }
+    textarea { min-height: 72px; padding: 10px; resize: vertical; }
+    button { height: 38px; border: none; border-radius: 8px; padding: 0 14px; cursor: pointer; color: #fff; background: var(--primary); font-size: 14px; }
+    button:hover { opacity: .9; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-secondary { background: #6b7280; }
+    .btn-danger { background: var(--danger); }
+    .btn-warning { background: var(--warning); }
+    .btn-light { color: var(--primary); background: #eef3ff; border: 1px solid #d9e3ff; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+    .metric { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: #fbfcff; }
+    .metric .k { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .metric .v { font-size: 22px; font-weight: 800; }
+    .metric.primary .v { color: var(--primary); }
+    .metric.success .v { color: var(--success); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1080px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px 8px; text-align: left; white-space: nowrap; font-size: 14px; }
+    th { background: #f8f9fc; color: #4b5563; font-weight: 700; }
+    tbody tr:hover { background: #fbfcff; }
+    .amount { color: var(--success); font-weight: 800; }
+    .danger-text { color: var(--danger); }
+    .muted { color: var(--muted); }
+    .state { padding: 22px 0; text-align: center; color: var(--muted); }
+    .msg { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px; line-height: 1.6; font-size: 14px; }
+    .msg.ok { display: block; color: #126b45; background: #e9f8f1; border: 1px solid #b9ebd3; }
+    .msg.err { display: block; color: #b42318; background: #fff1f0; border: 1px solid #ffc9c4; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: #eef3ff; color: #3157c8; }
+    .badge.pending { background: #fff7e6; color: #ad6800; }
+    .badge.settled { background: #e9f8f1; color: #137a4b; }
+    .badge.frozen { background: #eef2f7; color: #4b5563; }
+    .badge.cancelled { background: #fff1f0; color: #c62828; }
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .detail-panel { display: none; }
+    .detail-panel.show { display: block; }
+    .detail-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .remark-box { margin-top: 12px; display: grid; grid-template-columns: minmax(260px, 1fr) auto auto auto; gap: 10px; align-items: end; }
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      .summary { grid-template-columns: 1fr; }
+      .toolbar, .card-head, .detail-title { align-items: flex-start; flex-direction: column; }
+      .form-item { width: 100%; }
+      .remark-box { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="title">推广收益结算管理</div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>按场地汇总待结算</h3>
+        <div class="action-row">
+          <button type="button" id="refreshAllBtn" class="btn-light">刷新</button>
+          <button type="button" id="createSettlementBtn">批量生成结算</button>
+        </div>
+      </div>
+      <div class="toolbar">
+        <div class="form-item">
+          <label for="startDate">开始日期</label>
+          <input id="startDate" type="date">
+        </div>
+        <div class="form-item">
+          <label for="endDate">结束日期</label>
+          <input id="endDate" type="date">
+        </div>
+        <div class="form-item">
+          <label for="venueId">场地ID</label>
+          <input id="venueId" type="number" placeholder="全部">
+        </div>
+        <button type="button" id="querySummaryBtn">查询待结算</button>
+      </div>
+      <div class="summary">
+        <div class="metric primary">
+          <div class="k">待结算场地</div>
+          <div class="v" id="pendingVenueCount">0</div>
+        </div>
+        <div class="metric">
+          <div class="k">待结算订单</div>
+          <div class="v" id="pendingOrderCount">0</div>
+        </div>
+        <div class="metric">
+          <div class="k">订单金额</div>
+          <div class="v" id="pendingOrderAmount">0.00</div>
+        </div>
+        <div class="metric success">
+          <div class="k">推广收益</div>
+          <div class="v" id="pendingRewardAmount">0.00</div>
+        </div>
+      </div>
+      <div id="msg" class="msg"></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllVenues"></th>
+              <th>推广场地</th>
+              <th>账期范围</th>
+              <th>订单数</th>
+              <th>被邀请用户</th>
+              <th>订单金额</th>
+              <th>推广收益</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTbody"></tbody>
+        </table>
+      </div>
+      <div id="summaryState" class="state">加载中...</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>结算批次列表</h3>
+        <button type="button" id="queryBatchesBtn" class="btn-light">刷新批次</button>
+      </div>
+      <div class="toolbar">
+        <div class="form-item">
+          <label for="batchStatus">批次状态</label>
+          <select id="batchStatus">
+            <option value="">全部</option>
+            <option value="settled">已结算</option>
+            <option value="cancelled">已撤销</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>批次号</th>
+              <th>推广场地</th>
+              <th>账期范围</th>
+              <th>订单数</th>
+              <th>订单金额</th>
+              <th>推广收益</th>
+              <th>状态</th>
+              <th>结算时间</th>
+              <th>操作人</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="batchTbody"></tbody>
+        </table>
+      </div>
+      <div id="batchState" class="state">加载中...</div>
+    </div>
+
+    <div class="card detail-panel" id="detailPanel">
+      <div class="detail-title">
+        <h3 id="detailTitle">明细</h3>
+        <button type="button" id="closeDetailBtn" class="btn-secondary">关闭明细</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllLogs"></th>
+              <th>账期</th>
+              <th>推广场地</th>
+              <th>消费场地</th>
+              <th>被邀请人</th>
+              <th>邀请码</th>
+              <th>订单金额</th>
+              <th>推广收益</th>
+              <th>状态</th>
+              <th>订单号</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody id="detailTbody"></tbody>
+        </table>
+      </div>
+      <div class="remark-box">
+        <div>
+          <label for="exceptionRemark">异常处理原因</label>
+          <textarea id="exceptionRemark" placeholder="冻结或撤销时必须填写原因"></textarea>
+        </div>
+        <button type="button" id="freezeLogsBtn" class="btn-warning">冻结选中</button>
+        <button type="button" id="cancelLogsBtn" class="btn-danger">撤销选中</button>
+        <button type="button" id="restoreLogsBtn" class="btn-secondary">恢复待结算</button>
+      </div>
+      <div id="detailState" class="state">请选择汇总或批次查看明细</div>
+    </div>
+  </div>
+
+<script>
+const API = '/api/promotion/PromotionRewardSettlementAdmin.php';
+const els = {
+  startDate: document.getElementById('startDate'),
+  endDate: document.getElementById('endDate'),
+  venueId: document.getElementById('venueId'),
+  batchStatus: document.getElementById('batchStatus'),
+  querySummaryBtn: document.getElementById('querySummaryBtn'),
+  queryBatchesBtn: document.getElementById('queryBatchesBtn'),
+  refreshAllBtn: document.getElementById('refreshAllBtn'),
+  createSettlementBtn: document.getElementById('createSettlementBtn'),
+  selectAllVenues: document.getElementById('selectAllVenues'),
+  selectAllLogs: document.getElementById('selectAllLogs'),
+  pendingVenueCount: document.getElementById('pendingVenueCount'),
+  pendingOrderCount: document.getElementById('pendingOrderCount'),
+  pendingOrderAmount: document.getElementById('pendingOrderAmount'),
+  pendingRewardAmount: document.getElementById('pendingRewardAmount'),
+  summaryTbody: document.getElementById('summaryTbody'),
+  batchTbody: document.getElementById('batchTbody'),
+  detailPanel: document.getElementById('detailPanel'),
+  detailTitle: document.getElementById('detailTitle'),
+  detailTbody: document.getElementById('detailTbody'),
+  summaryState: document.getElementById('summaryState'),
+  batchState: document.getElementById('batchState'),
+  detailState: document.getElementById('detailState'),
+  closeDetailBtn: document.getElementById('closeDetailBtn'),
+  freezeLogsBtn: document.getElementById('freezeLogsBtn'),
+  cancelLogsBtn: document.getElementById('cancelLogsBtn'),
+  restoreLogsBtn: document.getElementById('restoreLogsBtn'),
+  exceptionRemark: document.getElementById('exceptionRemark'),
+  msg: document.getElementById('msg')
+};
+
+let currentDetailMode = '';
+let currentDetailArgs = null;
+
+function pad(n){ return String(n).padStart(2, '0'); }
+function ymd(d){ const x = new Date(d); return `${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`; }
+function money(n){ return `${Number(n || 0).toFixed(2)} 元`; }
+function esc(v){ return String(v ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+function showMsg(type, text){ els.msg.className = `msg ${type}`; els.msg.textContent = text; }
+function clearMsg(){ els.msg.className = 'msg'; els.msg.textContent = ''; }
+function statusBadge(status){
+  const map = { pending: '待结算', settled: '已结算', frozen: '已冻结', cancelled: '已撤销', reversed: '已冲正' };
+  return `<span class="badge ${esc(status)}">${esc(map[status] || status)}</span>`;
+}
+function selectedVenueIds(){
+  return Array.from(document.querySelectorAll('[data-venue-check]:checked')).map(item => Number(item.value)).filter(Boolean);
+}
+function selectedLogIds(){
+  return Array.from(document.querySelectorAll('[data-log-check]:checked')).map(item => Number(item.value)).filter(Boolean);
+}
+async function requestJson(url, options = {}){
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+    ...options
+  });
+  const json = await res.json();
+  if (!json || json.code !== 200) throw new Error((json && json.msg) || '请求失败');
+  return json.data || {};
+}
+function applyFilters(url){
+  const startDate = els.startDate.value;
+  const endDate = els.endDate.value;
+  const venueId = els.venueId.value;
+  if (startDate) url.searchParams.set('start_date', startDate);
+  if (endDate) url.searchParams.set('end_date', endDate);
+  if (venueId) url.searchParams.set('venue_id', venueId);
+}
+
+async function loadSummary(){
+  clearMsg();
+  els.summaryState.textContent = '加载中...';
+  els.summaryTbody.innerHTML = '';
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set('action', 'summary');
+  applyFilters(url);
+  try {
+    const data = await requestJson(url.toString());
+    const summary = data.summary || {};
+    const rows = data.list || [];
+    els.pendingVenueCount.textContent = String(summary.venue_count || 0);
+    els.pendingOrderCount.textContent = String(summary.order_count || 0);
+    els.pendingOrderAmount.textContent = money(summary.order_amount);
+    els.pendingRewardAmount.textContent = money(summary.reward_amount);
+    if (!rows.length) {
+      els.summaryState.textContent = '暂无待结算数据';
+      return;
+    }
+    els.summaryTbody.innerHTML = rows.map(row => `
+      <tr>
+        <td><input type="checkbox" data-venue-check value="${Number(row.promotion_venue_id || 0)}"></td>
+        <td>${esc(row.promotion_venue_id)} / ${esc(row.promotion_venue_name || '-')}</td>
+        <td>${esc(row.start_date || '-')} 至 ${esc(row.end_date || '-')}</td>
+        <td>${Number(row.order_count || 0)}</td>
+        <td>${Number(row.invitee_count || 0)}</td>
+        <td>${money(row.order_amount)}</td>
+        <td class="amount">${money(row.reward_amount)}</td>
+        <td><button type="button" class="btn-light" data-pending-detail="${Number(row.promotion_venue_id || 0)}">查看明细</button></td>
+      </tr>`).join('');
+    els.summaryState.textContent = `共 ${rows.length} 个场地待结算`;
+  } catch (err) {
+    showMsg('err', err.message || '待结算汇总加载失败');
+    els.summaryState.textContent = '加载失败';
+  }
+}
+
+async function loadBatches(){
+  els.batchState.textContent = '加载中...';
+  els.batchTbody.innerHTML = '';
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set('action', 'batches');
+  applyFilters(url);
+  if (els.batchStatus.value) url.searchParams.set('status', els.batchStatus.value);
+  try {
+    const data = await requestJson(url.toString());
+    const rows = data.list || [];
+    if (!rows.length) {
+      els.batchState.textContent = '暂无结算批次';
+      return;
+    }
+    els.batchTbody.innerHTML = rows.map(row => `
+      <tr>
+        <td>${esc(row.settlement_no)}</td>
+        <td>${esc(row.promotion_venue_id)} / ${esc(row.promotion_venue_name || '-')}</td>
+        <td>${esc(row.settlement_start_date)} 至 ${esc(row.settlement_end_date)}</td>
+        <td>${Number(row.order_count || 0)}</td>
+        <td>${money(row.order_amount)}</td>
+        <td class="amount">${money(row.reward_amount)}</td>
+        <td>${statusBadge(row.settlement_status)}</td>
+        <td>${esc(row.settled_at || '-')}</td>
+        <td>${esc(row.operator_name || row.operator_uid || '-')}</td>
+        <td><button type="button" class="btn-light" data-batch-detail="${Number(row.id || 0)}">批次明细</button></td>
+      </tr>`).join('');
+    els.batchState.textContent = `共 ${rows.length} 个结算批次`;
+  } catch (err) {
+    showMsg('err', err.message || '结算批次加载失败');
+    els.batchState.textContent = '加载失败';
+  }
+}
+
+function renderDetailRows(rows){
+  if (!rows.length) {
+    els.detailTbody.innerHTML = '';
+    els.detailState.textContent = '暂无明细';
+    return;
+  }
+  els.detailTbody.innerHTML = rows.map(row => {
+    const canOperate = ['pending', 'frozen'].includes(row.reward_status);
+    return `
+      <tr>
+        <td>${canOperate ? `<input type="checkbox" data-log-check value="${Number(row.id || 0)}">` : ''}</td>
+        <td>${esc(row.reward_date)}</td>
+        <td>${esc(row.promotion_venue_id)} / ${esc(row.promotion_venue_name || '-')}</td>
+        <td>${esc(row.consumer_venue_id)} / ${esc(row.consumer_venue_name || '-')}</td>
+        <td>${esc(row.invitee_uid)}${row.invitee_nickname ? ' / ' + esc(row.invitee_nickname) : ''}</td>
+        <td>${esc(row.invite_code)}</td>
+        <td>${money(row.order_amount)}</td>
+        <td class="amount">${money(row.reward_amount)}</td>
+        <td>${statusBadge(row.reward_status)}</td>
+        <td>${esc(row.order_id)}</td>
+        <td>${esc(row.remark || '')}</td>
+      </tr>`;
+  }).join('');
+  els.detailState.textContent = `共 ${rows.length} 条明细`;
+}
+
+async function loadPendingDetail(venueId){
+  currentDetailMode = 'pending';
+  currentDetailArgs = { venueId };
+  els.detailPanel.classList.add('show');
+  els.detailTitle.textContent = `场地 ${venueId} 待结算明细`;
+  els.detailState.textContent = '加载中...';
+  els.detailTbody.innerHTML = '';
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set('action', 'pending_detail');
+  url.searchParams.set('venue_id', venueId);
+  applyFilters(url);
+  try {
+    const data = await requestJson(url.toString());
+    renderDetailRows(data.list || []);
+  } catch (err) {
+    showMsg('err', err.message || '待结算明细加载失败');
+    els.detailState.textContent = '加载失败';
+  }
+}
+
+async function loadBatchDetail(batchId){
+  currentDetailMode = 'batch';
+  currentDetailArgs = { batchId };
+  els.detailPanel.classList.add('show');
+  els.detailTitle.textContent = `结算批次 ${batchId} 明细`;
+  els.detailState.textContent = '加载中...';
+  els.detailTbody.innerHTML = '';
+  const url = new URL(API, window.location.origin);
+  url.searchParams.set('action', 'batch_detail');
+  url.searchParams.set('batch_id', batchId);
+  try {
+    const data = await requestJson(url.toString());
+    const batch = data.batch || {};
+    els.detailTitle.textContent = `${batch.settlement_no || batchId} 明细`;
+    renderDetailRows(data.list || []);
+  } catch (err) {
+    showMsg('err', err.message || '批次明细加载失败');
+    els.detailState.textContent = '加载失败';
+  }
+}
+
+async function createSettlement(){
+  clearMsg();
+  const venueIds = selectedVenueIds();
+  if (!venueIds.length) {
+    showMsg('err', '请先勾选需要结算的场地');
+    return;
+  }
+  if (!els.startDate.value || !els.endDate.value) {
+    showMsg('err', '请先选择结算日期范围');
+    return;
+  }
+  const remark = window.prompt('请输入本次结算备注，可留空', '') || '';
+  if (!window.confirm(`确认给 ${venueIds.length} 个场地生成推广收益结算批次吗？生成后对应明细会变为已结算。`)) return;
+  els.createSettlementBtn.disabled = true;
+  try {
+    const data = await requestJson(API, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'create_settlement',
+        venue_ids: venueIds,
+        start_date: els.startDate.value,
+        end_date: els.endDate.value,
+        remark
+      })
+    });
+    showMsg('ok', `结算完成：生成 ${((data.created || []).length)} 个批次，跳过 ${((data.skipped || []).length)} 个场地`);
+    await Promise.all([loadSummary(), loadBatches()]);
+  } catch (err) {
+    showMsg('err', err.message || '生成结算批次失败');
+  } finally {
+    els.createSettlementBtn.disabled = false;
+  }
+}
+
+async function markException(targetStatus){
+  clearMsg();
+  const ids = selectedLogIds();
+  if (!ids.length) {
+    showMsg('err', '请先勾选需要处理的明细');
+    return;
+  }
+  const remark = els.exceptionRemark.value.trim();
+  if (targetStatus !== 'pending' && !remark) {
+    showMsg('err', '冻结或撤销异常收益时必须填写原因');
+    return;
+  }
+  const text = targetStatus === 'frozen' ? '冻结' : (targetStatus === 'cancelled' ? '撤销' : '恢复待结算');
+  if (!window.confirm(`确认${text}选中的 ${ids.length} 条明细吗？`)) return;
+  try {
+    await requestJson(API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'mark_exception', ids, target_status: targetStatus, remark })
+    });
+    showMsg('ok', `${text}完成`);
+    if (currentDetailMode === 'pending' && currentDetailArgs) await loadPendingDetail(currentDetailArgs.venueId);
+    if (currentDetailMode === 'batch' && currentDetailArgs) await loadBatchDetail(currentDetailArgs.batchId);
+    await loadSummary();
+  } catch (err) {
+    showMsg('err', err.message || '异常处理失败');
+  }
+}
+
+function initDate(){
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  els.startDate.value = ymd(yesterday);
+  els.endDate.value = ymd(yesterday);
+}
+
+els.querySummaryBtn.addEventListener('click', loadSummary);
+els.queryBatchesBtn.addEventListener('click', loadBatches);
+els.refreshAllBtn.addEventListener('click', () => { loadSummary(); loadBatches(); });
+els.createSettlementBtn.addEventListener('click', createSettlement);
+els.batchStatus.addEventListener('change', loadBatches);
+els.closeDetailBtn.addEventListener('click', () => els.detailPanel.classList.remove('show'));
+els.freezeLogsBtn.addEventListener('click', () => markException('frozen'));
+els.cancelLogsBtn.addEventListener('click', () => markException('cancelled'));
+els.restoreLogsBtn.addEventListener('click', () => markException('pending'));
+els.selectAllVenues.addEventListener('change', () => {
+  document.querySelectorAll('[data-venue-check]').forEach(item => item.checked = els.selectAllVenues.checked);
+});
+els.selectAllLogs.addEventListener('change', () => {
+  document.querySelectorAll('[data-log-check]').forEach(item => item.checked = els.selectAllLogs.checked);
+});
+els.summaryTbody.addEventListener('click', event => {
+  const btn = event.target.closest('[data-pending-detail]');
+  if (btn) loadPendingDetail(Number(btn.dataset.pendingDetail));
+});
+els.batchTbody.addEventListener('click', event => {
+  const btn = event.target.closest('[data-batch-detail]');
+  if (btn) loadBatchDetail(Number(btn.dataset.batchDetail));
+});
+
+initDate();
+loadSummary();
+loadBatches();
+</script>
+</body>
+</html>

@@ -244,12 +244,32 @@ if (!in_array($role_id, [1, 2], true)) {
         ? intval($totalCountResult[0]['count'])
         : 0;
 
+    // 当前筛选条件下的礼物订单累计：
+    // 用户消费折算 = 礼物金币(payment_amount) / 10
+    // 场地礼物收益 = 用户消费折算 * 60%
+    $giftSummarySql = "
+        SELECT COALESCE(SUM(COALESCE(g.payment_amount, 0)), 0) AS total_gift_gold
+        FROM gift_orders g
+        {$whereSql}
+    ";
+    $giftSummaryResult = $database->query($giftSummarySql, $params);
+    $totalGiftGold = 0.00;
+
+    if (is_array($giftSummaryResult) && isset($giftSummaryResult[0]['total_gift_gold'])) {
+        $totalGiftGold = (float)$giftSummaryResult[0]['total_gift_gold'];
+    }
+
+    $totalGiftConsumeAmount = round($totalGiftGold / 10, 2);
+    $totalVenueGiftIncome = round($totalGiftConsumeAmount * 0.6, 2);
+
     echo json_encode([
         'code' => 0,
         'msg' => '',
         'role_id' => $role_id,
         'order_type' => 'gift',
         'count' => $totalCount,
+        'total_gift_consume_amount' => $totalGiftConsumeAmount,
+        'total_venue_gift_income' => $totalVenueGiftIncome,
         'data' => $data ?: []
     ], JSON_UNESCAPED_UNICODE);
 
@@ -433,6 +453,26 @@ if (!empty($data)) {
     unset($order);
 }
 
+// 驾驶订单累计金额：
+// 1. 只有用户实际输入了筛选条件（用户ID / 订单号 / 场地）才统计、才允许前端显示；
+// 2. 只累计支付类型不是“能量”的驾驶订单。
+$hasExplicitSummaryFilter = !empty($order_number) || !empty($uid) || !empty($venue_id);
+$totalPaymentAmount = null;
+
+if ($hasExplicitSummaryFilter) {
+    $summarySql = "SELECT ROUND(COALESCE(SUM(COALESCE(o.payment_amount, 0)), 0), 2) AS total_payment_amount
+                   FROM orders o"
+        . $whereSql
+        . " AND COALESCE(TRIM(o.pays_type), '') <> '能量'";
+    $summaryResult = $database->query($summarySql, $params);
+
+    if (is_array($summaryResult) && isset($summaryResult[0]['total_payment_amount'])) {
+        $totalPaymentAmount = (float)$summaryResult[0]['total_payment_amount'];
+    } else {
+        $totalPaymentAmount = 0.00;
+    }
+}
+
 // 非 fast 模式才查总数
 if ($fast) {
     $totalCount = $offset + count($data) + ($hasMore ? 1 : 0);
@@ -455,6 +495,8 @@ echo json_encode([
     'count' => $totalCount,
     'has_more' => $hasMore,
     'fast' => $fast,
+    'show_payment_summary' => $hasExplicitSummaryFilter,
+    'total_payment_amount' => $totalPaymentAmount,
     'data' => $data
 ], JSON_UNESCAPED_UNICODE);
 
