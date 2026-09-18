@@ -1,0 +1,243 @@
+[
+  {
+    "html": "paylist.html",
+    "label": "提现审批",
+    "php": [
+      "api/pay/getpaylist.php",
+      "api/pay/modifyApplicationStatus.php",
+      "api/pay/modifyPayoutStatus.php"
+    ]
+  },
+  {
+    "html": "user_invite_codes.html",
+    "label": "邀请生成",
+    "php": [
+      "api/operat/user_invite_codes.php"
+    ]
+  },
+  {
+    "html": "Promotion_Reward_Settlement_Admin.html",
+    "label": "推广收益结算",
+    "php": [
+      "api/promotion/PromotionRewardSettlementAdmin.php"
+    ]
+  },
+  {
+    "html": "order_report.html",
+    "label": "订单申诉",
+    "php": [
+      "api/operat/EnergyGift.php",
+      "api/orders/get_appeals.php",
+      "api/orders/handle_appeal.php"
+    ]
+  },
+  {
+    "html": "reporthand.html",
+    "label": "投诉处理",
+    "php": [
+      "api/devMgr/devMgtV2.php",
+      "api/operat/get_current_user.php",
+      "api/operat/ReporthandV2.php",
+      "api/operat/venue_mute_records_api.php"
+    ]
+  },
+  {
+    "html": "pricing_options.html",
+    "label": "资费商品",
+    "php": [
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/operat/pricing_options.php"
+    ]
+  },
+  {
+    "html": "Balancerecharge.html",
+    "label": "用户管理",
+    "php": [
+      "api/operat/EnergyGift.php",
+      "api/user/getUserList.php",
+      "api/user/gold_recharge.php",
+      "api/user/recharge.php",
+      "api/user/setUserStreamer.php",
+      "api/user/toggleUserDeleted.php",
+      "api/user/toggleUserMute.php",
+      "api/operat/updateNickname.php",
+      "api/user/updateStreamerVenue.php"
+    ]
+  },
+  {
+    "html": "Comsumquery_v2.html",
+    "label": "消费查询",
+    "php": [
+      "api/finance/Comsumquery_v2.php"
+    ]
+  },
+  {
+    "html": "AdminDrivingOrders.html",
+    "label": "订单查询",
+    "php": [
+      "api/finance/addRefundRecord.php",
+      "api/finance/cancelRefundRecord.php",
+      "api/operat/EnergyGift.php",
+      "api/finance/getDrivOrder.php",
+      "api/finance/toggleOrderLock.php"
+    ]
+  },
+  {
+    "html": "VenuesManagement.html",
+    "label": "场地管理",
+    "php": [
+      "api/devMgr/devMgtV2.php",
+      "api/venue/set_venue_spending_alert.php",
+      "api/devMgr/upload_violation_image.php",
+      "api/venue/VenuesManagement.php"
+    ]
+  },
+  {
+    "html": "devMgtV2.html",
+    "label": "设备管理",
+    "php": [
+      "api/devMgr/check_stream_set_sn_status.php",
+      "api/devMgr/device_command.php",
+      "api/devMgr/devMgtV2.php",
+      "http://rcwulian.cn/app/dump/dump_post.php",
+      "api/operat/get_current_user.php",
+      "api/vehicle/modifDevicecfg_safe_transaction.php",
+      "api/vehicle/modifyDevice.php",
+      "api/devMgr/ota_command_history.php",
+      "https://rcwulian.cn/app/code/send-Reports.php",
+      "api/devMgr/syncSingleVehicleToDr.php",
+      "api/devMgr/wifi_command_history.php"
+    ]
+  },
+  {
+    "html": "FranchiseManagement.html",
+    "label": "加盟管理",
+    "php": [
+      "api/franchise/FranchiesList.php",
+      "api/franchise/FranchiseManagement.php",
+      "api/config/get_language.php"
+    ]
+  },
+  {
+    "html": "zone.html",
+    "label": "专区管理",
+    "php": [
+      "https://rcwulian.cn/app/img/userimg/upload_profile.php",
+      "api/venue/zones.php"
+    ]
+  },
+  {
+    "html": "MessageMgmt.html",
+    "label": "消息管理",
+    "php": [
+      "api/index/Msg.php"
+    ]
+  },
+  {
+    "html": "feedback_mgt.html",
+    "label": "反馈信息",
+    "php": [
+      "api/feedback/create.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/feedback/list.php",
+      "api/feedback/reply.php"
+    ]
+  },
+  {
+    "html": "ban_Record.html",
+    "label": "违规查询",
+    "php": [
+      "api/operat/ban_record.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php"
+    ]
+  },
+  {
+    "html": "energygift.html",
+    "label": "补偿能量",
+    "php": [
+      "api/operat/EnergyGift.php"
+    ]
+  },
+  {
+    "html": "peddingMain.html",
+    "label": "图文审核",
+    "php": [
+      "api/venue/deletePendingImage.php",
+      "api/venue/get_audit_list.php",
+      "api/venue/getPendingImages.php",
+      "api/venue/getPendingVehicleNameAudits.php",
+      "api/venue/rejectImage.php",
+      "api/venue/review_venue_description.php",
+      "api/venue/review_venue_name.php",
+      "api/venue/reviewImage.php",
+      "api/venue/reviewVehicleNameAudit.php",
+      "api/venue/reviewVoiceRoomBg.php",
+      "https://rcwulian.cn/app/img/userimg/upload_profile.php",
+      "api/operat/upload.php"
+    ]
+  },
+  {
+    "html": "RefundQequest.html",
+    "label": "退款申请",
+    "php": [
+      "api/finance/getOrderSearch.php",
+      "https://rcwulian.cn/app/pay/tui.php"
+    ]
+  },
+  {
+    "html": "energy_log_view.html",
+    "label": "能量分配",
+    "php": [
+      "api/operat/energy_log_data.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php"
+    ]
+  },
+  {
+    "html": "doll_catch_record.html",
+    "label": "娃娃记录",
+    "php": [
+      "api/dolls/doll_catch_record.php"
+    ]
+  },
+  {
+    "html": "points_mall_admin.html",
+    "label": "积分商城",
+    "php": [
+      "api/operat/points_mall.php",
+      "https://rcwulian.cn/app/img/userimg/upload_profile.php"
+    ]
+  },
+  {
+    "html": "black_user_gmt.html",
+    "label": "拉黑用户",
+    "php": [
+      "api/operat/blacklist_list.php",
+      "api/operat/blacklist_protect.php",
+      "api/operat/block_user_for_venue.php",
+      "api/operat/block_user.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/operat/search_user.php",
+      "api/operat/unblock_user.php"
+    ]
+  },
+  {
+    "html": "funds.html",
+    "label": "金额查看",
+    "php": [
+      "api/operat/venue-funds-overview.php"
+    ]
+  },
+  {
+    "html": "refund_records.html",
+    "label": "操作金额",
+    "php": [
+      "api/finance/cancelRefundRecord.php",
+      "api/finance/getRefundRecords.php"
+    ]
+  }
+]

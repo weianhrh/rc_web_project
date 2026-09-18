@@ -1,0 +1,213 @@
+[
+  {
+    "html": "h.html",
+    "label": "驾驶订单",
+    "php": [
+      "api/orders/CompleteOrder.php",
+      "api/venue/CancelReservation.php",
+      "api/venue/getReservationsList.php"
+    ]
+  },
+  {
+    "html": "user.html",
+    "label": "能量赠送",
+    "php": [
+      "api/operat/blacklist_list.php",
+      "api/operat/block_user.php",
+      "api/operat/unblock_user.php",
+      "api/user/getUserList.php",
+      "api/user/recharges.php",
+      "api/venue/venue_gift_energy.php"
+    ]
+  },
+  {
+    "html": "vehicleslite.html",
+    "label": "设备管理",
+    "php": [
+      "api/vehicle/getVehicleList.php"
+    ]
+  },
+  {
+    "html": "venue.html",
+    "label": "场地管理",
+    "php": [
+      "api/venue/clearVenueEditLock.php",
+      "api/venue/deleteVenueDescriptionStatus.php",
+      "api/venue/deleteVenueNameStatus.php",
+      "api/venue/getLiveBanStatus.php",
+      "api/venue/getVenueDescriptionStatus.php",
+      "api/venue/getVenueEditLock.php",
+      "api/venue/getVenueImageStatus.php",
+      "api/venue/getVenueList.php",
+      "api/venue/getVenueNameStatus.php",
+      "api/venue/getVoiceRoomBgReviewStatus.php",
+      "api/venue/setVenue.php",
+      "api/venue/uploadImg.php",
+      "api/venue/uploadVoiceRoomBg.php",
+      "https://rcwulian.cn/app/img/userimg/upload_profile.php"
+    ]
+  },
+  {
+    "html": "incomedetailsv2.html",
+    "label": "收入明细",
+    "php": [
+      "api/venue/GetDrivingOrdersv2.php"
+    ]
+  },
+  {
+    "html": "moeny.html",
+    "label": "财务对账",
+    "php": [
+      "api/operat/EnergyGift.php",
+      "api/pay/CheckDailyVenueRevenue.php",
+      "api/pay/GetDailyVenueRevenue.php"
+    ]
+  },
+  {
+    "html": "PaymentDisbursement_optimized.html",
+    "label": "提现申请",
+    "php": [
+      "api/pay/ApplyWithdrawal.php",
+      "api/pay/CalculateSettlements.php",
+      "api/pay/getWithdrawalRecords.php"
+    ]
+  },
+  {
+    "html": "getFaultDevices.html",
+    "label": "故障审批",
+    "php": [
+      "api/devMgr/getFaultDevices.php",
+      "api/devMgr/updateFaultStatus.php"
+    ]
+  },
+  {
+    "html": "paybind.html",
+    "label": "绑定卡号",
+    "php": [
+      "api/pay/BindPaymentAccount.php"
+    ]
+  },
+  {
+    "html": "pricing_options.html",
+    "label": "资费套餐",
+    "php": [
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/operat/pricing_options.php"
+    ]
+  },
+  {
+    "html": "reporthand.html",
+    "label": "投诉处理",
+    "php": [
+      "api/devMgr/devMgtV2.php",
+      "api/operat/get_current_user.php",
+      "api/operat/ReporthandV2.php",
+      "api/operat/venue_mute_records_api.php"
+    ]
+  },
+  {
+    "html": "ban_Record.html",
+    "label": "违规记录",
+    "php": [
+      "api/operat/ban_record.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php"
+    ]
+  },
+  {
+    "html": "energy_log_view.html",
+    "label": "能量分配",
+    "php": [
+      "api/operat/energy_log_data.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php"
+    ]
+  },
+  {
+    "html": "fill_energy.html",
+    "label": "挂车占有",
+    "php": [
+      "api/operat/energy_renew_or_config.php"
+    ]
+  },
+  {
+    "html": "black_user_gmt.html",
+    "label": "拉黑用户",
+    "php": [
+      "api/operat/blacklist_protect.php",
+      "api/operat/blacklist_list.php",
+      "api/operat/block_user_for_venue.php",
+      "api/operat/block_user.php",
+      "api/operat/get_current_user.php",
+      "api/operat/search_user.php",
+      "api/operat/unblock_user.php",
+      "api/operat/EnergyGift.php"
+    ]
+  },
+  {
+    "html": "feedback_mgt.html",
+    "label": "反馈信息",
+    "php": [
+      "api/feedback/create.php",
+      "api/feedback/list.php",
+      "api/feedback/reply.php",
+      "api/operat/get_current_user.php",
+      "api/operat/EnergyGift.php"
+    ]
+  },
+  {
+    "html": "refund_records_fi.html",
+    "label": "金额退款",
+    "php": [
+      "api/finance/getRefundRecords.php"
+    ]
+  },
+  {
+    "html": "latest_device_run.html",
+    "label": "设备历史管理",
+    "php": [
+      "api/operat/latest_device_run.php",
+      "api/devMgr/devMgtV2.php"
+    ]
+  },
+  {
+    "html": "Promotion_Reward.html",
+    "label": "推广奖励",
+    "php": [
+      "api/promotion/GetInviteRewardPreview.php"
+    ]
+  },
+  {
+    "html": "Promotion_Reward_Settlement_Admin.html",
+    "label": "推广结算",
+    "php": [
+      "api/promotion/PromotionRewardSettlementAdmin.php"
+    ]
+  },
+  {
+    "html": "anchor_auth_start.html",
+    "label": "直播认证",
+    "php": [
+      "api/admin/anchor_auth_check_venue.php",
+      "api/admin/anchor_auth_submit.php"
+    ]
+  },
+  {
+    "html": "GiftPaymentDisbursement.html",
+    "label": "礼物提现",
+    "php": [
+      "api/pay/ApplyWithdrawal.php",
+      "api/pay/CalculateSettlements.php",
+      "api/pay/getWithdrawalRecords.php"
+    ]
+  },
+  {
+    "html": "venueLiveDuration.html",
+    "label": "开播时长",
+    "php": [
+      "api/operat/get_current_user.php",
+      "api/operat/venueLiveDuration.php"
+    ]
+  }
+]

@@ -811,6 +811,26 @@ body {
   }
 }
 
+.user-id-link {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-weight: 800;
+  line-height: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.user-id-link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
 </style>
 </head>
 
@@ -882,6 +902,24 @@ body {
         let currentPage = 1;
         let pageSize = 5;
         let totalOrders = [];
+
+        function openUserManagement(uid) {
+            const userId = String(uid || '').trim();
+            if (!userId || userId === '-') return;
+
+            const targetHash = `/iframe/link/Balancerecharge/uid=${encodeURIComponent(userId)}`;
+
+            try {
+                if (window.top && window.top !== window) {
+                    window.top.location.hash = targetHash;
+                    return;
+                }
+            } catch (e) {
+                console.warn('无法切换到后台用户管理路由，改用页面直跳：', e);
+            }
+
+            window.location.href = `/res/Balancerecharge.html?uid=${encodeURIComponent(userId)}`;
+        }
         let totalCount = 0;
         let orderCache = []; // 用于缓存所有订单数据
         let currentRoleId = 0;
@@ -1161,7 +1199,7 @@ if (order.order_type === 'guardian') {
     <div class="order-body">
       <div class="order-field">
         <span class="field-label">用户ID</span>
-        <span class="field-value">${order.uid || '-'}</span>
+        ${order.uid ? `<button type="button" class="field-value user-id-link" onclick="openUserManagement('${order.uid}')" title="点击进入用户管理">${order.uid}</button>` : '<span class="field-value">-</span>'}
       </div>
 
       <div class="order-field">
@@ -1265,7 +1303,7 @@ if (order.order_type === 'gift') {
     <div class="order-body">
       <div class="order-field">
         <span class="field-label">用户ID</span>
-        <span class="field-value">${order.uid || '-'}</span>
+        ${order.uid ? `<button type="button" class="field-value user-id-link" onclick="openUserManagement('${order.uid}')" title="点击进入用户管理">${order.uid}</button>` : '<span class="field-value">-</span>'}
       </div>
 
       <div class="order-field">
@@ -1386,7 +1424,7 @@ card.innerHTML = `
   <div class="order-body">
     <div class="order-field">
       <span class="field-label">用户ID</span>
-      <span class="field-value">${order.uid || '-'}</span>
+      ${order.uid ? `<button type="button" class="field-value user-id-link" onclick="openUserManagement('${order.uid}')" title="点击进入用户管理">${order.uid}</button>` : '<span class="field-value">-</span>'}
     </div>
 
     <div class="order-field">

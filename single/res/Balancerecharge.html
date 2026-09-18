@@ -790,6 +790,55 @@ async function saveStreamerVenue(uid) {
     return (url.searchParams.get(name) || '').trim();
   }
 
+
+  // ✅ 支持从订单查询点击用户ID后跳转：自动按用户ID筛选
+  // layuiAdmin 的 SPA 路由参数格式是 /uid=123，而不是 ?uid=123。
+  // 同时兼容普通 query 参数，避免旧链接失效。
+  function getTopHashParam(name) {
+    try {
+      if (!window.top || !window.top.location) return '';
+      const hash = String(window.top.location.hash || '');
+
+      // 兼容 #/xxx?uid=123 这类旧写法
+      const qIndex = hash.indexOf('?');
+      if (qIndex >= 0) {
+        const params = new URLSearchParams(hash.slice(qIndex + 1));
+        const queryValue = (params.get(name) || '').trim();
+        if (queryValue) return queryValue;
+      }
+
+      // layuiAdmin 正确路由：#/iframe/link/Balancerecharge/uid=123
+      const cleanHash = hash.replace(/^#\/?/, '').split('?')[0];
+      const segments = cleanHash.split('/');
+      for (const segment of segments) {
+        const eqIndex = segment.indexOf('=');
+        if (eqIndex <= 0) continue;
+
+        const key = decodeURIComponent(segment.slice(0, eqIndex));
+        if (key !== name) continue;
+
+        return decodeURIComponent(segment.slice(eqIndex + 1).replace(/\+/g, ' ')).trim();
+      }
+
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function applyUserIdFromUrl() {
+    const uid = getQueryParam('uid') || getQueryParam('user_id') || getTopHashParam('uid') || getTopHashParam('user_id');
+    if (!uid) return false;
+
+    const idInput = document.querySelector('input[name="id"]');
+    if (idInput) idInput.value = uid;
+
+    currentPage = 1;
+    lastParams = { id: uid };
+    loadTableData(lastParams);
+    return true;
+  }
+
   // ✅ 自动把 URL 里的 invitation_code 填到输入框并搜索
   function applyInvitationFromUrl() {
     const inv = getQueryParam('invitation_code');
@@ -1131,9 +1180,10 @@ async function toggleUserMute(uid, isMute) {
     if (d.success) loadTableData(lastParams);
   }
 
-  // 初始化：优先读 URL invitation_code
-  const used = applyInvitationFromUrl();
-  if (!used) loadTableData();
+  // 初始化：优先处理从订单查询跳转过来的用户ID，其次处理邀请码
+  const usedUserId = applyUserIdFromUrl();
+  const usedInvitation = usedUserId ? false : applyInvitationFromUrl();
+  if (!usedUserId && !usedInvitation) loadTableData();
   if (filterStreamerBtn) {
   updateStreamerFilterButton();
 

@@ -1,0 +1,71 @@
+[
+  {
+    "html": "ban_Record.html",
+    "label": "违规查询",
+    "php": [
+      "api/operat/ban_record.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php"
+    ]
+  },
+  {
+    "html": "black_user_gmt.html",
+    "label": "拉黑用户",
+    "php": [
+      "api/operat/blacklist_list.php",
+      "api/operat/blacklist_protect.php",
+      "api/operat/block_user_for_venue.php",
+      "api/operat/block_user.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/operat/search_user.php",
+      "api/operat/unblock_user.php"
+    ]
+  },
+  {
+    "html": "energy_log_view.html",
+    "label": "能量分配",
+    "php": [
+      "api/operat/energy_log_data.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php"
+    ]
+  },
+  {
+    "html": "feedback_mgt.html",
+    "label": "反馈信息",
+    "php": [
+      "api/feedback/create.php",
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/feedback/list.php",
+      "api/feedback/reply.php"
+    ]
+  },
+  {
+    "html": "pricing_options.html",
+    "label": "资费商品",
+    "php": [
+      "api/operat/EnergyGift.php",
+      "api/operat/get_current_user.php",
+      "api/operat/pricing_options.php"
+    ]
+  },
+  {
+    "html": "Promotion_Reward_Settlement_Admin.html",
+    "label": "推广收益结算",
+    "php": [
+      "api/promotion/PromotionRewardSettlementAdmin.php"
+    ]
+  },
+  {
+    "html": "reporthand.html",
+    "label": "投诉处理",
+    "php": [
+      "api/devMgr/devMgtV2.php",
+      "api/operat/get_current_user.php",
+      "api/operat/ReporthandV2.php",
+      "api/operat/venue_mute_records_api.php"
+    ]
+  }
+]
