@@ -594,7 +594,246 @@ elseif ($action === 'set_venue_status') {
 elseif ($action === 'set_live_stream_flag') {
 
     $venue_id = intval($_POST['venue_id'] ?? 0);
-    $is_live = intval($_POST['show_live_stream'] ?? 0); // 前端先不改参数名，兼容旧调用
+    // 兼容现有前端参数名：1=管理员允许该场地主播开播，0=管理员关闭开播权限
+    $anchor_live_enabled = intval($_POST['show_live_stream'] ?? 0);
+
+    if (!in_array(intval($user['role_id'] ?? 0), [1, 2], true)) {
+        echo json_encode(['code' => 403, 'msg' => '仅管理员可设置开播或关播'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($venue_id <= 0) {
+        echo json_encode(['code' => 1, 'msg' => '场地ID无效'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if (!in_array($anchor_live_enabled, [0, 1], true)) {
+        echo json_encode(['code' => 2, 'msg' => '直播授权参数错误'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $conn = $database->getConnection();
+
+    try {
+        $stmt = $conn->prepare("
+            SELECT id, venue_name, venue_room_id, is_live, venue_status_num,
+                   is_voice_room_banned, anchor_live_enabled
+            FROM venues
+            WHERE id = ?
+            LIMIT 1
+        ");
+        $stmt->bind_param('i', $venue_id);
+        $stmt->execute();
+        $venue = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$venue) {
+            throw new Exception('场地不存在');
+        }
+
+        if ($anchor_live_enabled === 1 && intval($venue['is_voice_room_banned'] ?? 0) === 1) {
+            echo json_encode(['code' => 403, 'msg' => '该场地语音房已封禁，无法允许主播开播'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $oldAnchorLiveEnabled = intval($venue['anchor_live_enabled'] ?? 0);
+        $oldIsLive = intval($venue['is_live'] ?? 0);
+        $oldVenueStatusNum = intval($venue['venue_status_num'] ?? 0);
+        $newIsLive = $oldIsLive;
+        $operatorUid = intval($user['uid'] ?? 0);
+        $remark = '管理员开播授权';
+
+        // 管理员关闭总开关时，如果主播当前正在直播，复用 close_voice_room 的关房信令踢出主播。
+        // 这里只撤销管理员授权并处理实际直播状态，不修改 venue_status_num。
+        $adminCloseSendResult = null;
+        $adminCloseRedisKey = '';
+        $adminCloseRedisDeleteCount = null;
+
+        if ($anchor_live_enabled === 0 && $oldIsLive === 1) {
+            $roomId = trim((string)($venue['venue_room_id'] ?? ''));
+
+            if ($roomId === '') {
+                throw new Exception('该场地未配置语音房room_id，无法踢出正在直播的主播');
+            }
+
+            $sendUrl = 'https://open.rcwulian.cn/api/devMgr/send_voice_room_close_message.php';
+            $payload = json_encode([
+                'room_id' => $roomId,
+                'ban_reason' => '已被管理员关播',
+                'from_user_id' => 'server_bot_1'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $sendUrl,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json'
+                ],
+            ]);
+
+            $sendRaw = curl_exec($ch);
+            $sendError = curl_error($ch);
+            $sendHttpCode = intval(curl_getinfo($ch, CURLINFO_HTTP_CODE));
+            curl_close($ch);
+
+            if ($sendError !== '') {
+                throw new Exception('发送管理员关播信令失败：' . $sendError);
+            }
+
+            if ($sendHttpCode !== 200) {
+                throw new Exception(
+                    '管理员关播接口HTTP状态异常：' . $sendHttpCode .
+                    '，响应：' . $sendRaw
+                );
+            }
+
+            $adminCloseSendResult = json_decode((string)$sendRaw, true);
+
+            if (!is_array($adminCloseSendResult)) {
+                throw new Exception('管理员关播接口返回的不是合法JSON：' . $sendRaw);
+            }
+
+            if (intval($adminCloseSendResult['code'] ?? -1) !== 0) {
+                throw new Exception(
+                    '管理员关播信令发送失败：' .
+                    ($adminCloseSendResult['msg'] ?? '未知错误')
+                );
+            }
+
+            $newIsLive = 0;
+
+            // 与 close_voice_room 保持一致，尽量清理 Redis DB7 的房间在线缓存。
+            // Redis 清理失败不阻断管理员关播后的数据库更新。
+            $adminCloseRedisKey = 'zego_room_alive_' . $roomId;
+            if (class_exists('Redis')) {
+                try {
+                    $redis = new Redis();
+                    if (@$redis->connect('127.0.0.1', 6379, 1.5)) {
+                        $redis->select(7);
+                        $adminCloseRedisDeleteCount = intval($redis->del($adminCloseRedisKey));
+                        $redis->close();
+                    }
+                } catch (Throwable $redisError) {
+                    $adminCloseRedisDeleteCount = null;
+                }
+            }
+        }
+
+        $conn->begin_transaction();
+
+        if ($anchor_live_enabled === 1) {
+            // 管理员“开播”只是开启主播开播权限，不代表主播已经在直播。
+            $stmt = $conn->prepare("
+                UPDATE venues
+                SET anchor_live_enabled = 1
+                WHERE id = ?
+                LIMIT 1
+            ");
+        } else {
+            // 管理员“关播”关闭主播开播权限；若当前正在直播，同时清掉实际直播展示状态。
+            // 明确不修改 venue_status_num，仍由主播 update_live_status.php 原逻辑维护。
+            $stmt = $conn->prepare("
+                UPDATE venues
+                SET anchor_live_enabled = 0,
+                    is_live = 0,
+                    is_recommend = 0,
+                    live_marked_at = NULL,
+                    need_live_review = 0,
+                    live_review_priority = 0
+                WHERE id = ?
+                LIMIT 1
+            ");
+        }
+
+        $stmt->bind_param('i', $venue_id);
+        if (!$stmt->execute()) {
+            throw new Exception('更新主播开播权限失败');
+        }
+        $stmt->close();
+
+        $ip = '';
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ipParts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $ip = trim($ipParts[0]);
+        } elseif (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+            $ip = trim($_SERVER['HTTP_X_REAL_IP']);
+        } else {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        }
+        $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
+
+        // 继续复用现有直播日志表。管理员日志记录的是“授权开/关”，
+        // old/new venue_status_num 保持一致，证明管理员没有改这个字段。
+        $stmt = $conn->prepare("
+            INSERT INTO venue_live_status_logs
+            (
+                venue_id,
+                action,
+                old_is_live,
+                new_is_live,
+                old_venue_status_num,
+                new_venue_status_num,
+                operator_uid,
+                remark,
+                ip,
+                user_agent
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param(
+            'iiiiiiisss',
+            $venue_id,
+            $anchor_live_enabled,
+            $oldIsLive,
+            $newIsLive,
+            $oldVenueStatusNum,
+            $oldVenueStatusNum,
+            $operatorUid,
+            $remark,
+            $ip,
+            $userAgent
+        );
+        if (!$stmt->execute()) {
+            throw new Exception('写入开播授权日志失败');
+        }
+        $stmt->close();
+
+        $conn->commit();
+
+        echo json_encode([
+            'code' => 0,
+            'msg' => $anchor_live_enabled === 1 ? '已允许该场地主播开播' : '已关闭该场地主播开播权限',
+            'data' => [
+                'venue_id' => $venue_id,
+                'anchor_live_enabled' => $anchor_live_enabled,
+                'is_live' => $newIsLive,
+                'venue_status_num' => $oldVenueStatusNum,
+                'previous_anchor_live_enabled' => $oldAnchorLiveEnabled,
+                'send_result' => $adminCloseSendResult,
+                'redis_key' => $adminCloseRedisKey,
+                'redis_delete_count' => $adminCloseRedisDeleteCount
+            ]
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    } catch (Throwable $e) {
+        if ($conn) {
+            try {
+                $conn->rollback();
+            } catch (Throwable $rollbackError) {
+            }
+        }
+        echo json_encode(['code' => 500, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    }
+
+    exit;
+}
+elseif ($action === 'set_live_mark_flag') {
+
+    $venue_id = intval($_POST['venue_id'] ?? 0);
+    $is_live = intval($_POST['is_live'] ?? 0);
 
     if ($venue_id <= 0) {
         echo json_encode(['code' => 1, 'msg' => '场地ID无效'], JSON_UNESCAPED_UNICODE);
@@ -602,12 +841,14 @@ elseif ($action === 'set_live_stream_flag') {
     }
 
     if (!in_array($is_live, [0, 1], true)) {
-        echo json_encode(['code' => 2, 'msg' => '直播参数错误'], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['code' => 2, 'msg' => '直播标记参数错误'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
+    // 保留原版“标记直播中 / 取消直播中”逻辑。
+    // 该操作只负责人工维护直播展示/推荐状态，不修改 anchor_live_enabled 管理员授权总开关。
     if ($is_live === 1) {
-        $sql = "UPDATE venues 
+        $sql = "UPDATE venues
                 SET is_live = 1,
                     is_recommend = 1,
                     live_marked_at = NOW(),
@@ -619,7 +860,7 @@ elseif ($action === 'set_live_stream_flag') {
                 LIMIT 1";
         $ok = $database->query($sql, [$venue_id], true);
     } else {
-        $sql = "UPDATE venues 
+        $sql = "UPDATE venues
                 SET is_live = 0,
                     is_recommend = 0,
                     live_marked_at = NULL,
@@ -1195,6 +1436,8 @@ elseif ($action === 'loadingdata') {
                         v.live_stream_url, 
                         v.show_live_stream,
                         v.is_live,
+                        v.anchor_live_enabled,
+                        v.venue_status_num,
                         v.is_recommend,
                         v.live_marked_at,
                         v.need_live_review,

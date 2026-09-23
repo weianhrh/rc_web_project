@@ -783,6 +783,12 @@
     </div>
 
     <div class="metric-item">
+        <div class="metric-label">今日引流用户</div>
+        <div class="metric-value" id="todayInviteUsers">0人</div>
+        <i class="fas fa-user-plus metric-icon"></i>
+    </div>
+
+    <div class="metric-item">
         <div class="metric-label">订单数</div>
         <div class="metric-value" id="orderCount">0单</div>
         <i class="fas fa-receipt metric-icon"></i>
@@ -820,6 +826,7 @@
                         document.getElementById('devicePayment').textContent = `¥${data.data.devicePayment ?? '0.00'}`;
                         document.getElementById('giftPayment').textContent = `¥${data.data.giftPayment ?? '0.00'}`;
                         document.getElementById('promotionIncome').textContent = `¥${data.data.promotionIncome ?? '0.00'}`;
+                        document.getElementById('todayInviteUsers').textContent = `${data.data.todayInviteUsers ?? 0}人`;
                         renderVenueLevel(data.data.venue_level, data.data.withdraw_ratio);
                         if (data.data.queue_length == null) {
                             data.data.queue_length = 0;

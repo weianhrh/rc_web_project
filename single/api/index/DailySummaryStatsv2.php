@@ -198,6 +198,26 @@ if ($venue_id) {
 
 $promotionIncomeResult = $database->query($promotionIncomeSql, $promotionIncomeParams);
 $promotionIncome = number_format((float)($promotionIncomeResult[0]['promotion_income'] ?? 0), 2, '.', '');
+
+// 今日引流用户：当天注册且邀请码归属于当前场地。
+$todayInviteUsers = 0;
+if ($venue_id) {
+    $todayInviteUsersSql = "SELECT COUNT(*) AS invite_user_count
+                            FROM users u
+                            INNER JOIN venues v
+                                    ON v.invite_code = u.invitation_code
+                            WHERE u.created_at >= ?
+                              AND u.created_at <= ?
+                              AND u.invitation_code IS NOT NULL
+                              AND u.invitation_code <> ''
+                              AND u.invitation_code <> '0000'
+                              AND v.id = ?";
+    $todayInviteUsersResult = $database->query(
+        $todayInviteUsersSql,
+        [$todayStart, $todayEnd, $venue_id]
+    );
+    $todayInviteUsers = (int)($todayInviteUsersResult[0]['invite_user_count'] ?? 0);
+}
 // Report count
 $reportCountSql = "SELECT COUNT(r.device_id) AS report_count
                    FROM Reports r
@@ -221,6 +241,7 @@ echo json_encode([
         'totalPaymentBeforeDeduction' => $totalPaymentBeforeDeduction,
         'promotionDeduction' => number_format($promotionDeduction, 2, '.', ''),
         'promotionIncome' => $promotionIncome,
+        'todayInviteUsers' => $todayInviteUsers,
         'devicePaymentBeforeDeduction' => $devicePaymentBeforeDeduction,
         'devicePayment' => $devicePayment,
         'giftPayment' => $giftPayment,

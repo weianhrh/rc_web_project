@@ -1738,6 +1738,7 @@ function renderVenues(list) {
         const isBuild = status === '建设中';
         const venueTypeNum = Number(venue.venue_type);
         const isLive = isVenueLive(venue);
+        const isAnchorLiveEnabled = Number(venue.anchor_live_enabled || 0) === 1;
         const isPriorityReview = needPriorityReview(venue);
 
         const isSoundDisabled = Number(venue.is_disabled_sound || 0) === 1;
@@ -1849,9 +1850,16 @@ ${showVoiceRoomSceneBtn ? `
 
 <div class="venue-action-area">
     <div class="venue-actions venue-actions-main">
+        ${[1, 2].includes(Number(window.role))
+            ? (isAnchorLiveEnabled
+                ? `<button class="live-btn cancel" onclick="setVenueLiveStream(${venue.id}, 0, this)">关播</button>`
+                : `<button class="live-btn" onclick="setVenueLiveStream(${venue.id}, 1, this)">开播</button>`)
+            : ''
+        }
+
         ${isLive
-            ? `<button class="live-btn cancel" onclick="setVenueLiveStream(${venue.id}, 0)">取消直播中</button>`
-            : `<button class="live-btn" onclick="setVenueLiveStream(${venue.id}, 1)">标记直播中</button>`
+            ? `<button class="live-btn cancel" onclick="setVenueLiveMark(${venue.id}, 0, this)">取消直播中</button>`
+            : `<button class="live-btn" onclick="setVenueLiveMark(${venue.id}, 1, this)">标记直播中</button>`
         }
 
         <button class="edit-btn" onclick="editVenue(${venue.id})">修改场地信息</button>
@@ -1874,7 +1882,7 @@ ${showVoiceRoomSceneBtn ? `
         }
 
         ${[1, 2].includes(Number(window.role)) && venue.venue_room_id
-            ? `<button class="voice-room-close-btn" onclick="closeVoiceRoom(${venue.id}, this)">关播</button>`
+            ? `<button class="voice-room-close-btn" onclick="closeVoiceRoom(${venue.id}, this)">违规关播</button>`
             : ''
         }
 
@@ -1936,7 +1944,60 @@ window.openVenueLiveLogs = function (venueId) {
     const url = `https://open.rcwulian.cn/res/venueLiveStatusLogs.html?venue_id=${encodeURIComponent(venueId)}`;
     window.open(url, '_blank');
 };
-window.setVenueLiveStream = function (venueId, showLiveStream) {
+window.setVenueLiveMark = function (venueId, isLive, button) {
+    const actionText = isLive === 1 ? '标记直播中' : '取消直播中';
+
+    const originalText = button ? button.textContent : actionText;
+    if (button) {
+        button.disabled = true;
+        button.textContent = `${actionText}...`;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'set_live_mark_flag');
+    formData.append('venue_id', venueId);
+    formData.append('is_live', isLive);
+
+    fetch('https://open.rcwulian.cn/api/venue/VenuesManagement.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.code === 0) {
+            alert(isLive === 1 ? '已标记为直播中' : '已取消直播中');
+            loadVenues();
+        } else {
+            alert(data.msg || '操作失败');
+        }
+    })
+    .catch(err => {
+        console.error('设置直播标记失败:', err);
+        alert('请求异常');
+    })
+    .finally(() => {
+        if (button && document.body.contains(button)) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+};
+window.setVenueLiveStream = function (venueId, showLiveStream, button) {
+    const actionText = showLiveStream === 1 ? '开播' : '关播';
+    const confirmText = showLiveStream === 1
+        ? `确定允许场地 ${venueId} 的主播开播吗？开启后主播可自行开播/关播。`
+        : `确定关闭场地 ${venueId} 的主播开播权限吗？如果当前正在直播，会立即把主播关播并提示“已被管理员关播”。`;
+
+    if (!confirm(confirmText)) {
+        return;
+    }
+
+    const originalText = button ? button.textContent : actionText;
+    if (button) {
+        button.disabled = true;
+        button.textContent = `${actionText}中...`;
+    }
+
     const formData = new FormData();
     formData.append('action', 'set_live_stream_flag');
     formData.append('venue_id', venueId);
@@ -1949,7 +2010,7 @@ window.setVenueLiveStream = function (venueId, showLiveStream) {
     .then(res => res.json())
     .then(data => {
         if (data.code === 0) {
-            alert(showLiveStream === 1 ? '已标记为直播中' : '已取消直播中');
+            alert(data.msg || `${actionText}成功`);
             loadVenues();
         } else {
             alert(data.msg || '操作失败');
@@ -1958,6 +2019,12 @@ window.setVenueLiveStream = function (venueId, showLiveStream) {
     .catch(err => {
         console.error('设置直播状态失败:', err);
         alert('请求异常');
+    })
+    .finally(() => {
+        if (button && document.body.contains(button)) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
     });
 };
 window.setVenueStatus = function (venueId, currentStatus) {

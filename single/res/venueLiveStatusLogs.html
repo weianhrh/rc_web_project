@@ -545,15 +545,20 @@ function resetSearch() {
 
         tbody.innerHTML = list.map(row => {
             const isOpen = Number(row.action) === 1;
-            const isSystem = row.remark === '系统关播';
+            const isAdminGrantLog = row.remark === '管理员开关播' || row.remark === '管理员开播授权';
+            const actionBadge = isAdminGrantLog
+                ? (isOpen
+                    ? '<span class="badge badge-open">授权开播</span>'
+                    : '<span class="badge badge-close">关闭授权</span>')
+                : (isOpen
+                    ? '<span class="badge badge-open">开播</span>'
+                    : '<span class="badge badge-close">关播</span>');
 
-            const actionBadge = isOpen
-                ? '<span class="badge badge-open">开播</span>'
-                : '<span class="badge badge-close">关播</span>';
-
-            const typeBadge = isSystem
+            const typeBadge = row.remark === '系统关播'
                 ? '<span class="badge badge-system">系统关播</span>'
-                : '<span class="badge badge-self">主播开关播</span>';
+                : (isAdminGrantLog
+                    ? '<span class="badge badge-system">管理员开播授权</span>'
+                    : '<span class="badge badge-self">主播开关播</span>');
 
             const venueText = `${row.venue_id || ''} - ${row.venue_name || ''}`;
 

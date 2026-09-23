@@ -120,11 +120,16 @@ try {
     foreach ($rows as &$row) {
         $action = intval($row['action']);
 
-        $row['action_text'] = $action === 1 ? '开播' : '关播';
+        $isAdminGrantLog = in_array($row['remark'], ['管理员开关播', '管理员开播授权'], true);
+        $row['action_text'] = $isAdminGrantLog
+            ? ($action === 1 ? '授权开播' : '关闭授权')
+            : ($action === 1 ? '开播' : '关播');
         $row['operator_text'] = empty($row['operator_uid']) ? '系统' : ('UID ' . $row['operator_uid']);
 
         if ($row['remark'] === '系统关播') {
             $row['type_text'] = '系统关播';
+        } elseif ($isAdminGrantLog) {
+            $row['type_text'] = '管理员开播授权';
         } else {
             $row['type_text'] = '主播开关播';
         }
