@@ -552,6 +552,9 @@ function updateWithdrawButtonState() {
           } else if (data.code === 1005) {
             // alert('场地已被封禁，无法提现，请联系运营处理');
             showCustomModal('无法提现', '场地已被封禁，无法提现，请联系运营处理。');
+          } else if (data.code === 1009) {
+            showCustomModal('提现提示', data.msg || '当前属于打款期间，暂时不能提现。');
+            updateWithdrawButtonState();
           } else if (data.code === 1008) { // ★ 新增
         //   alert(`超过可提现额度：
         //     账户余额：${data.data.account_balance} 元

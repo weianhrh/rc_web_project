@@ -36,6 +36,29 @@ if (!$user || !$user['role_id']) {
     exit;
 }
 
+// 每周打款时段暂停提现申请：使用服务器北京时间，不受手机/电脑时区影响。
+// 周三18:00（含）开始暂停，周四12:00（不含）结束；普通余额和礼物余额统一限制。
+// 必须放在所有业务查询、写入申请和扣减余额之前，管理员审核/打款接口不受影响。
+$withdrawalPauseStartHour = 18;
+$withdrawalPauseEndHour = 0; // 周四中午12点；如需周三晚12点结束，将此处改为0（周四00:00）。
+$withdrawalNow = new DateTimeImmutable('now', new DateTimeZone('Asia/Shanghai'));
+$withdrawalWeekday = (int)$withdrawalNow->format('N'); // 周一=1，周三=3，周四=4
+$withdrawalHour = (int)$withdrawalNow->format('G');
+
+if (($withdrawalWeekday === 3 && $withdrawalHour >= $withdrawalPauseStartHour)
+    || ($withdrawalWeekday === 4 && $withdrawalHour < $withdrawalPauseEndHour)) {
+    echo json_encode([
+        'code' => 1009,
+        'msg' => sprintf(
+            "当前属于打款期间，暂时不能提现。\n暂停申请时间：每周三%02d:00至周四%02d:00（北京时间），结束后可正常申请。",
+            $withdrawalPauseStartHour,
+            $withdrawalPauseEndHour
+        ),
+        'data' => []
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $venue_id = (int)$user['venue_id'];
 $uid      = (int)$user['uid'];
 

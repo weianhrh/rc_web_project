@@ -143,6 +143,44 @@
             color: rgba(21, 148, 95, .48);
         }
 
+        .invite-metric.is-danger {
+            border-color: #fda29b;
+            background: linear-gradient(180deg, #fff 0%, #fff1f0 100%);
+        }
+
+        .invite-metric.is-danger .metric-value,
+        .invite-metric.is-danger .metric-icon {
+            color: #d92d20;
+        }
+
+        .invite-metric.is-warning {
+            border-color: #f7c566;
+            background: linear-gradient(180deg, #fff 0%, #fffaeb 100%);
+        }
+
+        .invite-metric.is-warning .metric-value,
+        .invite-metric.is-warning .metric-icon {
+            color: #dc6803;
+        }
+
+        .invite-target-badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 20px;
+            margin-left: 6px;
+            padding: 0 7px;
+            border-radius: 999px;
+            background: #d92d20;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+
+        .invite-target-badge[hidden] {
+            display: none;
+        }
+
         .metric-label {
             color: var(--secondary);
             font-size: 13px;
@@ -782,8 +820,8 @@
         <i class="fas fa-award metric-icon"></i>
     </div>
 
-    <div class="metric-item">
-        <div class="metric-label">今日引流用户</div>
+    <div class="metric-item invite-metric" id="todayInviteMetric">
+        <div class="metric-label">今天有效引流用户<span class="invite-target-badge" id="inviteTargetBadge" hidden>未达标</span></div>
         <div class="metric-value" id="todayInviteUsers">0人</div>
         <i class="fas fa-user-plus metric-icon"></i>
     </div>
@@ -826,7 +864,18 @@
                         document.getElementById('devicePayment').textContent = `¥${data.data.devicePayment ?? '0.00'}`;
                         document.getElementById('giftPayment').textContent = `¥${data.data.giftPayment ?? '0.00'}`;
                         document.getElementById('promotionIncome').textContent = `¥${data.data.promotionIncome ?? '0.00'}`;
-                        document.getElementById('todayInviteUsers').textContent = `${data.data.todayInviteUsers ?? 0}人`;
+                        const inviteCount = Number(data.data.todayInviteUsers || 0);
+                        const inviteMetric = document.getElementById('todayInviteMetric');
+                        const inviteTargetBadge = document.getElementById('inviteTargetBadge');
+                        document.getElementById('todayInviteUsers').textContent = `${inviteCount}人`;
+                        inviteMetric.classList.remove('is-danger', 'is-warning');
+                        inviteTargetBadge.hidden = true;
+                        if (inviteCount < 5) {
+                            inviteMetric.classList.add('is-danger');
+                            inviteTargetBadge.hidden = false;
+                        } else if (inviteCount < 10) {
+                            inviteMetric.classList.add('is-warning');
+                        }
                         renderVenueLevel(data.data.venue_level, data.data.withdraw_ratio);
                         if (data.data.queue_length == null) {
                             data.data.queue_length = 0;

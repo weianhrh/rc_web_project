@@ -199,10 +199,10 @@ if ($venue_id) {
 $promotionIncomeResult = $database->query($promotionIncomeSql, $promotionIncomeParams);
 $promotionIncome = number_format((float)($promotionIncomeResult[0]['promotion_income'] ?? 0), 2, '.', '');
 
-// 今日引流用户：当天注册且邀请码归属于当前场地。
+// 今天有效引流用户：当天通过本场邀请码完成注册。
 $todayInviteUsers = 0;
 if ($venue_id) {
-    $todayInviteUsersSql = "SELECT COUNT(*) AS invite_user_count
+    $todayInviteUsersSql = "SELECT COUNT(DISTINCT u.uid) AS invite_user_count
                             FROM users u
                             INNER JOIN venues v
                                     ON v.invite_code = u.invitation_code
