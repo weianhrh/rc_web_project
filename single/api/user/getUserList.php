@@ -22,7 +22,7 @@ if (!$user || !$user['role_id']) {
     exit;
 }
 
-$role_id  = $user['role_id'];
+$role_id  = (int)$user['role_id'];
 $venue_id = $user['venue_id'];
 $username = $user['username'];
 
@@ -123,6 +123,23 @@ $limit    = isset($_GET['limit']) ? (int)$_GET['limit'] : 20; // 每页显示条
 $invitation_code = $_GET['invitation_code'] ?? '';
 $is_streamer     = $_GET['is_streamer'] ?? '';
 $streamer_venue = trim($_GET['streamer_venue'] ?? '');
+$ip = $_GET['ip'] ?? '';
+if (!is_string($ip)) {
+    echo json_encode(['code' => 400, 'msg' => 'IP格式不正确']);
+    exit;
+}
+$ip = trim($ip);
+if ($ip !== '') {
+    if (!in_array($role_id, [1, 2], true)) {
+        echo json_encode(['code' => 403, 'msg' => '仅管理员可以按IP查询用户']);
+        exit;
+    }
+    if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+        echo json_encode(['code' => 400, 'msg' => 'IP格式不正确']);
+        exit;
+    }
+    $ip = inet_ntop(inet_pton($ip));
+}
 // 计算分页的起始位置
 $offset = ($page - 1) * $limit;
 
@@ -150,6 +167,9 @@ if (!in_array($role_id, [1, 2], true)) {
                    wallet,
                    gold_balance,
                    invitation_code,
+                   register_ip,
+                   last_login_ip,
+                   created_at,
                    last_login AS jointime,
                    deleted,
                    terrace,
@@ -163,6 +183,11 @@ if (!in_array($role_id, [1, 2], true)) {
 // 条件查询
 $params = [];
 $filterSql = '';
+if ($ip !== '') {
+    $filterSql .= ' AND (register_ip = ? OR last_login_ip = ?)';
+    $params[] = $ip;
+    $params[] = $ip;
+}
 
 if ($id !== '') {
     $filterSql .= " AND uid = ?";
@@ -229,16 +254,12 @@ if ($result) {
     }
 }
 
-// 计算总数以支持分页（同样不限制 deleted）
-$countSql    = "SELECT COUNT(*) AS count FROM users WHERE 1=1";
-$countResult = $database->query($countSql);
-$totalCount  = $countResult ? $countResult[0]['count'] : 0;
-
 if ($result !== false) {
     echo json_encode([
         'code'  => 0,
         'msg'   => '',
         'count' => $totalCount,
+        'can_view_login_ip' => in_array($role_id, [1, 2], true),
         'data'  => $result
     ]);
 } else {

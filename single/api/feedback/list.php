@@ -10,14 +10,10 @@ $database = new Database();
 $session_token = $_COOKIE['session_token'] ?? null;
 if (!$session_token) json_out(['code'=>1001,'msg'=>'无有效认证信息，请登录','count'=>0,'data'=>[]]);
 
-$userRows = $database->query(
-  "SELECT uid, role_id, venue_id FROM admin_users WHERE session_token = ?",
-  [$session_token]
-);
-if (!$userRows || empty($userRows)) {
+$user = $database->getUserBySessionToken($session_token);
+if (!$user) {
   json_out(['code'=>1001,'msg'=>'用户未登录或不存在','count'=>0,'data'=>[]]);
 }
-$user = $userRows[0];
 $role_id       = (int)$user['role_id'];
 $bind_venue_id = (int)$user['venue_id'];
 

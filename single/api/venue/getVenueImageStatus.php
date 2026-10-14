@@ -10,13 +10,13 @@ if (!$session_token) {
     exit;
 }
 
-$user = $database->query("SELECT venue_id FROM admin_users WHERE session_token = ?", [$session_token]);
+$user = $database->getUserBySessionToken($session_token);
 if (!$user) {
     echo json_encode(['code' => 1002, 'msg' => '非法用户']);
     exit;
 }
-$role_id = $user['role_id']; 
-$venue_id = $user[0]['venue_id'];
+$role_id = $user['role_id'];
+$venue_id = $user['venue_id'];
 
 // 查找该场地最近一次上传的图片审核记录
 $sql = "SELECT status, reason, uploaded_at, reviewed_at 

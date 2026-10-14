@@ -37,6 +37,35 @@ class Database {
         $stmt->execute();
         $result = $stmt->get_result();
         if ($row = $result->fetch_assoc()) {
+            $row['default_venue_id'] = $row['venue_id'];
+            $row['is_mcn'] = ($row['account_type'] ?? 'single') === 'mcn'
+                && (int)($row['mcn_id'] ?? 0) > 0;
+            $selectedVenueId = $_COOKIE['selected_venue_id'] ?? '';
+
+            if ($row['is_mcn'] && ctype_digit((string)$selectedVenueId) && (int)$selectedVenueId > 0) {
+                $mcnId = (int)$row['mcn_id'];
+                $selectedVenueId = (int)$selectedVenueId;
+                $venueStmt = $this->connection->prepare(
+                    "SELECT venue_uid FROM mcn_venues
+                     WHERE mcn_id = ? AND venue_id = ? AND status = 1
+                     LIMIT 1"
+                );
+
+                if ($venueStmt) {
+                    $venueStmt->bind_param("ii", $mcnId, $selectedVenueId);
+                    $venueStmt->execute();
+                    $venueResult = $venueStmt->get_result();
+                    $venueBinding = $venueResult ? $venueResult->fetch_assoc() : null;
+                    if ($venueBinding) {
+                        $row['venue_id'] = $selectedVenueId;
+                        if ((int)($venueBinding['venue_uid'] ?? 0) > 0) {
+                            $row['uid'] = (int)$venueBinding['venue_uid'];
+                        }
+                    }
+                    $venueStmt->close();
+                }
+            }
+
             return $row;
         } else {
             return null;

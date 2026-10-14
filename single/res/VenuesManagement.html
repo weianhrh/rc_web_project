@@ -1375,6 +1375,31 @@ body {
         font-size: 12px;
     }
 }
+
+.level-log-page-btn,
+.level-history-btn {
+    border: 1px solid #bfd0ff;
+    background: #f5f8ff;
+    color: #2457c5;
+    cursor: pointer;
+}
+
+.level-log-page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    margin: 0 0 12px 10px;
+    padding: 0 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.level-log-page-btn:hover,
+.level-history-btn:hover {
+    background: #e8efff;
+}
     </style>
 </head>
 
@@ -1383,6 +1408,7 @@ body {
         <div class="card">
             <div class="card-title">场地管理</div>
             <button class="add-btn" id="add-venue-btn">添加场地</button>
+            <button type="button" class="level-log-page-btn" onclick="openVenueLevelLogs()">等级变动记录</button>
 
             <input list="venue_options" id="venue_search" placeholder="输入场地名称搜索" autocomplete="off"
                 style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px;">
@@ -1863,6 +1889,7 @@ ${showVoiceRoomSceneBtn ? `
         }
 
         <button class="edit-btn" onclick="editVenue(${venue.id})">修改场地信息</button>
+        <button class="level-history-btn" onclick="openVenueLevelLogs(${venue.id})">等级记录</button>
 
         ${Number(venue.is_spending_alert || 0) === 1
             ? `<button class="spending-alert-off-btn" onclick="setVenueSpendingAlert(${venue.id}, 0)">关闭高消费提示</button>`
@@ -1943,6 +1970,11 @@ statCards.forEach(card => {
 window.openVenueLiveLogs = function (venueId) {
     const url = `https://open.rcwulian.cn/res/venueLiveStatusLogs.html?venue_id=${encodeURIComponent(venueId)}`;
     window.open(url, '_blank');
+};
+
+window.openVenueLevelLogs = function (venueId) {
+    const query = venueId ? `?venue_id=${encodeURIComponent(venueId)}` : '';
+    window.open(`https://open.rcwulian.cn/res/VenueLevelChangeLogs.html${query}`, '_blank');
 };
 window.setVenueLiveMark = function (venueId, isLive, button) {
     const actionText = isLive === 1 ? '标记直播中' : '取消直播中';

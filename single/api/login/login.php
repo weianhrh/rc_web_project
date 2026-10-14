@@ -55,13 +55,18 @@ if (($failCountUser >= $MAX_ATTEMPTS || $failCountIP >= $MAX_ATTEMPTS) && $ttl >
 }
 
 // 查询数据库
-$sql = "SELECT username, password, session_token FROM admin_users WHERE username = ?";
+$sql = "SELECT au.username, au.password, au.session_token, au.account_type,
+               CASE WHEN au.account_type = 'mcn' THEN COALESCE(mo.status, 0) ELSE 1 END AS account_status
+        FROM admin_users au
+        LEFT JOIN mcn_organizations mo ON mo.id = au.mcn_id
+        WHERE au.username = ?";
 $user = $database->query($sql, [$username]);
 
 // 为防止用户名枚举攻击，使用 dummy hash
 $dummy_hash = '$2y$10$usesomesaltystringforequaldelay123456789012345678901234';
 $real_hash = $user[0]['password'] ?? $dummy_hash;
-$isValid = password_verify($password, $real_hash);
+$isValid = password_verify($password, $real_hash)
+    && (int)($user[0]['account_status'] ?? 0) === 1;
 
 if ($user && $isValid) {
     // 登录成功，清除失败记录
@@ -77,7 +82,14 @@ if ($user && $isValid) {
     }
 
     // 设置 HttpOnly + Secure Cookie
-    setcookie('session_token', $session_token, time() + 2592000, '/', '', isset($_SERVER['HTTPS']), true);
+    $secureCookie = isset($_SERVER['HTTPS']);
+    setcookie('session_token', $session_token, time() + 2592000, '/', '', $secureCookie, true);
+    if (($user[0]['account_type'] ?? 'single') === 'mcn') {
+        setcookie('venue_scope', 'all', time() + 2592000, '/', '', $secureCookie, false);
+    } else {
+        setcookie('venue_scope', 'single', time() + 2592000, '/', '', $secureCookie, false);
+    }
+    setcookie('selected_venue_id', '', time() - 3600, '/', '', $secureCookie, false);
     $_SESSION['user_id'] = $username;
 
     logLoginAttempt($username, $ip, $userAgent, true);

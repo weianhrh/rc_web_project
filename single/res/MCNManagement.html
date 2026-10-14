@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCN机构管理</title>
+  <link rel="stylesheet" href="/res/fa/css/all.min.css">
+  <style>
+    :root { --primary:#1677ff; --ink:#172033; --muted:#667085; --line:#e4e9f2; --soft:#f6f8fb; --danger:#d92d20; --success:#15945f; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:20px; background:#f4f6fa; color:var(--ink); font-family:"PingFang SC",system-ui,sans-serif; }
+    .page { max-width:1400px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:8px; }
+    .page-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:20px; letter-spacing:0; }
+    .sub { margin-top:5px; color:var(--muted); font-size:13px; }
+    button { font:inherit; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:36px; padding:0 14px; border:1px solid #d0d5dd; border-radius:6px; background:#fff; color:#344054; cursor:pointer; }
+    .btn:hover { border-color:#91baff; color:var(--primary); }
+    .btn-primary { border-color:var(--primary); background:var(--primary); color:#fff; }
+    .btn-primary:hover { background:#0958d9; color:#fff; }
+    .table-wrap { width:100%; overflow:auto; }
+    table { width:100%; border-collapse:collapse; min-width:980px; }
+    th,td { padding:13px 16px; border-bottom:1px solid #edf0f5; text-align:left; vertical-align:middle; font-size:13px; }
+    th { background:#fafbfc; color:#475467; font-weight:600; white-space:nowrap; }
+    .name { font-weight:700; font-size:14px; }
+    .venue-list { display:flex; flex-wrap:wrap; gap:6px; }
+    .venue-tag { padding:4px 7px; border:1px solid #d6e4ff; border-radius:4px; background:#f2f7ff; color:#175cd3; white-space:nowrap; }
+    .venue-tag.default { border-color:#abefc6; background:#ecfdf3; color:#067647; }
+    .status { display:inline-flex; align-items:center; gap:6px; font-weight:600; }
+    .status::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--success); }
+    .status.off { color:#667085; }
+    .status.off::before { background:#98a2b3; }
+    .actions { display:flex; gap:8px; white-space:nowrap; }
+    .icon-btn { width:34px; height:34px; border:1px solid #d0d5dd; border-radius:6px; background:#fff; color:#475467; cursor:pointer; }
+    .icon-btn:hover { border-color:#91baff; color:var(--primary); }
+    .empty { padding:56px 20px; text-align:center; color:var(--muted); }
+    .mask { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.45); z-index:20; }
+    .mask.open { display:flex; }
+    .dialog { width:min(720px,100%); max-height:92vh; overflow:auto; background:#fff; border-radius:8px; box-shadow:0 24px 70px rgba(15,23,42,.24); }
+    .dialog-head { display:flex; align-items:center; justify-content:space-between; padding:17px 20px; border-bottom:1px solid var(--line); }
+    .dialog-head h2 { margin:0; font-size:18px; }
+    .dialog-body { padding:20px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .field { display:flex; flex-direction:column; gap:7px; }
+    .field.full { grid-column:1/-1; }
+    label { color:#344054; font-size:13px; font-weight:600; }
+    input,select { width:100%; height:38px; padding:0 10px; border:1px solid #d0d5dd; border-radius:6px; background:#fff; color:var(--ink); outline:none; }
+    input:focus,select:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(22,119,255,.1); }
+    .hint { color:var(--muted); font-size:12px; font-weight:400; }
+    .venue-picker { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); max-height:230px; overflow:auto; border:1px solid var(--line); border-radius:6px; }
+    .venue-option { display:flex; align-items:center; gap:9px; min-height:42px; padding:8px 10px; border-bottom:1px solid #f0f2f5; font-size:13px; cursor:pointer; }
+    .venue-option:nth-child(odd) { border-right:1px solid #f0f2f5; }
+    .venue-option input { width:16px; height:16px; margin:0; box-shadow:none; }
+    .venue-option.disabled { color:#98a2b3; background:#fafafa; cursor:not-allowed; }
+    .dialog-foot { display:flex; justify-content:flex-end; gap:10px; padding:15px 20px; border-top:1px solid var(--line); }
+    .notice { display:none; margin:14px 20px 0; padding:10px 12px; border-radius:6px; font-size:13px; }
+    .notice.show { display:block; }
+    .notice.error { background:#fff1f0; color:#b42318; border:1px solid #fecdca; }
+    @media(max-width:700px) { body{padding:10px}.page-head{align-items:flex-start}.form-grid{grid-template-columns:1fr}.venue-picker{grid-template-columns:1fr}.venue-option:nth-child(odd){border-right:0}.field.full{grid-column:auto} }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-head">
+      <div><h1>MCN机构管理</h1><div class="sub">管理MCN账号、所属场地与默认工作场地</div></div>
+      <button class="btn btn-primary" id="createBtn" type="button"><i class="fas fa-plus"></i>新建MCN</button>
+    </header>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>MCN机构</th><th>登录账号</th><th>绑定场地</th><th>默认场地</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>暂无MCN机构</div>
+    </div>
+  </main>
+
+  <div class="mask" id="mask">
+    <section class="dialog" role="dialog" aria-modal="true">
+      <header class="dialog-head"><h2 id="dialogTitle">新建MCN</h2><button class="icon-btn" id="closeBtn" type="button" title="关闭"><i class="fas fa-times"></i></button></header>
+      <div class="notice error" id="notice"></div>
+      <form id="form">
+        <div class="dialog-body form-grid">
+          <input type="hidden" id="mcnId"><input type="hidden" id="adminUserId">
+          <div class="field"><label for="mcnName">MCN名称</label><input id="mcnName" maxlength="100" required></div>
+          <div class="field"><label for="username">登录账号</label><input id="username" maxlength="50" autocomplete="off" required></div>
+          <div class="field full"><label for="password">登录密码 <span class="hint" id="passwordHint">至少8位</span></label><input id="password" type="password" minlength="8" autocomplete="new-password"></div>
+          <div class="field full"><label>绑定场地 <span class="hint">已绑定其他MCN的场地不可选择</span></label><div class="venue-picker" id="venuePicker"></div></div>
+          <div class="field full"><label for="defaultVenue">默认管理场地</label><select id="defaultVenue" required><option value="">请先选择场地</option></select></div>
+        </div>
+        <footer class="dialog-foot"><button class="btn" id="cancelBtn" type="button">取消</button><button class="btn btn-primary" id="saveBtn" type="submit"><i class="fas fa-check"></i>保存</button></footer>
+      </form>
+    </section>
+  </div>
+
+  <script>
+    const API = '/api/operat/MCNManagement.php';
+    let state = { organizations: [], venues: [] };
+    const $ = id => document.getElementById(id);
+
+    async function request(params) {
+      const response = await fetch(API, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body:new URLSearchParams(params) });
+      const result = await response.json();
+      if (!result || result.code !== 0) throw new Error(result?.msg || '请求失败');
+      return result.data;
+    }
+
+    async function load() {
+      try {
+        state = await request({ action:'list' });
+        render();
+      } catch (error) {
+        $('tbody').innerHTML = `<tr><td colspan="7" class="empty">${escapeHtml(error.message)}</td></tr>`;
+      }
+    }
+
+    function render() {
+      $('empty').hidden = state.organizations.length > 0;
+      $('tbody').innerHTML = state.organizations.map(item => {
+        const venues = item.venues.map(v => `<span class="venue-tag ${v.is_default ? 'default' : ''}">${v.venue_name}（${v.venue_id}）${v.is_default ? ' · 默认' : ''}</span>`).join('');
+        const defaultVenue = item.venues.find(v => v.is_default);
+        return `<tr>
+          <td><div class="name">${escapeHtml(item.mcn_name)}</div><div class="hint">ID: ${item.id}</div></td>
+          <td>${escapeHtml(item.username || '-')}</td>
+          <td><div class="venue-list">${venues || '-'}</div></td>
+          <td>${defaultVenue ? `${escapeHtml(defaultVenue.venue_name)}（${defaultVenue.venue_id}）` : '-'}</td>
+          <td><span class="status ${item.status ? '' : 'off'}">${item.status ? '启用' : '停用'}</span></td>
+          <td>${escapeHtml(item.updated_at || '-')}</td>
+          <td><div class="actions">
+            <button class="icon-btn" type="button" title="编辑" onclick="openEdit(${item.id})"><i class="fas fa-pen"></i></button>
+            <button class="icon-btn" type="button" title="${item.status ? '停用' : '启用'}" onclick="toggleStatus(${item.id},${item.status ? 0 : 1})"><i class="fas ${item.status ? 'fa-ban' : 'fa-check'}"></i></button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openCreate() {
+      $('dialogTitle').textContent = '新建MCN';
+      $('form').reset(); $('mcnId').value=''; $('adminUserId').value='';
+      $('password').required = true; $('passwordHint').textContent = '至少8位';
+      renderVenuePicker(null, []); updateDefaultOptions(); showNotice('');
+      $('mask').classList.add('open');
+    }
+
+    function openEdit(id) {
+      const item = state.organizations.find(row => row.id === id);
+      if (!item) return;
+      $('dialogTitle').textContent = '修改MCN'; $('mcnId').value=item.id; $('adminUserId').value=item.admin_user_id;
+      $('mcnName').value=item.mcn_name; $('username').value=item.username || ''; $('password').value='';
+      $('password').required = false; $('passwordHint').textContent = '不填写则保持原密码';
+      renderVenuePicker(item.id, item.venues.map(v => v.venue_id)); updateDefaultOptions(item.default_venue_id); showNotice('');
+      $('mask').classList.add('open');
+    }
+
+    function renderVenuePicker(currentMcnId, selectedIds) {
+      $('venuePicker').innerHTML = state.venues.map(v => {
+        const occupied = Number(v.mcn_id || 0) > 0 && Number(v.mcn_id) !== Number(currentMcnId || 0);
+        const missingUid = Number(v.venue_uid || 0) <= 0;
+        const disabled = occupied || missingUid;
+        const checked = selectedIds.includes(Number(v.id));
+        const reason = occupied ? ` · ${escapeHtml(v.mcn_name)}` : (missingUid ? ' · 未绑定加盟商UID' : '');
+        return `<label class="venue-option ${disabled ? 'disabled' : ''}"><input type="checkbox" value="${v.id}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span>${escapeHtml(v.venue_name)}（${v.id}）${reason}</span></label>`;
+      }).join('');
+      $('venuePicker').querySelectorAll('input').forEach(input => input.addEventListener('change', () => updateDefaultOptions()));
+    }
+
+    function selectedVenueIds() { return [...$('venuePicker').querySelectorAll('input:checked')].map(input => Number(input.value)); }
+    function updateDefaultOptions(preferred) {
+      const selected = selectedVenueIds();
+      const current = Number(preferred || $('defaultVenue').value || 0);
+      $('defaultVenue').innerHTML = '<option value="">请选择默认场地</option>' + selected.map(id => {
+        const venue = state.venues.find(v => Number(v.id) === id);
+        return `<option value="${id}">${escapeHtml(venue?.venue_name || '')}（${id}）</option>`;
+      }).join('');
+      if (selected.includes(current)) $('defaultVenue').value = String(current);
+      else if (selected.length) $('defaultVenue').value = String(selected[0]);
+    }
+
+    async function save(event) {
+      event.preventDefault(); showNotice('');
+      const isEdit = Boolean($('mcnId').value); const venueIds = selectedVenueIds();
+      if (!venueIds.length) return showNotice('请至少选择一个场地');
+      $('saveBtn').disabled = true;
+      try {
+        await request({ action:isEdit?'update':'create', mcn_id:$('mcnId').value, admin_user_id:$('adminUserId').value, mcn_name:$('mcnName').value.trim(), username:$('username').value.trim(), password:$('password').value, venue_ids:JSON.stringify(venueIds), default_venue_id:$('defaultVenue').value });
+        closeDialog(); await load();
+      } catch (error) { showNotice(error.message); }
+      finally { $('saveBtn').disabled = false; }
+    }
+
+    async function toggleStatus(id, status) {
+      if (!confirm(status ? '确认启用这个MCN机构？' : '确认停用？停用后该MCN账号将不能登录。')) return;
+      try { await request({action:'toggle_status',mcn_id:id,status}); await load(); }
+      catch (error) { alert(error.message); }
+    }
+
+    function showNotice(message) { $('notice').textContent=message; $('notice').classList.toggle('show',Boolean(message)); }
+    function closeDialog() { $('mask').classList.remove('open'); }
+    function escapeHtml(value) { const div=document.createElement('div'); div.textContent=String(value??''); return div.innerHTML; }
+
+    $('createBtn').onclick=openCreate; $('closeBtn').onclick=closeDialog; $('cancelBtn').onclick=closeDialog; $('form').onsubmit=save;
+    $('mask').addEventListener('click', event => { if (event.target === $('mask')) closeDialog(); });
+    load();
+  </script>
+</body>
+</html>

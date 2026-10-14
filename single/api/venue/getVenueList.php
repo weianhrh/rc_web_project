@@ -22,8 +22,7 @@ if (!$session_token) {
 }
 
 // 查询用户权限和绑定场地
-$sql = "SELECT role_id, venue_id FROM admin_users WHERE session_token = ?";
-$user = $database->query($sql, [$session_token]);
+$user = $database->getUserBySessionToken($session_token);
 
 if (!$user) {
     logMessage("session_token 查询用户失败");
@@ -33,8 +32,8 @@ if (!$user) {
 }
 
 // 提取角色和场地
-$role_id = $user[0]['role_id'];
-$bind_venue_id = $user[0]['venue_id'];
+$role_id = $user['role_id'];
+$bind_venue_id = $user['venue_id'];
 $get_venue_id = $_GET['id'] ?? null;
 
 // 记录请求信息

@@ -27,6 +27,10 @@ if (!$user || !$user['role_id']) {
 }
 
 $role_id = $user['role_id'];
+if (!in_array((int)$role_id, [1, 2], true)) {
+    echo json_encode(['code' => 1003, 'msg' => '没有权限管理后台账号', 'data' => []]);
+    exit;
+}
 
 // 获取请求方法
 $method = $_SERVER['REQUEST_METHOD'];
@@ -52,6 +56,10 @@ if ($method === 'POST') {
         // 密码加密
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         $roleInt        = (int)$role;
+        if ((int)$role_id !== 1 && !in_array($roleInt, [3, 4], true)) {
+            echo json_encode(['code' => 1003, 'msg' => '当前账号无权创建该角色', 'data' => []]);
+            exit;
+        }
 
         try {
             // 开启错误报告
@@ -158,6 +166,16 @@ if ($method === 'POST') {
             exit;
         }
 
+        $target = $database->query("SELECT role_id, account_type FROM admin_users WHERE id = ? LIMIT 1", [(int)$id]);
+        if (!$target) {
+            echo json_encode(['code' => 1, 'msg' => '待修改账号不存在', 'data' => []]);
+            exit;
+        }
+        if ((int)$role_id !== 1 && (($target[0]['account_type'] ?? 'single') === 'mcn' || (int)$target[0]['role_id'] <= 2)) {
+            echo json_encode(['code' => 1003, 'msg' => '当前账号无权修改该账号', 'data' => []]);
+            exit;
+        }
+
         $roleInt = (int)$role;
 
         try {
@@ -243,8 +261,8 @@ if ($method === 'POST') {
                 uid,
                 created_at,
                 updated_at,
-                session_token
-            FROM admin_users";
+                account_type
+            FROM admin_users" . ((int)$role_id === 1 ? "" : " WHERE account_type <> 'mcn' AND role_id IN (3,4)");
 
             $stmt = $database->getConnection()->prepare($query);
             $stmt->execute();

@@ -55,23 +55,22 @@ if (!$session_token) {
 $data = json_decode(file_get_contents('php://input'), true) ?: [];
 
 // 允许部分更新，不强制要求一定带 venue_name
-$sql  = "SELECT uid, role_id, venue_id FROM admin_users WHERE session_token = ?";
-$user = $database->query($sql, [$session_token]);
+$user = $database->getUserBySessionToken($session_token);
 if (!$user) {
     echo json_encode(['code' => 1001, 'msg' => '用户未登录或不存在', 'data' => []], JSON_UNESCAPED_UNICODE);
     $database->close();
     exit;
 }
 
-$role_id      = (int)$user[0]['role_id'];
-$venue_id     = $data['id'] ?? $user[0]['venue_id'];
-$operator_uid = (int)$user[0]['uid'];
+$role_id      = (int)$user['role_id'];
+$venue_id     = $data['id'] ?? $user['venue_id'];
+$operator_uid = (int)$user['uid'];
 
 if (!$venue_id) {
     echo json_encode(['code' => 1002, 'msg' => '缺少场地ID', 'data' => []], JSON_UNESCAPED_UNICODE);
     exit;
 }
-if (!in_array($role_id, [1, 2], true)&& (int)$venue_id !== (int)$user[0]['venue_id']) {
+if (!in_array($role_id, [1, 2], true)&& (int)$venue_id !== (int)$user['venue_id']) {
     echo json_encode(['code' => 1003, 'msg' => '权限不足，无法修改该场地', 'data' => []], JSON_UNESCAPED_UNICODE);
     exit;
 }

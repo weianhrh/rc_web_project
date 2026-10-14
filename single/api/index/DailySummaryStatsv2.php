@@ -1,5 +1,6 @@
 <?php
 require_once '../Database.php'; // Ensure correct path
+date_default_timezone_set('Asia/Shanghai');
 // api/index/DailySummaryStatsv2.php
 // Check for session token in cookie
 if (!isset($_COOKIE['session_token'])) {
@@ -33,6 +34,7 @@ $todayStart = $today . ' 00:00:00';
 $todayEnd   = $today . ' 23:59:59';
 $venue_id = ($role_id != 0) ? $user['venue_id'] : null;
 $venue_name = null; // Default value
+$venue_invite_code = '';
 
 // Get venue name and queue length
 $queue_length = 0;
@@ -41,11 +43,12 @@ if ($venue_id) {
     $withdraw_ratio = 80;
     
     if ($venue_id) {
-        $venueNameSql = "SELECT venue_name, queue_length, venue_level FROM venues WHERE id = ?";
+        $venueNameSql = "SELECT venue_name, queue_length, venue_level, invite_code FROM venues WHERE id = ?";
         $venueNameResult = $database->query($venueNameSql, [$venue_id]);
         if ($venueNameResult) {
             $venue_name = $venueNameResult[0]['venue_name'] ?? null;
             $queue_length = $venueNameResult[0]['queue_length'] ?? 0;
+            $venue_invite_code = trim((string)($venueNameResult[0]['invite_code'] ?? ''));
     
             $venue_level = strtoupper(trim($venueNameResult[0]['venue_level'] ?? 'A'));
             if (!in_array($venue_level, ['S', 'A', 'B', 'C', 'D'], true)) {
@@ -64,6 +67,7 @@ if ($venue_id) {
     if ($venueNameResult) {
         $venue_name = $venueNameResult[0]['venue_name'] ?? null;
         $queue_length = $venueNameResult[0]['queue_length'] ?? 0;
+        $venue_invite_code = trim((string)($venueNameResult[0]['invite_code'] ?? ''));
     }
 }
 
@@ -201,6 +205,10 @@ $promotionIncome = number_format((float)($promotionIncomeResult[0]['promotion_in
 
 // 今天有效引流用户：当天通过本场邀请码完成注册。
 $todayInviteUsers = 0;
+$inviteBaseTarget = 5;
+$inviteExcellentTarget = 10;
+$zeroInviteStreakDays = 0;
+$zeroInviteStreakCapped = false;
 if ($venue_id) {
     $todayInviteUsersSql = "SELECT COUNT(DISTINCT u.uid) AS invite_user_count
                             FROM users u
@@ -217,6 +225,30 @@ if ($venue_id) {
         [$todayStart, $todayEnd, $venue_id]
     );
     $todayInviteUsers = (int)($todayInviteUsersResult[0]['invite_user_count'] ?? 0);
+
+    if ($venue_invite_code !== '' && $venue_invite_code !== '0000') {
+        $recentInviteRows = $database->query(
+            "SELECT DATE(created_at) AS invite_date, COUNT(*) AS invite_count
+             FROM users
+             WHERE created_at >= CURDATE() - INTERVAL 5 DAY
+               AND created_at < CURDATE()
+               AND invitation_code = ?
+             GROUP BY DATE(created_at)",
+            [$venue_invite_code]
+        );
+        $inviteDates = [];
+        foreach ($recentInviteRows ?: [] as $recentInviteRow) {
+            $inviteDates[(string)$recentInviteRow['invite_date']] = (int)$recentInviteRow['invite_count'];
+        }
+        for ($daysAgo = 1; $daysAgo <= 5; $daysAgo++) {
+            $date = date('Y-m-d', strtotime('-' . $daysAgo . ' day'));
+            if (($inviteDates[$date] ?? 0) > 0) {
+                break;
+            }
+            $zeroInviteStreakDays++;
+        }
+        $zeroInviteStreakCapped = $zeroInviteStreakDays >= 5;
+    }
 }
 // Report count
 $reportCountSql = "SELECT COUNT(r.device_id) AS report_count
@@ -242,6 +274,10 @@ echo json_encode([
         'promotionDeduction' => number_format($promotionDeduction, 2, '.', ''),
         'promotionIncome' => $promotionIncome,
         'todayInviteUsers' => $todayInviteUsers,
+        'inviteBaseTarget' => $inviteBaseTarget,
+        'inviteExcellentTarget' => $inviteExcellentTarget,
+        'zeroInviteStreakDays' => $zeroInviteStreakDays,
+        'zeroInviteStreakCapped' => $zeroInviteStreakCapped,
         'devicePaymentBeforeDeduction' => $devicePaymentBeforeDeduction,
         'devicePayment' => $devicePayment,
         'giftPayment' => $giftPayment,

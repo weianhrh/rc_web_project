@@ -33,15 +33,11 @@ try {
         voiceBgStatusJson(1001, '用户未登录或会话已过期');
     }
 
-    $rows = $database->query(
-        'SELECT uid, role_id, venue_id FROM admin_users WHERE session_token = ? LIMIT 1',
-        [$sessionToken]
-    );
-    if (!$rows) {
+    $user = $database->getUserBySessionToken($sessionToken);
+    if (!$user) {
         voiceBgStatusJson(1001, '用户未登录或会话已过期');
     }
 
-    $user = $rows[0];
     $roleId = intval($user['role_id']);
     if (!in_array($roleId, [1, 2, 3], true)) {
         voiceBgStatusJson(1002, '当前账号无权查看语音房背景图审核状态');

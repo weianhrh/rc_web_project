@@ -25,7 +25,8 @@ layui.define(['table', 'form'], function(exports){
     {field: 'wallet', title: '钱包', width: 100, templet: function(d) {
       return '¥ ' + parseFloat(d.wallet).toFixed(2);
     }},
-    {field: 'jointime', title: '加入时间', sort: true},
+    {field: 'created_at', title: '首次注册时间', sort: true},
+    {field: 'jointime', title: '最后登录时间', sort: true},
     {title: '操作', width: 250, align: 'center', fixed: 'right', toolbar: '#table-useradmin-webuser'}
   ]],
   page: true,

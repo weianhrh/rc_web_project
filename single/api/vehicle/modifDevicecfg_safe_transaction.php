@@ -1,7 +1,8 @@
 <?php 
 // /api/vehicle/modifDevicecfg.php
 
-require_once '../Database.php';  
+require_once '../Database.php';
+require_once __DIR__ . '/driveConfirmConfig.php';
 header('Content-Type: application/json; charset=utf-8');
  function logMessage($message) {
     $logFile = __DIR__ . '/operation_debug_log.txt';
@@ -138,7 +139,7 @@ function fetchVehicleControlSettings($database, $device_id) {
         return null;
     }
 
-    return $result->fetch_assoc();
+    return driveConfirmConfigAppendSnapshot($database, $device_id, $result->fetch_assoc());
 }
 
 function buildChanges($before, $after) {
@@ -301,7 +302,10 @@ if ($result->num_rows === 0) {
     exit; 
 } 
  
-$settings = $result->fetch_assoc(); 
+$settings = $result->fetch_assoc();
+$canManageDriveConfirm = in_array((int)$role_id, [1, 2], true);
+$driveConfirmState = driveConfirmConfigGetState($database, $user, $device_id);
+$settings['drive_confirm_seconds'] = $driveConfirmState['raw_value'];
  
 // 构造响应数据，默认使用数据库中的值 
 $response = [ 
@@ -332,6 +336,14 @@ $response = [
         'audio_source_type' => $settings['audio_source_type'] === null ? 0 : (int)$settings['audio_source_type']
     ] 
 ]; 
+
+// 驾驶确认时长仅 role=1/2 可见，其他角色的响应中完全省略这些字段。
+if ($canManageDriveConfirm) {
+    $response['data']['drive_confirm_seconds'] = $driveConfirmState['value'];
+    $response['data']['drive_confirm_seconds_available'] = $driveConfirmState['available'];
+    $response['data']['drive_confirm_seconds_editable'] = $driveConfirmState['editable'];
+    $response['data']['drive_confirm_seconds_message'] = $driveConfirmState['message'];
+}
  
 $action = $data['action'] ?? 'get';
 
@@ -347,6 +359,37 @@ if ($action !== 'save') {
         'data' => []
     ], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// 普通字段只在明确提交时更新；不按图传类型覆盖，也不截断非法小数。
+$hasDriveConfirmSeconds = array_key_exists('drive_confirm_seconds', $data);
+$driveConfirmSeconds = null;
+if ($hasDriveConfirmSeconds) {
+    if (!$canManageDriveConfirm) {
+        echo json_encode([
+            'code' => 1003,
+            'msg' => '仅平台管理员可修改驾驶确认时长',
+            'data' => []
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if (!in_array($data['drive_confirm_seconds'], [5, 10, '5', '10'], true)) {
+        echo json_encode([
+            'code' => 1005,
+            'msg' => '驾驶确认时长只能选择 5 秒或 10 秒',
+            'data' => []
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if (!$driveConfirmState['editable']) {
+        echo json_encode([
+            'code' => $driveConfirmState['error_code'],
+            'msg' => $driveConfirmState['message'],
+            'data' => []
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $driveConfirmSeconds = (int)$data['drive_confirm_seconds'];
 }
 
 $request_id = date('YmdHis') . '_' . bin2hex(random_bytes(4));
@@ -456,6 +499,11 @@ if ($isPasteConfig) {
             $data['car_type']
         );
     }
+
+    // 确认时长属于当前设备自身配置，保持原有控制参数复制/粘贴范围。
+    if ($hasDriveConfirmSeconds) {
+        $rejectPaste('驾驶确认时长请在设备配置中单独设置', 'drive_confirm_seconds', $data['drive_confirm_seconds']);
+    }
 }
 
 $denyField = function ($key, $reason) use (&$deniedPayload, $data) {
@@ -500,6 +548,7 @@ $clampInt = function ($value, $min, $max) {
 $knownKeys = [
     'action' => true,
     'device_id' => true,
+    'drive_confirm_seconds' => true,
     // 粘贴配置的元信息只用于校验/日志，不进入 UPDATE。
     'paste_config' => true,
     'paste_source_car_type' => true,
@@ -660,7 +709,32 @@ foreach ($data as $key => $value) {
 }
 
 try {
-    $conn->begin_transaction();
+    if (!$conn->begin_transaction()) {
+        throw new RuntimeException('无法开始设备配置保存事务，请重试');
+    }
+
+    if ($hasDriveConfirmSeconds) {
+        // 锁定设备行，并在写入前再次确认管理员权限与设备存在。
+        $vehicle = driveConfirmConfigFetchVehicle($conn, $device_id, true);
+        if (!$vehicle || !driveConfirmConfigCanAccess($user, $vehicle)) {
+            throw new RuntimeException('设备不存在或无权限修改驾驶确认时长，请刷新后重试');
+        }
+
+        $beforeSettings['drive_confirm_seconds'] = $vehicle['drive_confirm_seconds'];
+        if ((string)$vehicle['drive_confirm_seconds'] !== (string)$driveConfirmSeconds) {
+            $vehicleId = (int)$vehicle['id'];
+            $stmt = $conn->prepare('UPDATE vehicles SET drive_confirm_seconds = ? WHERE id = ? AND serial_number = ?');
+            if (!$stmt) {
+                throw new RuntimeException('保存驾驶确认时长失败，请确认 vehicles.drive_confirm_seconds 为普通字段');
+            }
+            $stmt->bind_param('iis', $driveConfirmSeconds, $vehicleId, $device_id);
+            if (!$stmt->execute()) {
+                throw new RuntimeException('保存驾驶确认时长失败，请确认 vehicles.drive_confirm_seconds 为普通字段');
+            }
+            $allowedPayload['drive_confirm_seconds'] = $driveConfirmSeconds;
+            $stmt->close();
+        }
+    }
 
     foreach ($pendingUpdates as $field => $item) {
         // 字段名来自上面的白名单，不能直接使用用户提交的字段名。
@@ -700,7 +774,9 @@ try {
         logChannelDiff($device_id, $ch, $info['old'], $info['new'], $stmt->affected_rows);
     }
 
-    $conn->commit();
+    if (!$conn->commit()) {
+        throw new RuntimeException('提交设备配置保存事务失败，请重试');
+    }
 } catch (Throwable $e) {
     $conn->rollback();
 

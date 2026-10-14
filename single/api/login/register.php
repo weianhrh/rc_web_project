@@ -4,6 +4,14 @@ require_once '../Database.php'; // 引入数据库连接类
 // 启用会话
 session_start();
 
+$database = new Database();
+$sessionToken = $_COOKIE['session_token'] ?? null;
+$currentUser = $sessionToken ? $database->getUserBySessionToken($sessionToken) : null;
+if (!$currentUser || (int)$currentUser['role_id'] !== 1) {
+    echo json_encode(['code' => 1003, 'msg' => '仅超级管理员可以创建后台账号', 'data' => []]);
+    exit;
+}
+
 // 检查是否是POST请求
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 获取请求参数
@@ -11,11 +19,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $role = $_POST['role'] ?? '4'; // 默认为普通用户
 
-    // 创建数据库实例
-    $database = new Database();
-
     if (!$username || !$password) {
         echo json_encode(['code' => 1, 'msg' => '用户名或密码不能为空', 'data' => []]);
+        exit;
+    }
+
+    if (!in_array((int)$role, [1, 2, 3, 4], true)) {
+        echo json_encode(['code' => 1, 'msg' => '无效的角色', 'data' => []]);
         exit;
     }
 

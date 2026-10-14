@@ -20,6 +20,14 @@
         "href": "vehicleslite.html"
     },
     {
+        "id": "device-automation-run",
+        "icon": "fa-play-circle",
+        "label": "自动化运行",
+        "title": "设备自动化运行",
+        "href": "excavator_auto_control.html",
+        "page": "excavator_auto_control.html"
+    },
+    {
         "id": "venue-management1",
         "icon": "fa-map-marker-alt",
         "label": "场地管理",

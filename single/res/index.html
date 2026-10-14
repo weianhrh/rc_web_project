@@ -121,6 +121,17 @@
             background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
         }
 
+        .metric-item.order-metric {
+            cursor: pointer;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .metric-item.order-metric:focus-visible {
+            outline: 3px solid rgba(22, 119, 255, .24);
+            outline-offset: 2px;
+        }
+
         .metric-item.promo-metric::after {
             background: rgba(21, 148, 95, .1);
         }
@@ -162,6 +173,141 @@
         .invite-metric.is-warning .metric-icon {
             color: #dc6803;
         }
+
+        .invite-metric {
+            grid-column: span 1;
+            min-height: 168px;
+            overflow: visible;
+        }
+
+        .invite-metric.is-success {
+            border-color: #98d5ba;
+            background: linear-gradient(180deg, #fff 0%, #effaf5 100%);
+        }
+
+        .invite-metric.is-success .metric-value,
+        .invite-metric.is-success .metric-icon {
+            color: #08734c;
+        }
+
+        .invite-value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .invite-goal {
+            color: #7b8495;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .invite-progress {
+            width: calc(100% - 46px);
+            height: 7px;
+            margin-top: 10px;
+            overflow: hidden;
+            border-radius: 4px;
+            background: #e8edf4;
+        }
+
+        .invite-progress-fill {
+            display: block;
+            width: 0;
+            height: 100%;
+            border-radius: inherit;
+            background: #d92d20;
+            transition: width .25s ease;
+        }
+
+        .invite-metric.is-warning .invite-progress-fill { background: #dc6803; }
+        .invite-metric.is-success .invite-progress-fill { background: #15945f; }
+
+        .invite-metric.is-warning .invite-target-badge { background: #dc6803; }
+        .invite-metric.is-success .invite-target-badge { background: #15945f; }
+
+        .invite-status-text {
+            margin-top: 8px;
+            color: #475467;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .invite-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px 10px;
+            margin-top: 7px;
+            color: #7b8495;
+            font-size: 11px;
+        }
+
+        .invite-actions {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 6px;
+            margin-top: 11px;
+        }
+
+        .invite-action-btn {
+            min-height: 30px;
+            padding: 0 8px;
+            border: 1px solid #cbd8eb;
+            border-radius: 6px;
+            background: #fff;
+            color: #2457c5;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .invite-action-btn.primary {
+            border-color: #246bfd;
+            background: #246bfd;
+            color: #fff;
+        }
+
+        .invite-detail-mask {
+            position: fixed;
+            inset: 0;
+            z-index: 1190;
+            display: none;
+            background: rgba(15, 23, 42, .46);
+        }
+
+        .invite-detail-modal {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            z-index: 1200;
+            display: none;
+            width: min(92vw, 620px);
+            max-height: 78vh;
+            transform: translate(-50%, -50%);
+            overflow: hidden;
+            border: 1px solid #dfe5ee;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, .22);
+        }
+
+        .invite-detail-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px;
+            border-bottom: 1px solid #e7ebf1;
+        }
+
+        .invite-detail-title { font-size: 17px; font-weight: 700; }
+        .invite-detail-close { border: 0; background: transparent; color: #667085; font-size: 22px; cursor: pointer; }
+        .invite-detail-summary { padding: 12px 18px; background: #f7f9fc; color: #475467; font-size: 13px; }
+        .invite-detail-list { max-height: 52vh; overflow: auto; }
+        .invite-user-row { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; padding: 13px 18px; border-bottom: 1px solid #edf0f4; }
+        .invite-user-name { font-weight: 700; }
+        .invite-user-meta, .invite-user-time { color: #7b8495; font-size: 12px; }
+        .invite-detail-empty { padding: 40px 18px; text-align: center; color: #7b8495; }
 
         .invite-target-badge {
             display: inline-flex;
@@ -283,6 +429,10 @@
 
   .metric-item.main-metric {
     grid-column: span 2;
+  }
+
+  .invite-metric {
+    grid-column: span 1;
   }
 
   .nav-grid {
@@ -499,6 +649,158 @@
   min-width: 0;
 }
 
+.venue-switcher-wrap {
+  flex: 0 1 250px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 150px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.venue-switcher-wrap[hidden] {
+  display: none !important;
+}
+
+.venue-switcher {
+  width: 100%;
+  height: 34px;
+  padding: 0 30px 0 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 13px;
+  outline: none;
+}
+
+.venue-switcher:focus {
+  border-color: #5b8cff;
+  box-shadow: 0 0 0 3px rgba(91, 140, 255, .12);
+}
+
+.mcn-org-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  color: #475467;
+  font-size: 13px;
+}
+
+.mcn-org-wrap b {
+  color: #172033;
+  font-size: 14px;
+}
+
+.mcn-name-input {
+  width: min(260px, 58vw);
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid #b8c2d1;
+  border-radius: 6px;
+  outline: none;
+}
+
+.mcn-name-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, .1);
+}
+
+.mcn-icon-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #475467;
+  cursor: pointer;
+}
+
+.mcn-icon-btn:hover {
+  border-color: #91baff;
+  color: var(--primary);
+}
+
+.venue-enter-btn {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.venue-action-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.venue-analysis-btn {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid #b8d5ff;
+  border-radius: 5px;
+  background: #edf5ff;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.all-venue-summary {
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.all-venue-summary-title {
+  margin-bottom: 10px;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.all-venue-table-wrap {
+  overflow-x: auto;
+}
+
+.all-venue-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.all-venue-table th,
+.all-venue-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #eaecf0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.all-venue-table th:first-child,
+.all-venue-table td:first-child {
+  text-align: left;
+}
+
+.readonly-notice {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid #b2ddff;
+  border-radius: 6px;
+  background: #eff8ff;
+  color: #175cd3;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+body.all-venue-mode #nav-container {
+  display: none;
+}
+
 .venue-row-main {
   margin-bottom: 10px;
 }
@@ -703,6 +1005,12 @@
 
   .venue-row-main {
     margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .venue-switcher-wrap {
+    order: 3;
+    flex-basis: 100%;
   }
 
   .venue-row-sub {
@@ -745,6 +1053,20 @@
     grid-column: span 1;
   }
 
+  .invite-metric {
+    grid-column: span 1;
+    min-height: 164px;
+  }
+
+  .invite-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .invite-action-btn {
+    width: 100%;
+  }
+
   .metric-value {
     font-size: 22px;
   }
@@ -767,6 +1089,13 @@
       <span id="venue-id">(场地ID: 加载中)</span>
     </div>
 
+    <label class="venue-switcher-wrap" id="venue-switcher-wrap" for="venue-switcher" hidden>
+      <span>管理场地</span>
+      <select id="venue-switcher" class="venue-switcher" disabled>
+        <option value="">加载中</option>
+      </select>
+    </label>
+
     <span class="venue-status-wrap">
       <span id="venue-status">加载中</span>
       <button id="status-help-btn" class="status-help-btn" type="button">?</button>
@@ -774,6 +1103,15 @@
   </div>
 
 <div class="venue-row venue-row-sub">
+  <span id="mcn-org-wrap" class="mcn-org-wrap hidden">
+    MCN机构:
+    <b id="mcn-name-text"></b>
+    <button id="mcn-name-edit" class="mcn-icon-btn" type="button" title="修改MCN名称"><i class="fas fa-pen"></i></button>
+    <input id="mcn-name-input" class="mcn-name-input" type="text" maxlength="100" hidden>
+    <button id="mcn-name-save" class="mcn-icon-btn" type="button" title="保存" hidden><i class="fas fa-check"></i></button>
+    <button id="mcn-name-cancel" class="mcn-icon-btn" type="button" title="取消" hidden><i class="fas fa-times"></i></button>
+  </span>
+
   <span id="invite-wrap" class="venue-invite-wrap hidden">
     场地推广邀请码:
     <b id="venue-invite-code">----</b>
@@ -821,20 +1159,34 @@
     </div>
 
     <div class="metric-item invite-metric" id="todayInviteMetric">
-        <div class="metric-label">今天有效引流用户<span class="invite-target-badge" id="inviteTargetBadge" hidden>未达标</span></div>
-        <div class="metric-value" id="todayInviteUsers">0人</div>
+        <div class="metric-label"><span id="inviteMetricLabel">今日邀请码注册</span><span class="invite-target-badge" id="inviteTargetBadge" hidden>未达标</span></div>
+        <div class="invite-value-row"><div class="metric-value" id="todayInviteUsers">0</div><span class="invite-goal" id="inviteGoal">/ 5人</span></div>
+        <div class="invite-progress" id="inviteProgress"><span class="invite-progress-fill" id="inviteProgressFill"></span></div>
+        <div class="invite-status-text" id="inviteStatusText">距基础达标还差5人</div>
+        <div class="invite-meta" id="inviteMeta"><span>优秀目标：10人</span><span id="inviteZeroStreak">截至昨日连续0引流：0天</span></div>
+        <div class="invite-actions" id="inviteActions">
+            <button type="button" class="invite-action-btn primary" id="inviteCopyAction">复制邀请码</button>
+            <button type="button" class="invite-action-btn" id="inviteDetailAction">查看今日明细</button>
+        </div>
         <i class="fas fa-user-plus metric-icon"></i>
     </div>
 
-    <div class="metric-item">
+    <a class="metric-item order-metric" href="/res/incomedetailsv2.html" aria-label="查看收益明细">
         <div class="metric-label">订单数</div>
         <div class="metric-value" id="orderCount">0单</div>
         <i class="fas fa-receipt metric-icon"></i>
-    </div>
+    </a>
+</div>
+<div class="all-venue-summary" id="allVenueBreakdown" hidden>
+  <div class="all-venue-summary-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">各场地今日数据<a class="venue-enter-btn" href="/res/mcn_vehicle_transfer.html" style="text-decoration:none;font-size:14px"><i class="fas fa-exchange-alt" aria-hidden="true"></i> 车辆调配</a></div>
+  <div class="all-venue-table-wrap" id="allVenueTableWrap"></div>
 </div>
         </div>
 
         <!-- 导航区 -->
+        <div class="readonly-notice" id="allVenueReadonlyNotice" hidden>
+          当前为全部场地汇总，可通过车辆调配切换设备归属。订单、财务等操作需先选择具体场地。
+        </div>
         <div class="nav-grid" id="nav-container"></div>
 
     </div>   
@@ -842,52 +1194,288 @@
     
        
 
-        // 发起请求获取数据并更新页面
-        fetch('/api/index/DailySummaryStatsv2.php') 
-            .then(response => response.json()) 
-            .then(data => {
-                if (data.code  === 0) {
-                    window.__venueId = data.data.venue_id;   // ✅ 保存场地ID
-                    if (window.__venueStatus !== undefined) {
-                      setInviteUI(window.__venueId, window.__venueStatus === 0); // ✅ status已有就刷新一次
-                    }
-                    // 赋值给页面元素
-                   const venueName = data.data.venue_name || '动物汽车城';
-                        // document.getElementById('venue-name').childNodes[0].textContent = venueName + ' ';
-                        document.getElementById('venue-name').textContent = venueName;
-    
-                        // document.getElementById('venue-id').textContent = `场地ID: ${data.data.venue_id}`;
-                        document.getElementById('venue-id').textContent = `(场地ID: ${data.data.venue_id})`;
+        function setWorkspaceCookie(name, value) {
+          document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+        }
 
+        async function initVenueWorkspace() {
+          const switcher = document.getElementById('venue-switcher');
 
-                        document.getElementById('totalPayment').textContent = `¥${data.data.totalPayment ?? '0.00'}`;
-                        document.getElementById('devicePayment').textContent = `¥${data.data.devicePayment ?? '0.00'}`;
-                        document.getElementById('giftPayment').textContent = `¥${data.data.giftPayment ?? '0.00'}`;
-                        document.getElementById('promotionIncome').textContent = `¥${data.data.promotionIncome ?? '0.00'}`;
-                        const inviteCount = Number(data.data.todayInviteUsers || 0);
-                        const inviteMetric = document.getElementById('todayInviteMetric');
-                        const inviteTargetBadge = document.getElementById('inviteTargetBadge');
-                        document.getElementById('todayInviteUsers').textContent = `${inviteCount}人`;
-                        inviteMetric.classList.remove('is-danger', 'is-warning');
-                        inviteTargetBadge.hidden = true;
-                        if (inviteCount < 5) {
-                            inviteMetric.classList.add('is-danger');
-                            inviteTargetBadge.hidden = false;
-                        } else if (inviteCount < 10) {
-                            inviteMetric.classList.add('is-warning');
-                        }
-                        renderVenueLevel(data.data.venue_level, data.data.withdraw_ratio);
-                        if (data.data.queue_length == null) {
-                            data.data.queue_length = 0;
-                        }
-                        document.getElementById('queue-length').textContent = `¥${"0.00"}`;
-                        
-                        document.getElementById('orderCount').textContent = `${data.data.orderCount ?? 0} 单`;
-                }
-            })
-            .catch(error => {
-                console.error(' 数据加载失败:', error);
+          try {
+            const response = await fetch('/api/index/get_authorized_venues.php?_=' + Date.now());
+            const result = await response.json();
+            if (!result || result.code !== 0 || !result.data) {
+              throw new Error(result?.msg || '获取场地列表失败');
+            }
+
+            const info = result.data;
+            window.__mcnInfo = info;
+            document.getElementById('venue-switcher-wrap').hidden = !info.can_switch_venue;
+            setupMcnNameEditor(info);
+            switcher.innerHTML = '';
+            info.venues.forEach(venue => {
+              const option = document.createElement('option');
+              option.value = String(venue.id);
+              option.textContent = `${venue.venue_name}（${venue.id}）`;
+              switcher.appendChild(option);
             });
+
+            if (info.can_view_all) {
+              const allOption = document.createElement('option');
+              allOption.value = 'all';
+              allOption.textContent = `全部场地（${info.venues.length}个，只读）`;
+              switcher.insertBefore(allOption, switcher.firstChild);
+            }
+
+            switcher.value = info.scope === 'all'
+              ? 'all'
+              : String(info.current_venue_id || info.default_venue_id || '');
+            switcher.disabled = info.venues.length === 0;
+            switcher.onchange = function () {
+              if (this.value === 'all') {
+                setWorkspaceCookie('venue_scope', 'all');
+              } else {
+                setWorkspaceCookie('selected_venue_id', this.value);
+                setWorkspaceCookie('venue_scope', 'single');
+              }
+              window.location.reload();
+            };
+
+            await loadDashboardData(info.scope);
+          } catch (error) {
+            console.error('场地工作台初始化失败:', error);
+            switcher.innerHTML = '<option value="">加载失败</option>';
+            await loadDashboardData('single');
+          }
+        }
+
+        function setupMcnNameEditor(info) {
+          const wrap = document.getElementById('mcn-org-wrap');
+          const textEl = document.getElementById('mcn-name-text');
+          const input = document.getElementById('mcn-name-input');
+          const editBtn = document.getElementById('mcn-name-edit');
+          const saveBtn = document.getElementById('mcn-name-save');
+          const cancelBtn = document.getElementById('mcn-name-cancel');
+
+          if (!info.is_mcn) {
+            wrap.classList.add('hidden');
+            return;
+          }
+
+          wrap.classList.remove('hidden');
+          textEl.textContent = info.mcn_name || '未命名MCN';
+          editBtn.hidden = !info.can_edit_mcn_name;
+
+          const toggleEdit = active => {
+            textEl.hidden = active;
+            editBtn.hidden = active || !info.can_edit_mcn_name;
+            input.hidden = !active;
+            saveBtn.hidden = !active;
+            cancelBtn.hidden = !active;
+            if (active) {
+              input.value = textEl.textContent;
+              input.focus();
+              input.select();
+            }
+          };
+
+          editBtn.onclick = () => toggleEdit(true);
+          cancelBtn.onclick = () => toggleEdit(false);
+          saveBtn.onclick = async () => {
+            const name = input.value.trim();
+            if (name.length < 2) {
+              alert('MCN名称至少需要2个字符');
+              return;
+            }
+
+            saveBtn.disabled = true;
+            try {
+              const body = new URLSearchParams({ mcn_name: name });
+              const response = await fetch('/api/index/update_mcn_name.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                body
+              });
+              const result = await response.json();
+              if (!result || result.code !== 0) {
+                throw new Error(result?.msg || '修改失败');
+              }
+              textEl.textContent = result.data.mcn_name;
+              info.mcn_name = result.data.mcn_name;
+              toggleEdit(false);
+            } catch (error) {
+              alert(error.message || '修改MCN名称失败');
+            } finally {
+              saveBtn.disabled = false;
+            }
+          };
+          input.onkeydown = event => {
+            if (event.key === 'Enter') saveBtn.click();
+            if (event.key === 'Escape') cancelBtn.click();
+          };
+        }
+
+        async function loadDashboardData(scope) {
+          const isAll = scope === 'all';
+          const endpoint = isAll
+            ? '/api/index/MultiVenueSummary.php?_=' + Date.now()
+            : '/api/index/DailySummaryStatsv2.php?_=' + Date.now();
+
+          try {
+            const response = await fetch(endpoint);
+            const result = await response.json();
+            if (!result || result.code !== 0 || !result.data) {
+              throw new Error(result?.msg || '数据加载失败');
+            }
+
+            const data = result.data;
+            window.__allVenueReadonly = isAll;
+            window.__venueId = isAll ? null : data.venue_id;
+            document.body.classList.toggle('all-venue-mode', isAll);
+            document.getElementById('allVenueReadonlyNotice').hidden = !isAll;
+            document.getElementById('venue-name').textContent = data.venue_name || '场地名称';
+            document.getElementById('venue-id').textContent = isAll
+              ? `(${data.venue_count || 0}个场地，只读汇总)`
+              : `(场地ID: ${data.venue_id})`;
+
+            document.getElementById('totalPayment').textContent = `¥${data.totalPayment ?? '0.00'}`;
+            document.getElementById('devicePayment').textContent = `¥${data.devicePayment ?? '0.00'}`;
+            document.getElementById('giftPayment').textContent = `¥${data.giftPayment ?? '0.00'}`;
+            document.getElementById('promotionIncome').textContent = `¥${data.promotionIncome ?? '0.00'}`;
+            document.getElementById('queue-length').textContent = '¥0.00';
+            document.getElementById('orderCount').textContent = `${data.orderCount ?? 0} 单`;
+
+            const inviteCount = Number(data.todayInviteUsers || 0);
+            const baseTarget = Math.max(1, Number(data.inviteBaseTarget || 5));
+            const excellentTarget = Math.max(baseTarget, Number(data.inviteExcellentTarget || 10));
+            const inviteMetric = document.getElementById('todayInviteMetric');
+            const inviteTargetBadge = document.getElementById('inviteTargetBadge');
+            const inviteGoal = document.getElementById('inviteGoal');
+            const inviteStatusText = document.getElementById('inviteStatusText');
+            const inviteProgressFill = document.getElementById('inviteProgressFill');
+            const inviteActions = document.getElementById('inviteActions');
+            const inviteMeta = document.getElementById('inviteMeta');
+            const inviteProgress = document.getElementById('inviteProgress');
+            const inviteMetricLabel = document.getElementById('inviteMetricLabel');
+            document.getElementById('todayInviteUsers').textContent = inviteCount;
+            inviteMetric.classList.remove('is-danger', 'is-warning', 'is-success');
+            inviteTargetBadge.hidden = true;
+            inviteActions.hidden = isAll;
+            inviteMeta.hidden = isAll;
+            inviteProgress.hidden = isAll;
+
+            if (isAll) {
+              inviteMetricLabel.textContent = '今日引流总人数';
+              inviteGoal.textContent = '人';
+              inviteStatusText.textContent = '切换到具体场地查看达标进度';
+              inviteProgressFill.style.width = '0%';
+            } else if (inviteCount < baseTarget) {
+              inviteMetricLabel.textContent = '今日邀请码注册';
+              inviteMetric.classList.add('is-danger');
+              inviteTargetBadge.hidden = false;
+              inviteTargetBadge.textContent = '未达标';
+              inviteGoal.textContent = `/ ${baseTarget}人`;
+              inviteStatusText.textContent = `距基础达标还差${baseTarget - inviteCount}人`;
+              inviteProgressFill.style.width = `${Math.min(100, inviteCount / baseTarget * 100)}%`;
+            } else if (inviteCount < excellentTarget) {
+              inviteMetricLabel.textContent = '今日邀请码注册';
+              inviteMetric.classList.add('is-warning');
+              inviteTargetBadge.hidden = false;
+              inviteTargetBadge.textContent = '已达标';
+              inviteGoal.textContent = `/ ${excellentTarget}人`;
+              inviteStatusText.textContent = `已完成基础目标，距优秀还差${excellentTarget - inviteCount}人`;
+              inviteProgressFill.style.width = `${Math.min(100, inviteCount / excellentTarget * 100)}%`;
+            } else {
+              inviteMetricLabel.textContent = '今日邀请码注册';
+              inviteMetric.classList.add('is-success');
+              inviteTargetBadge.hidden = false;
+              inviteTargetBadge.textContent = '今日优秀';
+              inviteGoal.textContent = '人';
+              inviteStatusText.textContent = '今日引流表现优秀，请继续保持';
+              inviteProgressFill.style.width = '100%';
+            }
+
+            const streakDays = Number(data.zeroInviteStreakDays || 0);
+            const streakText = data.zeroInviteStreakCapped && streakDays >= 5 ? '5天以上' : `${streakDays}天`;
+            document.getElementById('inviteZeroStreak').textContent = `截至昨日连续0引流：${streakText}`;
+
+            if (isAll) {
+              setInviteUI(null, false);
+              document.getElementById('venue-level-wrap').classList.add('hidden');
+              document.getElementById('status-help-btn').hidden = true;
+              const statusEl = document.getElementById('venue-status');
+              statusEl.textContent = '只读';
+              statusEl.className = '';
+              renderAllVenueBreakdown(data.venues || []);
+            } else {
+              document.getElementById('venue-level-wrap').classList.remove('hidden');
+              document.getElementById('status-help-btn').hidden = false;
+              document.getElementById('allVenueBreakdown').hidden = true;
+              renderVenueLevel(data.venue_level, data.withdraw_ratio);
+              fetchVenueStatus();
+            }
+          } catch (error) {
+            console.error('数据加载失败:', error);
+          }
+        }
+
+        function renderAllVenueBreakdown(rows) {
+          const section = document.getElementById('allVenueBreakdown');
+          const wrap = document.getElementById('allVenueTableWrap');
+          const table = document.createElement('table');
+          table.className = 'all-venue-table';
+          table.innerHTML = '<thead><tr><th>场地</th><th>订单数</th><th>设备实付</th><th>推广扣减</th><th>礼物收益</th><th>预估收益</th><th>有效引流</th><th>操作</th></tr></thead>';
+          const body = document.createElement('tbody');
+
+          rows.forEach(row => {
+            const tr = document.createElement('tr');
+            [
+              `${row.venue_name}（${row.venue_id}）`,
+              `${row.order_count}单`,
+              `¥${row.order_total}`,
+              `-¥${row.promotion_deduction}`,
+              `¥${row.gift_payment}`,
+              `¥${row.estimated_income}`,
+              `${row.invite_count}人`
+            ].forEach(value => {
+              const td = document.createElement('td');
+              td.textContent = value;
+              tr.appendChild(td);
+            });
+            const actionTd = document.createElement('td');
+            const actionGroup = document.createElement('div');
+            actionGroup.className = 'venue-action-group';
+            const enterBtn = document.createElement('button');
+            enterBtn.type = 'button';
+            enterBtn.className = 'venue-enter-btn';
+            enterBtn.textContent = '进入管理';
+            enterBtn.onclick = () => enterVenue(row.venue_id);
+            const analysisBtn = document.createElement('button');
+            analysisBtn.type = 'button';
+            analysisBtn.className = 'venue-analysis-btn';
+            analysisBtn.textContent = '数据分析';
+            analysisBtn.onclick = () => {
+              window.location.href = `/res/venue_data_analysis.html?venue_id=${encodeURIComponent(row.venue_id)}`;
+            };
+            actionGroup.appendChild(enterBtn);
+            actionGroup.appendChild(analysisBtn);
+            actionTd.appendChild(actionGroup);
+            tr.appendChild(actionTd);
+            body.appendChild(tr);
+          });
+
+          table.appendChild(body);
+          wrap.replaceChildren(table);
+          section.hidden = false;
+        }
+
+        function enterVenue(venueId) {
+          setWorkspaceCookie('selected_venue_id', String(venueId));
+          setWorkspaceCookie('venue_scope', 'single');
+          window.location.reload();
+        }
+
+        initVenueWorkspace();
 
         // ✅ 根据场地ID生成4位邀请码：个位->100x；十位->10xx；百位->1xxx；四位及以上直接取后4位
   function genInviteCode(venueId) {
@@ -958,6 +1546,7 @@
               badge.title = `${finalLevel}级，提现比例 ${finalRatio}%`;
             } 
         function fetchVenueStatus() {
+            if (window.__allVenueReadonly) return;
             fetch('/api/index/get_venue_status.php') // 🔁 替换成真实接口
               .then(res => res.json())
               .then(data => {
@@ -1000,9 +1589,6 @@ setInviteUI(window.__venueId, status === 0); // ✅ 用全局venueId（不再从
                 statusEl.className = "";
               });
           }
-        
-          // ✅ 页面加载完成后立即调用一次
-          fetchVenueStatus();
         
           // ✅ 每 30 分钟自动刷新一次
           setInterval(fetchVenueStatus, 30 * 60 * 1000);
@@ -1118,6 +1704,11 @@ Promise.all([
   // 如果是 role_id = 4，过滤掉这 9 个功能
   if (roleId === 4) {
     finalNavData = navData.filter(item => !role4HideIds.has(item.id));
+  }
+
+  // 自动化运行涉及真实设备动作，仅超级管理员、管理员和加盟商显示入口。
+  if (![1, 2, 3].includes(roleId)) {
+    finalNavData = finalNavData.filter(item => item.id !== 'device-automation-run');
   }
   // 渲染过滤后的菜单
   renderNavGrid(finalNavData);
@@ -1287,6 +1878,84 @@ document.addEventListener('DOMContentLoaded', function initAnchorAuthModal() {
 
 //   checkAnchorAuthOnEnter();
 });
+
+function escapeInviteDetail(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[char]));
+}
+
+async function copyInviteCodeFromMetric() {
+  const button = document.getElementById('inviteCopyAction');
+  const code = (document.getElementById('venue-invite-code')?.textContent || '').trim();
+  if (!code || code === '----') {
+    alert('当前场地暂无可用邀请码');
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(code);
+  } catch (error) {
+    const textarea = document.createElement('textarea');
+    textarea.value = code;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+  }
+
+  const oldText = button.textContent;
+  button.textContent = '已复制 ' + code;
+  setTimeout(() => { button.textContent = oldText; }, 1400);
+}
+
+function closeInviteDetail() {
+  document.getElementById('invite-detail-mask').style.display = 'none';
+  document.getElementById('invite-detail-modal').style.display = 'none';
+}
+
+async function openInviteDetail() {
+  const mask = document.getElementById('invite-detail-mask');
+  const modal = document.getElementById('invite-detail-modal');
+  const summary = document.getElementById('invite-detail-summary');
+  const list = document.getElementById('invite-detail-list');
+  mask.style.display = 'block';
+  modal.style.display = 'block';
+  summary.textContent = '正在加载今日邀请码注册用户...';
+  list.innerHTML = '<div class="invite-detail-empty">正在加载...</div>';
+
+  try {
+    const response = await fetch('/api/index/TodayInviteDetail.php?_=' + Date.now(), { credentials: 'same-origin' });
+    const result = await response.json();
+    if (!result || result.code !== 0) throw new Error(result?.msg || '引流明细加载失败');
+    const data = result.data || {};
+    summary.textContent = `${data.venue_name || '当前场地'} · 邀请码 ${data.invite_code || '-'} · 今日 ${data.count || 0} 人`;
+    const rows = Array.isArray(data.list) ? data.list : [];
+    if (!rows.length) {
+      list.innerHTML = '<div class="invite-detail-empty">今天暂时还没有邀请码注册用户</div>';
+      return;
+    }
+    list.innerHTML = rows.map(row => `
+      <div class="invite-user-row">
+        <div>
+          <div class="invite-user-name">${escapeInviteDetail(row.nickname || '未设置昵称')}</div>
+          <div class="invite-user-meta">UID ${Number(row.uid || 0)} · ${escapeInviteDetail(row.platform_type || '未知平台')}</div>
+        </div>
+        <div class="invite-user-time">${escapeInviteDetail(row.created_at || '-')}</div>
+      </div>
+    `).join('');
+  } catch (error) {
+    summary.textContent = '加载失败';
+    list.innerHTML = `<div class="invite-detail-empty">${escapeInviteDetail(error.message || '请稍后重试')}</div>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function initInviteMetricActions() {
+  document.getElementById('inviteCopyAction')?.addEventListener('click', copyInviteCodeFromMetric);
+  document.getElementById('inviteDetailAction')?.addEventListener('click', openInviteDetail);
+  document.getElementById('invite-detail-close')?.addEventListener('click', closeInviteDetail);
+  document.getElementById('invite-detail-mask')?.addEventListener('click', closeInviteDetail);
+});
 </script>
 
 
@@ -1307,8 +1976,8 @@ document.addEventListener('DOMContentLoaded', function initAnchorAuthModal() {
 <div id="level-rule-modal" class="level-rule-modal">
   <div class="level-rule-title">场地评级说明</div>
   <div class="level-rule-content">
-    <div><b>A评级场地：</b>该评级场地运营正常，有效直播引流，收益提成比例为80%，请继续保持运营。</div>
-    <div><b>C评级场地：</b>该评级场地因长时间缺乏运营，无有效直播引流，收益提成比例降低为60%，请及时整改。</div>
+    <div><b>A评级场地：</b>运营正常，收益提成比例为80%。C级场地最近5个完整自然日累计引流超过15人，可自动恢复A级。</div>
+    <div><b>C评级场地：</b>最近5个完整自然日引流均为0时自动降为C级，收益提成比例为60%，请及时恢复推广。</div>
     <!--<div><b>S级：</b>扶持级，后续扩展使用。</div>-->
     <!--<div><b>B / D级：</b>后续扩展使用。</div>-->
     <!--<div style="margin-top:8px;">-->
@@ -1319,6 +1988,15 @@ document.addEventListener('DOMContentLoaded', function initAnchorAuthModal() {
     </div>
   </div>
   <button id="level-rule-close" class="level-rule-close" type="button">知道了</button>
+</div>
+<div id="invite-detail-mask" class="invite-detail-mask"></div>
+<div id="invite-detail-modal" class="invite-detail-modal" role="dialog" aria-modal="true" aria-labelledby="invite-detail-title">
+  <div class="invite-detail-head">
+    <div class="invite-detail-title" id="invite-detail-title">今日引流明细</div>
+    <button type="button" class="invite-detail-close" id="invite-detail-close" aria-label="关闭">×</button>
+  </div>
+  <div class="invite-detail-summary" id="invite-detail-summary">正在加载...</div>
+  <div class="invite-detail-list" id="invite-detail-list"></div>
 </div>
 <!-- 主播认证提醒弹窗 -->
 <div id="anchor-auth-mask" class="anchor-auth-mask">

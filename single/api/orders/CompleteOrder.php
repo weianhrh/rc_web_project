@@ -312,7 +312,8 @@ $existingPaymentAmount = $orderResult['payment_amount'] ?? 0; // 如果没有金
 // 从查询结果中提取当前的支付金额
 $existingtime = $orderResult['billing_rules'] ?? 0; // 可驾驶的时长
 if ($existingtime > 0) {
-    $ratePerMinute = ceil($existingPaymentAmount / $existingtime); // 每分钟资费，向上取整
+    // $ratePerMinute = ceil($existingPaymentAmount / $existingtime); // 每分钟资费，向上取整
+    $ratePerMinute = (float)$existingPaymentAmount / (float)$existingtime;
 } else {
     $ratePerMinute = 0; // 防止除以0错误
 }
@@ -411,7 +412,8 @@ if ($result && count($result) > 0) {
 
             // 更新订单中的实际支付金额
             // 使用 ceil 函数向上取整计算已经使用的金额
-            $usedTimepay = ceil($usedTimeMinutes) * $ratePerMinute;
+            // $usedTimepay = ceil($usedTimeMinutes) * $ratePerMinute;
+            $usedTimepay = (float)ceil($usedTimeMinutes * $ratePerMinute);
 
             // 计算返还金额
             $refundAmount = floor($existingPaymentAmount - $usedTimepay);

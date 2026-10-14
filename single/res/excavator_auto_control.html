@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>设备自动运行</title>
+  <style>
+    :root{--bg:#f5f7fa;--panel:#fff;--text:#172033;--muted:#667085;--line:#d9dee8;--blue:#1677ff;--blue2:#0f5fc7;--red:#d92d20;--green:#16803c;--amber:#b54708}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Arial,"Microsoft YaHei",sans-serif;letter-spacing:0}
+    button,input,select{font:inherit}.topbar{height:58px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:5}
+    h1{font-size:19px;margin:0}.state{display:flex;align-items:center;gap:8px;color:var(--muted)}.dot{width:9px;height:9px;border-radius:50%;background:#98a2b3}.dot.running{background:var(--green)}.dot.error{background:var(--red)}
+    main{max-width:1160px;margin:20px auto;padding:0 18px 36px}.band{background:var(--panel);border:1px solid var(--line);border-radius:7px;margin-bottom:14px;padding:18px}
+    .section-title{font-size:16px;font-weight:700;margin:0 0 14px}.target{display:grid;grid-template-columns:minmax(260px,1fr) 180px auto;gap:12px;align-items:end}
+    label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}select,input{width:100%;height:38px;border:1px solid #cbd2df;border-radius:6px;background:#fff;padding:0 10px;color:var(--text)}
+    button{height:38px;border:1px solid transparent;border-radius:6px;padding:0 15px;cursor:pointer;background:#fff;color:var(--text)}button:disabled{opacity:.48;cursor:not-allowed}.primary{background:var(--blue);color:#fff}.primary:hover{background:var(--blue2)}.secondary{border-color:#cbd2df}.danger{background:var(--red);color:#fff;font-weight:700}.icon{width:38px;padding:0;font-size:18px}
+    .preset-row,.runbar,.mode-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.preset-row{margin-bottom:14px}.preset{border-color:#b8c2d1}.preset.active{border-color:var(--blue);color:var(--blue);background:#eef6ff}.mode-row{margin-bottom:14px}.mode-switch{display:inline-flex;border:1px solid #b8c2d1;border-radius:6px;overflow:hidden}.mode-switch button{border:0;border-radius:0;min-width:108px}.mode-switch button+button{border-left:1px solid #b8c2d1}.mode-switch button.active{background:var(--blue);color:#fff}
+    table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{text-align:left;border-bottom:1px solid #e7eaf0;padding:10px 8px;vertical-align:middle}th{font-size:12px;color:var(--muted);font-weight:600;background:#fafbfc}th:nth-child(1){width:56px}th:nth-child(3){width:165px}th:nth-child(4){width:120px}th:nth-child(5){width:56px}
+    .command{font-family:Consolas,monospace;color:#344054;background:#f2f4f7;padding:4px 7px;border-radius:4px;white-space:nowrap}.duration-wrap{display:flex;align-items:center;gap:6px}.duration-wrap input{width:90px}.drag{color:#98a2b3}.remove{border:0;color:var(--red);background:transparent;font-size:18px;width:34px;padding:0}
+    .runbar{justify-content:space-between}.run-options{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.repeat{width:74px}.check{display:flex;align-items:center;gap:8px;color:var(--text);font-size:13px;margin:0}.check input{width:16px;height:16px;margin:0}.actions{display:flex;gap:9px}.progress{height:7px;background:#e9edf3;border-radius:4px;overflow:hidden;margin-top:14px}.progress>i{display:block;height:100%;width:0;background:var(--blue);transition:width .18s ease}
+    .log{height:180px;overflow:auto;background:#101828;color:#d0d5dd;border-radius:6px;padding:12px;font:12px/1.65 Consolas,monospace}.log .ok{color:#6ce9a6}.log .bad{color:#fda29b}.log .info{color:#84caff}
+    .notice{border-left:3px solid var(--amber);background:#fff8eb;padding:10px 12px;color:#7a2e0e;margin-bottom:14px}.empty{text-align:center;color:var(--muted);padding:24px}.mobile-stop{display:none}
+    @media(max-width:720px){.topbar{padding:0 14px}.target{grid-template-columns:1fr}.band{padding:14px}table{min-width:650px}.table-scroll{overflow-x:auto}.runbar{align-items:stretch}.actions{width:100%}.actions button{flex:1}.mobile-stop{display:block;position:fixed;right:16px;bottom:16px;z-index:10;width:58px;height:58px;border-radius:50%;padding:0;box-shadow:0 7px 22px rgba(217,45,32,.32)}}
+  </style>
+</head>
+<body>
+  <header class="topbar"><h1>设备自动运行</h1><div class="state"><span id="stateDot" class="dot"></span><span id="stateText">待机</span></div></header>
+  <main>
+    <section class="band">
+      <h2 class="section-title">目标设备</h2>
+      <div class="target">
+        <div><label for="deviceSelect">设备 / ZEGO 房间</label><select id="deviceSelect"><option value="">正在加载设备...</option></select></div>
+        <div><label for="roomId">房间号</label><input id="roomId" readonly placeholder="选择设备后自动填充"></div>
+        <button id="refreshBtn" class="secondary" type="button">刷新设备</button>
+      </div>
+    </section>
+
+    <section class="band">
+      <h2 class="section-title">自动动作编排</h2>
+      <div class="mode-row"><span>设备类型</span><div class="mode-switch"><button class="mode-btn active" data-mode="excavator" type="button">挖机</button><button class="mode-btn" data-mode="vehicle" type="button">车辆</button></div></div>
+      <div id="modeNotice" class="notice">运行前确认设备周围无人。每个动作最长 3 秒，动作结束会自动发送对应停止指令；离开页面或切换标签页时会触发全动作停止。</div>
+      <div id="presetButtons" class="preset-row">
+        <button id="addBtn" class="secondary" type="button">+ 添加动作</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>顺序</th><th>动作</th><th>发送指令</th><th>持续时间</th><th></th></tr></thead>
+          <tbody id="steps"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="band">
+      <div class="runbar">
+        <div class="run-options">
+          <div><label for="repeat">循环次数</label><input id="repeat" class="repeat" type="number" min="1" max="100" value="1"></div>
+          <label class="check"><input id="safetyCheck" type="checkbox">已确认设备周围安全</label>
+        </div>
+        <div class="actions"><button id="startBtn" class="primary" type="button">开始运行</button><button id="stopBtn" class="danger" type="button">立即停止全部</button></div>
+      </div>
+      <div class="progress"><i id="progressBar"></i></div>
+    </section>
+
+    <section class="band"><h2 class="section-title">运行记录</h2><div id="log" class="log"><div class="info">等待选择设备。</div></div></section>
+  </main>
+  <button id="mobileStop" class="danger mobile-stop" type="button" title="立即停止全部">■</button>
+
+  <script>
+    const COMMAND_API = '/api/devMgr/device_command.php';
+    const LOCK_API = '/api/devMgr/excavator_run_lock.php';
+    const EXCAVATOR_ACTIONS = {
+      dx1:'大臂上升',dx2:'大臂下降',xs1:'小臂伸出',xs2:'小臂收回',
+      ws1:'铲斗收斗',ws2:'铲斗放斗',lz1:'上车体左转',lz2:'上车体右转',
+      ql1:'左履带前进',ql2:'左履带后退',qr1:'右履带前进',qr2:'右履带后退'
+    };
+    const VEHICLE_ACTIONS = {
+      forward:'前进',backward:'后退',left:'原地左转向',right:'原地右转向',
+      forwardLeft:'前进并左转',forwardRight:'前进并右转',
+      backwardLeft:'后退并左转',backwardRight:'后退并右转'
+    };
+    const PRESETS = {
+      excavator:[
+        {key:'boom',label:'大臂往返测试',steps:[['dx1',800],['dx2',800]]},
+        {key:'dig',label:'挖掘循环',steps:[['dx2',700],['xs1',650],['ws1',700],['dx1',850],['lz1',550],['ws2',650]]},
+        {key:'turn',label:'左右回转',steps:[['lz1',700],['lz2',700]]}
+      ],
+      vehicle:[
+        {key:'straight',label:'直行往返',steps:[['forward',900],['backward',800]]},
+        {key:'sRoute',label:'S 形路线',steps:[['forwardLeft',750],['forwardRight',750],['forward',650]]},
+        {key:'square',label:'方形路线',steps:[['forward',900],['forwardRight',650],['forward',900],['forwardRight',650],['forward',900],['forwardRight',650],['forward',900],['forwardRight',650]]}
+      ]
+    };
+    let mode='excavator';
+    let activeRunMode='';
+    let activePreset='boom';
+    let calibration={directionMax:2000,directionMin:1000,directionMid:1500,throttleMax:2000,throttleMin:1000,throttleMid:1500};
+    let steps = PRESETS.excavator[0].steps.map(v=>({action:v[0],duration:v[1]}));
+    let runToken = 0;
+    let running = false;
+    let lockToken = '';
+    let heartbeatTimer = null;
+
+    const $ = id => document.getElementById(id);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const clampServo=value=>Math.max(1000,Math.min(2000,Math.round(Number(value)||1500)));
+    const safeToward=(mid,end,ratio=.45)=>clampServo(mid+(end-mid)*ratio);
+    function actionMap(){return mode==='vehicle'?VEHICLE_ACTIONS:EXCAVATOR_ACTIONS;}
+    function commandsFor(action){
+      if(mode==='excavator'){
+        const channel=action.slice(0,2),value=action.slice(2);
+        return {start:[`+${channel}#${value}-`],stop:[`+${channel}#0-`]};
+      }
+      const forward=`+fd#${safeToward(calibration.throttleMid,calibration.throttleMax)}-`;
+      const backward=`+bk#${safeToward(calibration.throttleMid,calibration.throttleMin)}-`;
+      const left=`+lt#${safeToward(calibration.directionMid,calibration.directionMax,.55)}-`;
+      const right=`+rt#${safeToward(calibration.directionMid,calibration.directionMin,.55)}-`;
+      const stop=[`+sp#${clampServo(calibration.throttleMid)}-`,`+md#${clampServo(calibration.directionMid)}-`];
+      const map={forward:[forward],backward:[backward],left:[left],right:[right],forwardLeft:[left,forward],forwardRight:[right,forward],backwardLeft:[left,backward],backwardRight:[right,backward]};
+      return {start:map[action]||[forward],stop};
+    }
+    function allStopCommands(runMode=activeRunMode||mode){
+      return runMode==='vehicle'
+        ? [`+sp#${clampServo(calibration.throttleMid)}-`,`+md#${clampServo(calibration.directionMid)}-`]
+        : ['dx','xs','ws','lz','ql','qr'].map(ch=>`+${ch}#0-`);
+    }
+    function esc(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function log(message,type=''){const row=document.createElement('div');row.className=type;row.textContent=`[${new Date().toLocaleTimeString('zh-CN',{hour12:false})}] ${message}`;$('log').appendChild(row);$('log').scrollTop=$('log').scrollHeight;}
+    function setState(text,type=''){ $('stateText').textContent=text; $('stateDot').className='dot'+(type?' '+type:''); }
+    function setEditingLocked(locked){
+      [$('deviceSelect'),$('refreshBtn'),$('repeat')].forEach(el=>{if(el)el.disabled=locked;});
+      document.querySelectorAll('.mode-btn,.preset,#addBtn,.action-select,.duration,.remove').forEach(el=>el.disabled=locked);
+    }
+    async function readJson(res,label){
+      const text=await res.text();
+      try{return JSON.parse(text);}catch(e){throw new Error(`${label}返回格式异常（HTTP ${res.status}）`);}
+    }
+
+    async function loadDevices(){
+      $('deviceSelect').innerHTML='<option value="">正在加载设备...</option>';
+      try{
+        const res=await fetch(LOCK_API,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:'action=list',credentials:'include'});
+        const json=await readJson(res,'设备列表接口');
+        if(json.code!==200) throw new Error(json.msg||'设备加载失败');
+        const rows=json.data?.rows||[];
+        $('deviceSelect').innerHTML='<option value="">请选择已关联车辆的设备</option>'+rows.map(r=>{const busy=Number(r.busy_count)>0?' [使用中]':'';return `<option value="${esc(r.room_id||'')}" data-direction-max="${esc(r.direction_max||2000)}" data-direction-min="${esc(r.direction_min||1000)}" data-direction-mid="${esc(r.direction_mid||1500)}" data-throttle-max="${esc(r.throttle_max||2000)}" data-throttle-min="${esc(r.throttle_min||1000)}" data-throttle-mid="${esc(r.throttle_mid||1500)}">${esc(r.vehicle_names||'未命名车辆')} / 设备 ${esc(r.device_id)} / 房间 ${esc(r.room_id||'-')}${busy}</option>`;}).join('');
+        log(`已加载 ${rows.length} 个可控设备房间（已过滤未关联车辆的摄像头）`,'ok');
+      }catch(e){$('deviceSelect').innerHTML='<option value="">设备加载失败</option>';log(e.message,'bad');setState('加载失败','error');}
+    }
+
+    function renderPresets(){
+      const list=PRESETS[mode];
+      $('presetButtons').innerHTML=list.map((p,i)=>`<button class="preset ${p.key===activePreset||(!activePreset&&i===0)?'active':''}" data-preset="${p.key}" type="button">${p.label}</button>`).join('')+'<button id="addBtn" class="secondary" type="button">+ 添加动作</button>';
+    }
+
+    function applyPreset(key){
+      const preset=PRESETS[mode].find(p=>p.key===key)||PRESETS[mode][0];
+      activePreset=preset.key;steps=preset.steps.map(v=>({action:v[0],duration:v[1]}));renderPresets();renderSteps();
+    }
+
+    function renderSteps(){
+      if(!steps.length){$('steps').innerHTML='<tr><td colspan="5" class="empty">暂无动作，请添加动作</td></tr>';return;}
+      const opts=Object.entries(actionMap()).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+      $('steps').innerHTML=steps.map((s,i)=>`<tr data-index="${i}"><td class="drag">${i+1}</td><td><select class="action-select">${opts}</select></td><td><span class="command">${commandsFor(s.action).start.join(' ')}</span></td><td><div class="duration-wrap"><input class="duration" type="number" min="100" max="3000" step="50" value="${s.duration}"><span>ms</span></div></td><td><button class="remove" type="button" title="删除动作">×</button></td></tr>`).join('');
+      [...document.querySelectorAll('.action-select')].forEach((el,i)=>el.value=steps[i].action);
+    }
+
+    async function sendCommand(message,isStop=false,keepalive=false,commandMode=activeRunMode||mode){
+      const room=$('roomId').value.trim(); if(!room) throw new Error('请先选择设备');
+      const body=new URLSearchParams({room_id:room,from_user_id:'server_bot_1',message,command_type:`${commandMode}_${isStop?'stop':'motion'}`});
+      const res=await fetch(COMMAND_API,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),credentials:'include',keepalive});
+      const json=await readJson(res,'动作指令接口'); if(json.code!==200) throw new Error(json.msg||`指令发送失败：${message}`); return json;
+    }
+
+    async function lockRequest(action,token='',keepalive=false){
+      const room=$('roomId').value.trim();
+      const body=new URLSearchParams({action,room_id:room});
+      if(token) body.set('lock_token',token);
+      const res=await fetch(LOCK_API,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString(),credentials:'include',keepalive});
+      const json=await readJson(res,'设备运行锁接口');
+      if(json.code!==200) throw new Error(json.msg||'设备共享状态切换失败');
+      return json;
+    }
+
+    async function acquireDeviceLock(){
+      const json=await lockRequest('acquire');
+      lockToken=json.data?.lock_token||'';
+      if(!lockToken) throw new Error('服务端未返回运行锁凭证');
+      clearInterval(heartbeatTimer);
+      heartbeatTimer=setInterval(async()=>{
+        if(!lockToken)return;
+        try{await lockRequest('heartbeat',lockToken);}catch(e){log(`运行锁续期失败：${e.message}`,'bad');await stopAll('运行锁失效，保护急停');}
+      },30000);
+      log(`设备已切换为未共享，已锁定 ${json.data?.vehicle_count||0} 台关联车辆`,'ok');
+    }
+
+    async function releaseDeviceLock(keepalive=false){
+      if(!lockToken)return;
+      const token=lockToken; clearInterval(heartbeatTimer); heartbeatTimer=null;
+      await lockRequest('release',token,keepalive);
+      lockToken='';
+      log('设备原共享状态已恢复','ok');
+    }
+
+    async function stopAll(reason='手动急停',quiet=false){
+      if(!running&&!lockToken){if(!quiet)log('当前没有正在运行的自动任务','info');return;}
+      runToken++; running=false; setState('停止中','error'); $('startBtn').disabled=false;
+      const stopMode=activeRunMode||mode;
+      const results=await Promise.allSettled(allStopCommands(stopMode).map(command=>sendCommand(command,true,true,stopMode)));
+      const failed=results.filter(r=>r.status==='rejected').length;
+      let releaseFailed=false;
+      try{await releaseDeviceLock(true);}catch(e){releaseFailed=true;log(`共享状态恢复失败：${e.message}`,'bad');}
+      activeRunMode='';
+      $('progressBar').style.width='0'; setState(failed||releaseFailed?'停止存在失败':'已停止',failed||releaseFailed?'error':'');
+      setEditingLocked(false);
+      if(!quiet) log(failed?`${reason}：${failed} 条停止指令失败`:`${reason}：全部停止指令已发送`,failed?'bad':'ok');
+    }
+
+    async function startRun(){
+      if(running) return;
+      if(!$('roomId').value){log('请先选择目标设备','bad');return;}
+      if(!$('safetyCheck').checked){log('请先确认设备周围安全','bad');return;}
+      if(!steps.length){log('至少需要一个动作','bad');return;}
+      const repeat=Math.max(1,Math.min(100,Number($('repeat').value)||1));
+      const token=++runToken; running=true; $('startBtn').disabled=true; setState('运行中','running');
+      setEditingLocked(true);
+      activeRunMode=mode;
+      let acquired=false;
+      const total=steps.length*repeat; let done=0; log('正在检查设备占用状态并关闭共享...','info');
+      try{
+        await acquireDeviceLock();
+        acquired=true;
+        log(`开始执行，共 ${total} 个动作`,'info');
+        for(let round=0;round<repeat;round++){
+          for(const step of steps){
+            if(token!==runToken) return;
+            const duration=Math.max(100,Math.min(3000,Number(step.duration)||500));
+            const name=actionMap()[step.action],commands=commandsFor(step.action);
+            log(`第 ${round+1} 轮：${name} ${duration}ms，发送 ${commands.start.join(' ')}`);
+            for(const command of commands.start)await sendCommand(command,false);
+            await sleep(duration);
+            for(const command of commands.stop)await sendCommand(command,true);
+            await sleep(220);
+            done++; $('progressBar').style.width=`${Math.round(done/total*100)}%`;
+          }
+        }
+        if(token===runToken){
+          running=false;$('startBtn').disabled=false;setEditingLocked(false);
+          await releaseDeviceLock();
+          activeRunMode='';setState('执行完成');log('自动动作执行完成，相关通道均已停止','ok');
+        }
+      }catch(e){
+        log(`执行中断：${e.message}`,'bad');
+        if(acquired||lockToken){await stopAll('异常保护急停');}
+        else{running=false;activeRunMode='';$('startBtn').disabled=false;setEditingLocked(false);setState('启动被拒绝','error');}
+      }
+    }
+
+    $('deviceSelect').addEventListener('change',e=>{
+      $('roomId').value=e.target.value;
+      const option=e.target.selectedOptions[0];
+      if(option){calibration={directionMax:clampServo(option.dataset.directionMax),directionMin:clampServo(option.dataset.directionMin),directionMid:clampServo(option.dataset.directionMid),throttleMax:clampServo(option.dataset.throttleMax),throttleMin:clampServo(option.dataset.throttleMin),throttleMid:clampServo(option.dataset.throttleMid)};renderSteps();}
+      log(e.target.value?`已选择房间 ${e.target.value}`:'已取消设备选择','info');
+    });
+    $('refreshBtn').addEventListener('click',loadDevices);
+    $('steps').addEventListener('change',e=>{const tr=e.target.closest('tr');if(!tr)return;const i=Number(tr.dataset.index);if(e.target.classList.contains('action-select'))steps[i].action=e.target.value;if(e.target.classList.contains('duration'))steps[i].duration=Math.max(100,Math.min(3000,Number(e.target.value)||500));renderSteps();});
+    $('steps').addEventListener('click',e=>{if(!e.target.classList.contains('remove'))return;steps.splice(Number(e.target.closest('tr').dataset.index),1);renderSteps();});
+    document.querySelectorAll('.mode-btn').forEach(btn=>btn.addEventListener('click',()=>{
+      if(running||lockToken){log('运行期间不能切换设备类型','bad');return;}
+      mode=btn.dataset.mode;document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      $('modeNotice').textContent=mode==='vehicle'?'车辆模式使用每台车的油门和方向校准值；每步结束自动回油门中位和方向中位。运行前确认行驶区域无人。':'挖机模式每个动作结束都会停止对应通道；离开页面或切换标签页时会触发全动作停止。';
+      activePreset=PRESETS[mode][0].key;applyPreset(activePreset);$('safetyCheck').checked=false;log(`已切换为${mode==='vehicle'?'车辆':'挖机'}模式`,'info');
+    }));
+    $('presetButtons').addEventListener('click',e=>{
+      const preset=e.target.closest('[data-preset]');if(preset){applyPreset(preset.dataset.preset);return;}
+      if(e.target.id==='addBtn'){if(steps.length>=20){log('最多编排 20 个动作','bad');return;}steps.push({action:mode==='vehicle'?'forward':'dx1',duration:500});activePreset='';renderPresets();renderSteps();}
+    });
+    $('startBtn').addEventListener('click',startRun); $('stopBtn').addEventListener('click',()=>stopAll()); $('mobileStop').addEventListener('click',()=>stopAll());
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&running)stopAll('页面进入后台，自动急停',true);});
+    window.addEventListener('pagehide',()=>{if(!running&&!lockToken)return;runToken++;const stopMode=activeRunMode||mode;allStopCommands(stopMode).forEach(command=>navigator.sendBeacon(COMMAND_API,new URLSearchParams({room_id:$('roomId').value,from_user_id:'server_bot_1',message:command,command_type:`${stopMode}_stop`})));if(lockToken)navigator.sendBeacon(LOCK_API,new URLSearchParams({action:'release',room_id:$('roomId').value,lock_token:lockToken}));});
+    renderPresets();renderSteps();loadDevices();
+  </script>
+</body>
+</html>

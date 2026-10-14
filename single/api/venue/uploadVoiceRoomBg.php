@@ -41,15 +41,11 @@ try {
         voiceBgJson(1001, '用户未登录或会话已过期');
     }
 
-    $rows = $database->query(
-        'SELECT uid, role_id, venue_id FROM admin_users WHERE session_token = ? LIMIT 1',
-        [$sessionToken]
-    );
-    if (!$rows) {
+    $user = $database->getUserBySessionToken($sessionToken);
+    if (!$user) {
         voiceBgJson(1001, '用户未登录或会话已过期');
     }
 
-    $user = $rows[0];
     $roleId = intval($user['role_id']);
     $operatorUid = intval($user['uid']);
     if (!in_array($roleId, [1, 2, 3], true)) {

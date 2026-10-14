@@ -1,9 +1,11 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+ini_set('display_errors', '0');
 mb_internal_encoding('UTF-8');
 
 // open.rcwulian.cn/api/mgt/barrage_words_api.php
-// 无密钥版本
+// Management actions require an authenticated platform administrator.
 
 define('BARRAGE_WORDS_FILE', '/www/wwwroot/open.rcwulian.cn/single/res/barrage_banned_words.json');
 
@@ -138,6 +140,41 @@ function validateWordOrOut($word) {
     if (mb_strlen($word, 'UTF-8') > 50) {
         out(422, '单个违禁词不能超过50个字符');
     }
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    out(405, '仅支持POST请求');
+}
+
+$sessionToken = $_COOKIE['session_token'] ?? '';
+if (!is_string($sessionToken) || $sessionToken === '') {
+    out(1001, '用户未登录或会话已过期');
+}
+
+try {
+    require_once __DIR__ . '/../Database.php';
+    $database = new Database();
+    $admin = $database->getUserBySessionToken($sessionToken);
+    $database->close();
+} catch (Throwable $e) {
+    error_log('barrage_words_api authentication failed: ' . $e->getMessage());
+    out(500, '权限校验失败，请稍后重试');
+}
+
+if (!$admin || empty($admin['id'])) {
+    out(1001, '用户未登录或会话已过期');
+}
+if (!in_array((int)($admin['role_id'] ?? 0), [1, 2], true)) {
+    out(403, '仅后台管理员可以管理违禁词');
+}
+
+// JSON-only writes prevent cross-site HTML forms from modifying the word list.
+$contentType = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
+if ($contentType !== 'application/json') {
+    out(415, '请使用JSON格式提交请求');
+}
+if (($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '') === 'cross-site') {
+    out(403, '不允许跨站管理请求');
 }
 
 $input = readInput();

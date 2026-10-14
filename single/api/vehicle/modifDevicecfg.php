@@ -2,7 +2,8 @@
 <?php 
 // /api/vehicle/modifDevicecfg.php
 
-require_once '../Database.php';  
+require_once '../Database.php';
+require_once __DIR__ . '/driveConfirmConfig.php';
 header('Content-Type: application/json; charset=utf-8');
  function logMessage($message) {
     $logFile = __DIR__ . '/operation_debug_log.txt';
@@ -298,7 +299,9 @@ if ($result->num_rows === 0) {
     exit; 
 } 
  
-$settings = $result->fetch_assoc(); 
+$settings = $result->fetch_assoc();
+$canManageDriveConfirm = in_array((int)$role_id, [1, 2], true);
+$driveConfirmState = driveConfirmConfigGetState($database, $user, $device_id);
  
 // 构造响应数据，默认使用数据库中的值 
 $response = [ 
@@ -329,6 +332,14 @@ $response = [
         'audio_source_type' => $settings['audio_source_type'] === null ? 0 : (int)$settings['audio_source_type']
     ] 
 ]; 
+
+// 驾驶确认时长仅 role=1/2 可见，其他角色的响应中完全省略这些字段。
+if ($canManageDriveConfirm) {
+    $response['data']['drive_confirm_seconds'] = $driveConfirmState['value'];
+    $response['data']['drive_confirm_seconds_available'] = $driveConfirmState['available'];
+    $response['data']['drive_confirm_seconds_editable'] = $driveConfirmState['editable'];
+    $response['data']['drive_confirm_seconds_message'] = $driveConfirmState['message'];
+}
  
 $action = $data['action'] ?? 'get';
 
@@ -341,6 +352,18 @@ if ($action !== 'save') {
     echo json_encode([
         'code' => 1007,
         'msg' => '未知操作类型',
+        'data' => []
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 新字段由当前页面使用的事务接口保存，旧接口不得忽略该字段后返回成功。
+if (array_key_exists('drive_confirm_seconds', $data)) {
+    echo json_encode([
+        'code' => $canManageDriveConfirm ? 1007 : 1003,
+        'msg' => $canManageDriveConfirm
+            ? '请刷新设备配置页面，并通过新版配置保存接口设置驾驶确认时长'
+            : '仅平台管理员可修改驾驶确认时长',
         'data' => []
     ], JSON_UNESCAPED_UNICODE);
     exit;

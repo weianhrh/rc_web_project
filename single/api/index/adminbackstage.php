@@ -36,48 +36,6 @@ $registerCountSql = "
 ";
 $registerCount = $database->query($registerCountSql, [$todayStart, $tomorrowStart])[0]['register_count'] ?? 0;
 
-// 今日实际充值总额
-$rechargeTotalSql = "
-    SELECT COALESCE(ROUND(SUM(payer_total), 2), 0) AS total_recharged_today
-    FROM RechargeOrders
-    WHERE status = '支付成功'
-      AND created_at >= ? AND created_at < ?
-";
-$totalRechargeFromBalanceChanges = $database->query($rechargeTotalSql, [$todayStart, $tomorrowStart])[0]['total_recharged_today'] ?? '0.00';
-
-// 今日用户实际总消费：订单消费 + 礼物收益
-$UserConsumptionSql = "
-    SELECT COALESCE(ROUND(SUM(payment_amount), 2), 0) AS total_consumption
-    FROM orders
-    WHERE end_time >= ? AND end_time < ?
-      AND pays_type <> '能量'
-";
-$orderConsumption = $database->query($UserConsumptionSql, [
-    $todayStart,
-    $tomorrowStart
-])[0]['total_consumption'] ?? '0.00';
-
-
-// 今日礼物收益：gift_orders 金币数 / 10 * 60%
-$GiftConsumptionSql = "
-    SELECT COALESCE(ROUND(SUM(payment_amount) / 10 * 0.6, 2), 0) AS gift_consumption
-    FROM gift_orders
-    WHERE send_time >= ? AND send_time < ?
-      AND status = '已完成'
-";
-$giftConsumption = $database->query($GiftConsumptionSql, [
-    $todayStart,
-    $tomorrowStart
-])[0]['gift_consumption'] ?? '0.00';
-
-
-// 今日用户实际总消费 = 普通订单消费 + 礼物收益
-$totalUserConsumption = number_format(
-    floatval($orderConsumption) + floatval($giftConsumption),
-    2,
-    '.',
-    ''
-);
 // 今日娃娃机收益
 $dollRevenueSql = "
     SELECT COALESCE(ROUND(SUM(payment_amount), 2), 0) AS doll_revenue_today
@@ -236,13 +194,11 @@ echo json_encode([
     'data' => [
         'role_id' => $role_id,
         'registerCount' => $registerCount,
-        'totalRechargeFromBalanceChanges' => $totalRechargeFromBalanceChanges,
                         // 新增：今日苹果金币充值收益
         'todayGoldRechargeRevenue' => $todayGoldRechargeRevenue,
 
         // 新增：今日苹果金币充值订单数
         'goldRechargeOrderCount' => (int)$goldRechargeOrderCount,
-        'totalUserConsumption' => $totalUserConsumption,
         'activeUserCount' => $activeUserCount,
         'reportCount' => $reportCountResult[0]['report_count'] ?? 0,
         'totalPendingwithdrawalapproval' => $totalPendingwithdrawalapproval[0]['total_count'] ?? 0,

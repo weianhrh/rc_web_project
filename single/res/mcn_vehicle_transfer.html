@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCN车辆调配</title>
+<link rel="stylesheet" href="/res/fa/css/all.min.css">
+<style>
+:root{--primary:#1677ff;--text:#172033;--muted:#667085;--line:#e4e9f2}
+*{box-sizing:border-box;letter-spacing:0}body{margin:0;background:#f7f9fc;color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:1240px;margin:auto;padding:24px}header{display:flex;align-items:center;gap:12px;margin-bottom:24px}h1{font-size:22px;margin:0;flex:1}h2{font-size:17px;margin:0 0 18px}button,input,select{font:inherit}button,.back{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--text);padding:8px 12px;cursor:pointer;text-decoration:none}button:hover,.back:hover{border-color:var(--primary)}button:disabled{opacity:.5;cursor:not-allowed}.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.icon{width:38px;padding:0}.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:18px 0}input,select{min-height:40px;max-width:100%;border:1px solid #cbd3df;border-radius:6px;background:#fff;color:var(--text);padding:8px 12px}input{width:260px}#count{margin-left:auto;color:var(--muted)}.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line)}.tab{border:0;border-radius:0;background:transparent;padding:12px 0;border-bottom:2px solid transparent}.tab.active{color:var(--primary);border-bottom-color:var(--primary)}.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:6px}table{width:100%;border-collapse:collapse;min-width:850px;text-align:left}th{background:#f1f5f9;color:var(--muted);font-weight:500;white-space:nowrap}td,th{padding:13px 16px;border-bottom:1px solid var(--line)}tbody tr:last-child td{border-bottom:0}td small{display:block;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}.good{color:#168253}.blocked{color:#b42318}.empty{text-align:center;padding:44px;color:var(--muted)}#notice{min-height:22px;margin:12px 0;color:#b42318}dialog{width:440px;max-width:calc(100% - 32px);padding:24px;border:1px solid var(--line);border-radius:8px;color:var(--text)}dialog::backdrop{background:rgba(17,24,39,.4)}dialog label{display:block;color:var(--muted);margin-top:18px}dialog select{width:100%;margin-top:7px}.dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}#dialogError{color:#b42318;margin:12px 0 0;min-height:22px}#currentVehicle{overflow-wrap:anywhere}#logsToolbar{color:var(--muted);padding:16px 0}[hidden]{display:none!important}@media(max-width:600px){main{padding:16px}h1{font-size:19px}header{gap:9px;flex-wrap:wrap}.back{padding:8px}.toolbar{gap:8px}.toolbar input{width:100%}.toolbar select{flex:1;min-width:130px}#count{width:100%;margin:0}td,th{padding:12px}.table-wrap{border-radius:4px}}
+</style>
+<style>
+@media(max-width:600px){.table-wrap{border:0;background:transparent;overflow:visible}table{min-width:0;display:block}thead{display:none}tbody{display:grid;gap:12px}tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px}td{display:block;min-width:0;padding:8px;border:0;overflow-wrap:anywhere}td::before{content:attr(data-label);display:block;font-size:12px;color:var(--muted);margin-bottom:4px}td:first-child,td:nth-child(5),td:last-child{grid-column:1/-1}td:last-child button{width:100%}td.empty{grid-column:1/-1;padding:28px}td.empty::before{display:none}}
+</style>
+</head>
+<body><main>
+<header><a class="back" id="back" href="/res/index.html"><i class="fas fa-arrow-left" aria-hidden="true"></i>全部场地汇总</a><h1>车辆调配</h1><button class="icon" id="refresh" title="刷新" aria-label="刷新"><i class="fas fa-sync-alt" aria-hidden="true"></i></button></header>
+<nav class="tabs"><button class="tab active" id="vehiclesTab">旗下车辆</button><button class="tab" id="logsTab">调配记录</button></nav>
+<section id="vehiclesPanel"><div class="toolbar"><input id="search" placeholder="搜索车辆名称或设备编号" aria-label="搜索车辆"><select id="venueFilter" aria-label="当前场地"><option value="">全部场地</option></select><select id="stateFilter" aria-label="调配状态"><option value="">全部状态</option><option value="ready">可调配</option><option value="blocked">不可调配</option></select><span id="count"></span></div><div class="table-wrap"><table><thead><tr><th>车辆 / 设备编号</th><th>当前场地</th><th>设备状态</th><th>共享状态</th><th>调配状态</th><th>操作</th></tr></thead><tbody id="vehiclesBody"><tr><td colspan="6" class="empty">加载中...</td></tr></tbody></table></div></section>
+<section id="logsPanel" hidden><div id="logsToolbar">最近50条调配记录</div><div class="table-wrap"><table><thead><tr><th>时间</th><th>设备编号</th><th>原场地</th><th>目标场地</th><th>操作账号ID</th></tr></thead><tbody id="logsBody"></tbody></table></div></section>
+<div id="notice" role="status" aria-live="polite"></div>
+<dialog id="transferDialog"><h2>切换绑定场地</h2><div id="currentVehicle"></div><label for="targetVenue">目标场地</label><select id="targetVenue"></select><div id="dialogError" role="alert"></div><div class="dialog-actions"><button id="cancelTransfer">取消</button><button id="confirmTransfer" class="primary"><i class="fas fa-exchange-alt" aria-hidden="true"></i>确认切换</button></div></dialog>
+</main>
+<script>
+const api='/api/index/MCNVehicleTransfer.php';
+let data={venues:[],vehicles:[],logs:[],csrf_token:''},selected=null,busy=false,loading=false;
+const $=id=>document.getElementById(id);
+function cell(tr,text){const td=document.createElement('td');td.textContent=text;tr.appendChild(td);return td;}
+function empty(body,columns,text){const tr=document.createElement('tr');const td=cell(tr,text);td.colSpan=columns;td.className='empty';body.replaceChildren(tr);}
+function render(){
+ const query=$('search').value.trim().toLowerCase(),venue=$('venueFilter').value,state=$('stateFilter').value;
+ const rows=data.vehicles.filter(v=>(!venue||String(v.venue_id)===venue)&&(!query||(v.name+' '+v.serial_number).toLowerCase().includes(query))&&(!state||(state==='ready')===v.can_transfer));
+ $('count').textContent=`共${rows.length}台 · 可调配${rows.filter(v=>v.can_transfer).length}台`;
+ const body=$('vehiclesBody');body.replaceChildren();
+ for(const v of rows){const tr=document.createElement('tr');const td=cell(tr,v.name);const small=document.createElement('small');small.textContent=v.serial_number;td.appendChild(small);cell(tr,`${v.venue_name}（${v.venue_id}）`);cell(tr,v.status);cell(tr,v.sharing_status);cell(tr,v.can_transfer?'可调配':v.blocked_reason).className=v.can_transfer?'good':'blocked';const action=cell(tr,'');const button=document.createElement('button');button.type='button';const icon=document.createElement('i');icon.className='fas fa-exchange-alt';icon.setAttribute('aria-hidden','true');button.append(icon,document.createTextNode('切换场地'));button.disabled=!v.can_transfer||data.venues.filter(t=>Number(t.id)!==v.venue_id&&Number(t.is_banned)!==1).length===0;button.title=v.blocked_reason||'切换绑定场地';button.onclick=()=>openTransfer(v);action.appendChild(button);body.appendChild(tr);}
+ body.querySelectorAll('tr').forEach(tr=>Array.from(tr.children).forEach((td,i)=>td.dataset.label=['车辆 / 设备编号','当前场地','设备状态','共享状态','调配状态','操作'][i]));
+ if(!rows.length)empty(body,6,'暂无符合条件的车辆');
+ const logs=$('logsBody');logs.replaceChildren();for(const log of data.logs){const tr=document.createElement('tr');[log.created_at,log.serial_number,log.source_venue_name||'-',log.target_venue_name||'-',log.operator_admin_id].forEach(v=>cell(tr,v));Array.from(tr.children).forEach((td,i)=>td.dataset.label=['时间','设备编号','原场地','目标场地','操作账号ID'][i]);logs.appendChild(tr);}if(!data.logs.length)empty(logs,5,'暂无调配记录');
+}
+async function load(){
+ if(loading)return;loading=true;$('refresh').disabled=true;
+ try{const response=await fetch(api,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error('加载失败，请稍后重试');const result=await response.json();if(result.code!==0)throw new Error(result.msg||'加载失败');data=result.data;const old=$('venueFilter').value;$('venueFilter').replaceChildren(new Option('全部场地',''));for(const v of data.venues)$('venueFilter').add(new Option(`${v.venue_name}（${v.id}）`,v.id));$('venueFilter').value=old;render();$('notice').textContent='';}
+ catch(error){data={venues:[],vehicles:[],logs:[],csrf_token:''};render();$('notice').textContent=error.message;}
+ finally{loading=false;$('refresh').disabled=false;}
+}
+function openTransfer(v){if(busy)return;selected=v;$('currentVehicle').textContent=`${v.name}（${v.serial_number}） · ${v.venue_name}`;$('targetVenue').replaceChildren(new Option('请选择目标场地',''));for(const target of data.venues){if(Number(target.id)===v.venue_id)continue;const option=new Option(`${target.venue_name}（${target.id}）${Number(target.is_banned)===1?' · 已封禁':''}`,target.id);option.disabled=Number(target.is_banned)===1;$('targetVenue').add(option);}$('dialogError').textContent='';$('transferDialog').showModal();}
+$('confirmTransfer').onclick=async()=>{
+ if(busy||!selected)return;if(!$('targetVenue').value){$('dialogError').textContent='请选择目标场地';return;}
+ busy=true;$('confirmTransfer').disabled=true;$('cancelTransfer').disabled=true;$('dialogError').textContent='';
+ try{const response=await fetch(api,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':data.csrf_token},body:JSON.stringify({vehicle_id:selected.id,source_venue_id:selected.venue_id,target_venue_id:Number($('targetVenue').value)})});if(!response.ok)throw new Error('请求失败，请刷新车辆状态后确认结果');const result=await response.json();if(result.code!==0)throw new Error(result.msg||'切换失败');$('transferDialog').close();await load();$('notice').style.color='#168253';$('notice').textContent=result.msg;}
+ catch(error){$('dialogError').textContent=error.message;}
+ finally{busy=false;$('confirmTransfer').disabled=false;$('cancelTransfer').disabled=false;}
+};
+$('cancelTransfer').onclick=()=>{if(!busy)$('transferDialog').close();};$('transferDialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});
+$('back').onclick=()=>{document.cookie='venue_scope=all; path=/; SameSite=Lax; Secure';};
+$('refresh').onclick=()=>{if(!busy){$('notice').style.color='#b42318';load();}};
+for(const id of ['search','venueFilter','stateFilter'])$(id).addEventListener(id==='search'?'input':'change',render);
+function tab(logs){$('vehiclesPanel').hidden=logs;$('logsPanel').hidden=!logs;$('vehiclesTab').classList.toggle('active',!logs);$('logsTab').classList.toggle('active',logs);}
+$('vehiclesTab').onclick=()=>tab(false);$('logsTab').onclick=()=>tab(true);load();
+</script></body></html>

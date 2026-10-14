@@ -43,7 +43,9 @@ function parse_to_user_ids($raw): array {
     }
 
     $parts = array_map('trim', $parts);
-    $parts = array_filter($parts, fn($v) => $v !== '');
+    $parts = array_filter($parts, function ($v) {
+        return $v !== '';
+    });
     $parts = array_values(array_unique($parts));
 
     return $parts;
@@ -77,6 +79,69 @@ $fromUserId = trim((string)($_POST['from_user_id'] ?? 'server_bot_1'));
 $message = (string)($_POST['message'] ?? '');
 $toUserIds = parse_to_user_ids($_POST['to_user_ids'] ?? '');
 $commandType = trim((string)($_POST['command_type'] ?? ''));
+
+// Automatic motion commands are a privileged, allowlisted subset of this API.
+// Keep the existing camera-management commands unchanged.
+$isExcavatorCommand = strpos($commandType, 'excavator_') === 0;
+$isVehicleCommand = strpos($commandType, 'vehicle_') === 0;
+if ($isExcavatorCommand || $isVehicleCommand) {
+    $roleId = (int)($adminUser['role_id'] ?? 0);
+    if (!in_array($roleId, [1, 2, 3], true)) {
+        json_out(403, '当前账号无设备动作控制权限');
+    }
+
+    if ($isExcavatorCommand) {
+        if (!preg_match('/^\+(dx|xs|ws|lz|ql|qr)#([012])-$/', trim($message), $motionMatch)) {
+            json_out(400, '挖机动作指令不在允许范围内');
+        }
+        $expectedType = $motionMatch[2] === '0' ? 'excavator_stop' : 'excavator_motion';
+    } else {
+        if (!preg_match('/^\+(fd|bk|lt|rt|sp|md)#(1000|1[0-9]{3}|2000)-$/', trim($message), $motionMatch)) {
+            json_out(400, '车辆动作指令不在允许范围内');
+        }
+        $expectedType = in_array($motionMatch[1], ['sp', 'md'], true)
+            ? 'vehicle_stop'
+            : 'vehicle_motion';
+    }
+    if ($commandType !== $expectedType) {
+        json_out(400, '动作类型与指令不匹配');
+    }
+
+    if ($roleId === 3) {
+        $venueId = (int)($adminUser['venue_id'] ?? 0);
+        if ($venueId <= 0) {
+            json_out(403, '加盟商账号未绑定场地，不能控制设备');
+        }
+        $knownRoom = $database->query(
+            "SELECT di.id,
+                    SUM(CASE WHEN v.bind_site = ? THEN 1 ELSE 0 END) AS own_count,
+                    SUM(CASE WHEN v.bind_site <> ? THEN 1 ELSE 0 END) AS foreign_count
+             FROM device_information di
+             INNER JOIN vehicles v
+               ON v.image_device_serial = CAST(di.id AS CHAR)
+               OR v.bk_image_device_serial = CAST(di.id AS CHAR)
+             WHERE di.room_id = ?
+             GROUP BY di.id
+             LIMIT 1",
+            [$venueId, $venueId, $roomId]
+        );
+        if (!$knownRoom || (int)$knownRoom[0]['own_count'] < 1 || (int)$knownRoom[0]['foreign_count'] > 0) {
+            json_out(403, '该设备不属于当前加盟商场地');
+        }
+    } else {
+        $knownRoom = $database->query(
+            'SELECT id FROM device_information WHERE room_id = ? LIMIT 1',
+            [$roomId]
+        );
+    }
+    if (!$knownRoom) {
+        json_out(404, '未找到对应设备房间，请先在设备信息中登记');
+    }
+
+    // A device room is isolated; never allow browser-supplied recipient routing here.
+    $toUserIds = [];
+    $fromUserId = 'server_bot_1';
+}
 
 if ($roomId === '') {
     json_out(400, 'room_id 不能为空');
@@ -175,6 +240,19 @@ if ($zegoCode !== 0) {
         'zego_data' => $zegoData,
         'raw' => $resp,
     ]);
+}
+
+if ($isExcavatorCommand || $isVehicleCommand) {
+    $operatorId = (int)($adminUser['id'] ?? $adminUser['uid'] ?? 0);
+    $logLine = sprintf(
+        "[%s] operator_id=%d room_id=%s command=%s ip=%s\n",
+        date('Y-m-d H:i:s'),
+        $operatorId,
+        preg_replace('/[^A-Za-z0-9_.-]/', '', $roomId),
+        trim($message),
+        $_SERVER['REMOTE_ADDR'] ?? ''
+    );
+    error_log($logLine, 3, __DIR__ . '/device_auto_command.log');
 }
 
 // WIFI 指令发送成功后保存记录。只认后端实际发送的消息内容，避免前端伪造记录。

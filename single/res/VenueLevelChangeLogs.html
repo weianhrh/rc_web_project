@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场地等级变动记录</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #f4f6f9;
+            color: #172033;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+            font-size: 14px;
+        }
+        .page { max-width: 1460px; margin: 0 auto; padding: 22px; }
+        .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+        h1 { margin: 0; font-size: 24px; letter-spacing: 0; }
+        .subtitle { margin-top: 6px; color: #667085; }
+        .refresh-btn, .filter-btn, .reset-btn, .page-btn {
+            height: 38px; border-radius: 6px; padding: 0 14px; cursor: pointer; font-weight: 600;
+        }
+        .refresh-btn, .filter-btn { border: 1px solid #246bfd; background: #246bfd; color: #fff; }
+        .reset-btn, .page-btn { border: 1px solid #d5dae3; background: #fff; color: #344054; }
+        .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .metric { min-height: 92px; padding: 17px 18px; border: 1px solid #e0e5ec; border-radius: 8px; background: #fff; }
+        .metric-label { color: #667085; font-size: 13px; }
+        .metric-value { margin-top: 8px; font-size: 26px; font-weight: 700; }
+        .metric.down .metric-value { color: #c43232; }
+        .metric.up .metric-value { color: #16835b; }
+        .metric.manual .metric-value { color: #8a4b16; }
+        .filters { display: grid; grid-template-columns: minmax(220px, 1.5fr) minmax(140px, .7fr) minmax(150px, .8fr) minmax(150px, .8fr) auto auto; gap: 10px; align-items: end; padding: 14px; border: 1px solid #e0e5ec; border-radius: 8px; background: #fff; margin-bottom: 16px; }
+        label { display: block; color: #475467; font-size: 12px; }
+        select, input { width: 100%; height: 38px; margin-top: 6px; padding: 0 10px; border: 1px solid #d5dae3; border-radius: 6px; background: #fff; color: #172033; }
+        .table-wrap { overflow: auto; border: 1px solid #e0e5ec; border-radius: 8px; background: #fff; }
+        table { width: 100%; min-width: 1180px; border-collapse: collapse; }
+        th { position: sticky; top: 0; z-index: 1; padding: 12px; background: #f8fafc; color: #475467; text-align: left; font-size: 12px; border-bottom: 1px solid #e0e5ec; }
+        td { padding: 13px 12px; border-bottom: 1px solid #edf0f4; vertical-align: top; }
+        tr:last-child td { border-bottom: 0; }
+        .venue-name { font-weight: 700; }
+        .sub { display: block; margin-top: 4px; color: #7b8495; font-size: 12px; }
+        .level-flow { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+        .level { display: inline-flex; min-width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 5px; background: #eef2f7; font-weight: 700; }
+        .level.new-a { background: #dcf7eb; color: #08734c; }
+        .level.new-c { background: #fee9e7; color: #b42318; }
+        .source { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .source.auto { background: #eaf1ff; color: #2457c5; }
+        .source.manual { background: #fff0dc; color: #8a4b16; }
+        .reason { max-width: 360px; line-height: 1.55; }
+        .empty, .loading { padding: 46px 20px; text-align: center; color: #7b8495; }
+        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 14px; }
+        .page-btn:disabled { opacity: .45; cursor: default; }
+        .error { padding: 14px; border: 1px solid #f0b8b4; border-radius: 6px; background: #fff1f0; color: #a42820; }
+        @media (max-width: 900px) {
+            .page { padding: 14px; }
+            .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .filters { grid-template-columns: 1fr 1fr; }
+            .filter-btn, .reset-btn { width: 100%; }
+        }
+        @media (max-width: 520px) {
+            .page-head { align-items: flex-start; }
+            h1 { font-size: 20px; }
+            .summary { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .metric { min-height: 78px; padding: 13px; }
+            .metric-value { font-size: 22px; }
+            .filters { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <header class="page-head">
+        <div>
+            <h1>场地等级变动记录</h1>
+            <div class="subtitle">自动升降级与管理员手动调整统一留痕</div>
+        </div>
+        <button type="button" class="refresh-btn" id="refreshBtn">刷新</button>
+    </header>
+
+    <section class="summary">
+        <div class="metric"><div class="metric-label">变动总数</div><div class="metric-value" id="totalCount">0</div></div>
+        <div class="metric down"><div class="metric-label">自动/人工降级</div><div class="metric-value" id="downCount">0</div></div>
+        <div class="metric up"><div class="metric-label">C级升A级</div><div class="metric-value" id="upCount">0</div></div>
+        <div class="metric manual"><div class="metric-label">人工调整</div><div class="metric-value" id="manualCount">0</div></div>
+    </section>
+
+    <section class="filters">
+        <label>场地
+            <select id="venueFilter"><option value="">全部场地</option></select>
+        </label>
+        <label>变动来源
+            <select id="sourceFilter">
+                <option value="">全部来源</option>
+                <option value="auto">自动任务</option>
+                <option value="manual">管理员手动</option>
+            </select>
+        </label>
+        <label>开始日期<input type="date" id="startDate"></label>
+        <label>结束日期<input type="date" id="endDate"></label>
+        <button type="button" class="filter-btn" id="filterBtn">查询</button>
+        <button type="button" class="reset-btn" id="resetBtn">重置</button>
+    </section>
+
+    <div id="message"></div>
+    <section class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>场地</th><th>等级变化</th><th>来源</th><th>统计周期</th>
+                    <th>引流人数</th><th>变动原因</th><th>操作人</th><th>执行时间</th>
+                </tr>
+            </thead>
+            <tbody id="logBody"><tr><td colspan="8" class="loading">正在加载...</td></tr></tbody>
+        </table>
+    </section>
+    <div class="pagination">
+        <button type="button" class="page-btn" id="prevBtn">上一页</button>
+        <span id="pageInfo">第 1 / 1 页</span>
+        <button type="button" class="page-btn" id="nextBtn">下一页</button>
+    </div>
+</main>
+
+<script>
+    const apiUrl = 'https://open.rcwulian.cn/api/venue/VenueLevelChangeLogs.php';
+    const state = { page: 1, totalPages: 1, initialVenueId: new URLSearchParams(location.search).get('venue_id') || '' };
+    const el = id => document.getElementById(id);
+
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function renderVenues(venues) {
+        const current = el('venueFilter').value || state.initialVenueId;
+        el('venueFilter').innerHTML = '<option value="">全部场地</option>' + venues.map(item =>
+            `<option value="${Number(item.venue_id)}">${Number(item.venue_id)} - ${esc(item.venue_name)}</option>`
+        ).join('');
+        el('venueFilter').value = current;
+        state.initialVenueId = '';
+    }
+
+    function renderRows(rows) {
+        if (!rows.length) {
+            el('logBody').innerHTML = '<tr><td colspan="8" class="empty">当前筛选条件下暂无等级变动记录</td></tr>';
+            return;
+        }
+        el('logBody').innerHTML = rows.map(row => {
+            const source = row.change_source === 'manual' ? '管理员手动' : '自动任务';
+            const operator = row.change_source === 'manual'
+                ? (row.operator_name || (row.operator_uid ? `UID ${row.operator_uid}` : '管理员'))
+                : '系统任务';
+            return `<tr>
+                <td><span class="venue-name">${Number(row.venue_id)} - ${esc(row.venue_name || '未知场地')}</span><span class="sub">邀请码 ${esc(row.invite_code || '-')}</span></td>
+                <td><span class="level-flow"><span class="level">${esc(row.old_level)}</span><span>→</span><span class="level new-${String(row.new_level).toLowerCase()}">${esc(row.new_level)}</span></span></td>
+                <td><span class="source ${esc(row.change_source)}">${source}</span></td>
+                <td>${esc(row.stat_start_date)} 至 ${esc(row.stat_end_date)}</td>
+                <td>${Number(row.invite_count || 0)} 人</td>
+                <td class="reason">${esc(row.reason || '-')}</td>
+                <td>${esc(operator)}</td>
+                <td>${esc(row.created_at || '-')}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function loadLogs() {
+        el('message').innerHTML = '';
+        el('logBody').innerHTML = '<tr><td colspan="8" class="loading">正在加载...</td></tr>';
+        const params = new URLSearchParams({ page: state.page, page_size: 30 });
+        const venueId = el('venueFilter').value || state.initialVenueId;
+        if (venueId) params.set('venue_id', venueId);
+        if (el('sourceFilter').value) params.set('source', el('sourceFilter').value);
+        if (el('startDate').value) params.set('start_date', el('startDate').value);
+        if (el('endDate').value) params.set('end_date', el('endDate').value);
+
+        try {
+            const response = await fetch(`${apiUrl}?${params.toString()}`, { credentials: 'include' });
+            const result = await response.json();
+            if (result.code !== 0) throw new Error(result.msg || '数据加载失败');
+            const data = result.data;
+            el('totalCount').textContent = data.summary.total;
+            el('downCount').textContent = data.summary.downgrade_count;
+            el('upCount').textContent = data.summary.upgrade_count;
+            el('manualCount').textContent = data.summary.manual_count;
+            renderVenues(data.venues || []);
+            renderRows(data.list || []);
+            state.totalPages = data.pagination.total_pages || 1;
+            el('pageInfo').textContent = `第 ${state.page} / ${state.totalPages} 页`;
+            el('prevBtn').disabled = state.page <= 1;
+            el('nextBtn').disabled = state.page >= state.totalPages;
+        } catch (error) {
+            el('message').innerHTML = `<div class="error">${esc(error.message)}</div>`;
+            el('logBody').innerHTML = '<tr><td colspan="8" class="empty">加载失败</td></tr>';
+        }
+    }
+
+    el('filterBtn').addEventListener('click', () => { state.page = 1; loadLogs(); });
+    el('refreshBtn').addEventListener('click', loadLogs);
+    el('resetBtn').addEventListener('click', () => {
+        el('venueFilter').value = '';
+        el('sourceFilter').value = '';
+        el('startDate').value = '';
+        el('endDate').value = '';
+        state.initialVenueId = '';
+        state.page = 1;
+        loadLogs();
+    });
+    el('prevBtn').addEventListener('click', () => { if (state.page > 1) { state.page--; loadLogs(); } });
+    el('nextBtn').addEventListener('click', () => { if (state.page < state.totalPages) { state.page++; loadLogs(); } });
+    loadLogs();
+</script>
+</body>
+</html>

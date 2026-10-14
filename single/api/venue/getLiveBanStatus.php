@@ -14,22 +14,21 @@ if (!$session_token) {
   exit;
 }
 
-$sql = "SELECT uid, role_id, venue_id FROM admin_users WHERE session_token = ?";
-$user = $database->query($sql, [$session_token]);
+$user = $database->getUserBySessionToken($session_token);
 if (!$user) {
   echo json_encode(['code'=>1001,'msg'=>'用户未登录或不存在','data'=>[]], JSON_UNESCAPED_UNICODE);
   exit;
 }
 
-$role_id = (int)$user[0]['role_id'];
-$venue_id = isset($_GET['id']) && trim($_GET['id']) !== '' ? (int)$_GET['id'] : (int)$user[0]['venue_id'];
+$role_id = (int)$user['role_id'];
+$venue_id = isset($_GET['id']) && trim($_GET['id']) !== '' ? (int)$_GET['id'] : (int)$user['venue_id'];
 
 if (!$venue_id) {
   echo json_encode(['code'=>1002,'msg'=>'缺少场地ID','data'=>[]], JSON_UNESCAPED_UNICODE);
   exit;
 }
 // 仅管理员可查别人的；role3 只能查自己的
-if (!in_array($role_id, [1,2], true) && $venue_id !== (int)$user[0]['venue_id']) {
+if (!in_array($role_id, [1,2], true) && $venue_id !== (int)$user['venue_id']) {
   echo json_encode(['code'=>1003,'msg'=>'权限不足','data'=>[]], JSON_UNESCAPED_UNICODE);
   exit;
 }

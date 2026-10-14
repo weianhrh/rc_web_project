@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>平台核心数据</title>
+  <link rel="stylesheet" href="/res/fa/css/all.min.css">
+  <style>
+    :root { --ink:#172033; --muted:#667085; --line:#e4e9f2; --primary:#1677ff; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; padding:24px; background:#f4f6fa; color:var(--ink); font-family:"PingFang SC",system-ui,sans-serif; }
+    main { max-width:880px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:8px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 22px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:20px; letter-spacing:0; }
+    .date { margin-top:5px; color:var(--muted); font-size:13px; }
+    .refresh { width:36px; height:36px; border:1px solid #d0d5dd; border-radius:6px; background:#fff; color:#475467; cursor:pointer; }
+    .refresh:hover { border-color:#91baff; color:var(--primary); }
+    .metrics { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:22px; }
+    .metric { min-height:150px; padding:20px; border:1px solid var(--line); border-radius:8px; background:#fafbfc; }
+    .label { color:var(--muted); font-size:14px; }
+    .value { margin-top:22px; font-size:32px; font-weight:750; letter-spacing:0; }
+    .updated { padding:0 22px 20px; color:#98a2b3; font-size:12px; }
+    .error { padding:50px 20px; text-align:center; color:#b42318; }
+    @media(max-width:640px) { body{padding:12px}.metrics{grid-template-columns:1fr}.value{font-size:28px} }
+  </style>
+</head>
+<body>
+  <main>
+    <header><div><h1>平台核心数据</h1><div class="date" id="date">加载中</div></div><button class="refresh" id="refresh" type="button" title="刷新"><i class="fas fa-sync-alt"></i></button></header>
+    <section class="metrics" id="metrics">
+      <div class="metric"><div class="label">今日平台总收益</div><div class="value" id="revenue">¥0.00</div></div>
+      <div class="metric"><div class="label">今日用户实际总消费</div><div class="value" id="consumption">¥0.00</div></div>
+    </section>
+    <div class="updated" id="updated"></div>
+  </main>
+  <script>
+    const money = value => Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits:2, maximumFractionDigits:2 });
+    async function load() {
+      const refresh = document.getElementById('refresh');
+      refresh.disabled = true;
+      try {
+        const response = await fetch('/api/index/platform_finance_private.php?_=' + Date.now());
+        const result = await response.json();
+        if (!result || result.code !== 0) throw new Error(result?.msg || '加载失败');
+        document.getElementById('date').textContent = result.data.date;
+        document.getElementById('revenue').textContent = '¥' + money(result.data.platform_total_revenue);
+        document.getElementById('consumption').textContent = '¥' + money(result.data.user_actual_consumption);
+        document.getElementById('updated').textContent = '更新时间：' + result.data.updated_at;
+      } catch (error) {
+        document.getElementById('metrics').innerHTML = `<div class="error">${String(error.message || '无权访问')}</div>`;
+      } finally {
+        refresh.disabled = false;
+      }
+    }
+    document.getElementById('refresh').onclick = load;
+    load();
+  </script>
+</body>
+</html>

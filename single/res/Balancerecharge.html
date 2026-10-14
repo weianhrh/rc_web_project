@@ -191,6 +191,13 @@ body{
   align-items:center;
 }
 
+.user-info .user-time{
+  grid-column:span 2;
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+}
+
 .badge-deleted{
   font-size:12px;
   color:#ff4d4f;
@@ -252,6 +259,7 @@ body{
 .btn-undelete{background:#18c08f;}
 .btn-consume{background:var(--secondary);}
 .btn-nickname{background:#2f6bff;}
+.btn-clear-invite{background:#b54708;}
 
 /* 分页 */
 .pagination{
@@ -315,6 +323,12 @@ body{
 
   .user-info{
     grid-template-columns:1fr;
+  }
+
+  .user-info .user-time{
+    grid-column:1 / -1;
+    white-space:normal;
+    overflow-wrap:anywhere;
   }
 
   /* 手机按钮：纵向堆，action-row 两列，注销独占一行 */
@@ -478,6 +492,10 @@ body{
         <div class="form-item">
           <label class="form-label">邀请码</label>
           <input type="text" name="invitation_code" placeholder="请输入邀请码" autocomplete="off" class="form-input">
+        </div>
+        <div class="form-item" id="login-ip-filter" style="display:none">
+          <label class="form-label">注册/登录IP</label>
+          <input type="text" name="ip" placeholder="请输入完整IP" autocomplete="off" class="form-input">
         </div>
         <div class="form-item venue-filter-item">
           <label class="form-label">场地搜索</label>
@@ -874,6 +892,7 @@ async function loadTableData(params = {}) {
         loading.style.display = 'none';
 
         if (data.code === 0) {
+          document.getElementById('login-ip-filter').style.display = data.can_view_login_ip ? '' : 'none';
           userList.innerHTML = '';
 
           totalPages = Math.max(1, Math.ceil((Number(data.count) || 0) / p.limit));
@@ -897,6 +916,7 @@ async function loadTableData(params = {}) {
             const registerWay = terraceMap[item.terrace] || (item.terrace || '未知');
 
             const invitation = item.invitation_code || '未设置';
+            const hasActiveInvitation = invitation !== '未设置' && invitation !== '0000';
 
             const safeUsername = (item.username || '').replace(/'/g, "\\'");
 
@@ -922,7 +942,9 @@ async function loadTableData(params = {}) {
                   <span>注册方式: ${registerWay}</span>
                   <span>用户余额: ¥${item.wallet || '0.00'}</span>
                   <span>用户金币: $${item.gold_balance || '0.00'}</span>
-                  <span>加入时间: ${item.jointime || '-'}</span>
+                  <span class="user-time">首次注册时间: ${item.created_at || '-'}</span>
+                  <span class="user-time">最后登录时间: ${item.jointime || '-'}</span>
+                  ${data.can_view_login_ip ? `<span class="user-time">首次注册IP: ${/^[0-9a-f:.]+$/i.test(item.register_ip || '') ? item.register_ip : '未记录'}</span><span class="user-time">最后登录IP: ${/^[0-9a-f:.]+$/i.test(item.last_login_ip || '') ? item.last_login_ip : '未记录'}</span>` : ''}
                 </div>
 
 <div class="user-actions">
@@ -1002,6 +1024,14 @@ async function loadTableData(params = {}) {
     ${Number(item.is_mute) === 1 ? '取消禁言' : '禁言'}
   </button>
 </div>
+
+${hasActiveInvitation ? `
+<div class="action-row action-row-full">
+  <button class="action-btn btn-clear-invite" onclick="clearUserInvitationCode(${item.id})">
+    <i class="fas fa-unlink"></i> 清除邀请码
+  </button>
+</div>
+` : ''}
 
               </div>
             `;
@@ -1158,6 +1188,35 @@ async function toggleUserMute(uid, isMute) {
   } catch (e) {
     console.error(e);
     alert('操作失败，请稍后再试');
+  }
+}
+
+async function clearUserInvitationCode(uid) {
+  const confirmed = confirm(
+    `确认将用户 UID ${uid} 的邀请码清除为 0000 吗？\n\n` +
+    '清除后，该用户将不再计入原场地引流人数，后续消费也不再产生该邀请码的推广归属。'
+  );
+  if (!confirmed) return;
+
+  const form = new FormData();
+  form.append('uid', String(uid));
+  form.append('reason', '管理员在用户管理确认异常注册并清除邀请码');
+
+  try {
+    const response = await fetch('https://open.rcwulian.cn/api/user/clearUserInvitationCode.php', {
+      method: 'POST',
+      body: form,
+      credentials: 'include'
+    });
+    const result = await response.json();
+    if (result.code !== 0) {
+      throw new Error(result.msg || '清除邀请码失败');
+    }
+    alert(result.msg || '邀请码已清除');
+    loadTableData(lastParams);
+  } catch (error) {
+    console.error(error);
+    alert(error.message || '清除邀请码失败，请稍后重试');
   }
 }
   // 改昵称（保持你原逻辑）

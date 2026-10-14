@@ -101,3 +101,11 @@ node_modules/
 /single/api/admin/anchor_auth_submit_test.php
 /single/api/operat/upload.php
 single/admin-v2/
+
+# Ignore local backup files
+*.bak
+*.bak.*
+*.bak_*
+
+# Ignore ACME challenge files
+/single/.well-known/acme-challenge/

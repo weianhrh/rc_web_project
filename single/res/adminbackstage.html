@@ -247,15 +247,6 @@
           <div class="metric-value" id="ActiveUsers">0人</div>
         </div>
 
-        <div class="metric-item" data-role-hide="2" id="rechargeWrap">
-          <div class="metric-label">今日平台总收益</div>
-          <div class="metric-value" id="totalRechargeFromBalanceChanges">¥0.00</div>
-        </div>
-
-        <div class="metric-item" data-role-hide="2" id="consumptionWrap">
-          <div class="metric-label">今日用户实际总消费</div>
-          <div class="metric-value" id="totalUserConsumption">¥0.00</div>
-        </div>
       </div>
 
       <div class="metrics-grid-bottom">
@@ -306,8 +297,6 @@
         RcCommon.setText('#venue-name', data.venue_name || '');
         RcCommon.setText('#registerCount', Number(data.registerCount || 0) + '人');
         RcCommon.setText('#ActiveUsers', Number(data.activeUserCount || 0) + '人');
-        RcCommon.setText('#totalRechargeFromBalanceChanges', '¥' + RcCommon.formatMoney(data.totalRechargeFromBalanceChanges));
-        RcCommon.setText('#totalUserConsumption', '¥' + RcCommon.formatMoney(data.totalUserConsumption));
 
         const dollRevenue = Number(data.dollRevenueToday || 0);
         RcCommon.setText('#dollRevenueToday', '¥' + RcCommon.formatMoney(dollRevenue));

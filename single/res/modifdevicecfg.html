@@ -372,6 +372,16 @@
                     <input type="text" id="name" name="name" required disabled> 
                 </div> 
                 <input type="hidden" id="device_id" name="device_id"> 
+                <div id="drive-confirm-seconds-field" style="display:none;">
+                    <div class="form-field">
+                        <label for="drive_confirm_seconds">驾驶确认时长</label>
+                        <select id="drive_confirm_seconds" name="drive_confirm_seconds" aria-describedby="drive_confirm_seconds_hint" disabled>
+                            <option value="5">5 秒</option>
+                            <option value="10" selected>10 秒</option>
+                        </select>
+                    </div>
+                    <p id="drive_confirm_seconds_hint" style="display:none; margin:-8px 0 16px; font-size:12px; color:var(--secondary);"></p>
+                </div>
                 <div class="form-field"> 
                     <label for="throttle_max">油门最大值</label> 
                     <input type="range" id="throttle_max_range" min="0" max="100" oninput="updateThrottleMaxValue(this.value)">   
@@ -549,6 +559,28 @@ function uiBoolToDbBool(v) {
 function addChanged(data, key, newValue, oldValue) {
   if (!DIRTY_FIELDS.has(key)) return;
   if (!sameValue(newValue, oldValue)) data[key] = newValue;
+}
+
+// 驾驶确认时长单独配置，按数据库回显，不随设备类型或复制粘贴改变。
+function fillDriveConfirmSeconds(data) {
+  const field = document.getElementById('drive-confirm-seconds-field');
+  const el = document.getElementById('drive_confirm_seconds');
+  const hint = document.getElementById('drive_confirm_seconds_hint');
+  const admin = isPlatformAdmin();
+  field.style.display = admin ? 'block' : 'none';
+  if (!admin) {
+    el.disabled = true;
+    hint.textContent = '';
+    hint.style.display = 'none';
+    return;
+  }
+  el.value = Number(data.drive_confirm_seconds) === 5 ? '5' : '10';
+  const hasField = Object.prototype.hasOwnProperty.call(data, 'drive_confirm_seconds');
+  const available = hasField && data.drive_confirm_seconds_available !== false;
+  const editable = data.drive_confirm_seconds_editable !== false;
+  el.disabled = !available || !editable;
+  hint.textContent = !hasField ? '配置接口尚未更新，请先更新后再设置。' : (data.drive_confirm_seconds_message || (!available ? '请先添加驾驶确认秒数字段。' : (!editable ? '无权修改此设备的驾驶确认时长。' : '')));
+  hint.style.display = hint.textContent ? 'block' : 'none';
 }
 
 /** 工具：从 "ch1#1000-2000#false#1500" 解析 */
@@ -1271,6 +1303,7 @@ window.addEventListener('DOMContentLoaded',  async function () {
     renderChannels(DEVICE_DATA);
 
     // 其他字段回填
+    fillDriveConfirmSeconds(DEVICE_DATA);
     document.getElementById('car_type').value = DEVICE_DATA.car_type;
     const audioSourceEl = document.getElementById('audio_source_type');
     if (audioSourceEl) {
@@ -1363,6 +1396,15 @@ document.getElementById('modify-form').addEventListener('submit', async function
           action: 'save',
           device_id: document.getElementById('device_id').value
         };
+
+        const driveConfirmEl = document.getElementById('drive_confirm_seconds');
+        if (isPlatformAdmin() && !driveConfirmEl.disabled && DIRTY_FIELDS.has('drive_confirm_seconds')) {
+          if (!['5', '10'].includes(driveConfirmEl.value)) {
+            alert('驾驶确认时长只能选择 5 秒或 10 秒');
+            return;
+          }
+          addChanged(data, 'drive_confirm_seconds', Number(driveConfirmEl.value), DEVICE_DATA.drive_confirm_seconds ?? 10);
+        }
 
         // ✅ 基础驾驶参数：role=1/2/3/4 都可输入；只有用户动过，并且和 DEVICE_DATA 不一致时才提交
         // ✅ 车辆类型 car_type 只允许平台管理员 role=1/2 修改，role=3/4 页面隐藏且不提交。

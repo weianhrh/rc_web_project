@@ -1386,19 +1386,67 @@ elseif ($action === 'set_venue_level') {
         exit;
     }
 
-    $ok = $database->query(
-        "UPDATE venues SET venue_level = ? WHERE id = ? LIMIT 1",
-        [$venue_level, $venue_id],
-        true
+    $venueRows = $database->query(
+        "SELECT venue_name, invite_code, COALESCE(NULLIF(UPPER(TRIM(venue_level)), ''), 'A') AS venue_level
+         FROM venues WHERE id = ? LIMIT 1",
+        [$venue_id]
     );
+    if (!$venueRows) {
+        echo json_encode(['code' => 3, 'msg' => '场地不存在'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
-    if ($ok) {
+    $oldLevel = $venueRows[0]['venue_level'];
+    if ($oldLevel === $venue_level) {
+        echo json_encode(['code' => 0, 'msg' => '场地评级未发生变化'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    try {
+        $database->beginTransaction();
+        $ok = $database->query(
+            "UPDATE venues SET venue_level = ? WHERE id = ? AND UPPER(TRIM(venue_level)) = ? LIMIT 1",
+            [$venue_level, $venue_id, $oldLevel],
+            true
+        );
+        if ($ok !== 1) {
+            throw new Exception('评级修改失败，数据可能已被其他管理员更新');
+        }
+
+        $operatorUid = intval($user['uid'] ?? 0);
+        $operatorName = trim((string)($user['username'] ?? ''));
+        $runId = 'manual-' . date('YmdHis') . '-' . bin2hex(random_bytes(3));
+        $reason = '管理员手动调整场地等级';
+        $logged = $database->query(
+            "INSERT INTO venue_level_auto_change_logs
+                (run_id, venue_id, invite_code, old_level, new_level, change_source,
+                 operator_uid, operator_name, stat_start_date, stat_end_date, invite_count, reason)
+             VALUES (?, ?, ?, ?, ?, 'manual', ?, ?, CURDATE(), CURDATE(), 0, ?)",
+            [
+                $runId,
+                $venue_id,
+                (string)($venueRows[0]['invite_code'] ?? ''),
+                $oldLevel,
+                $venue_level,
+                $operatorUid ?: null,
+                $operatorName,
+                $reason,
+            ],
+            true
+        );
+        if ($logged !== 1) {
+            throw new Exception('等级已修改但审计记录写入失败');
+        }
+
+        $database->commit();
         echo json_encode([
             'code' => 0,
             'msg' => '场地评级已修改为 ' . $venue_level
         ], JSON_UNESCAPED_UNICODE);
-    } else {
-        echo json_encode(['code' => 3, 'msg' => '评级修改失败'], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $e) {
+        $database->rollBack();
+        error_log('set_venue_level failed: ' . $e->getMessage());
+        echo json_encode(['code' => 3, 'msg' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 
     exit;

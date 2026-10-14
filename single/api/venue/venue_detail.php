@@ -264,11 +264,11 @@ $database->close();
     <div class="card-container">
      <?php foreach ($data as $row):
     if ($period === 'week') {
-        $label = date("m月d日", strtotime($row['start_date'])) . ' ~ ' . date("m月d日", strtotime($row['end_date']));
+        $label = date("Y年m月d日", strtotime($row['start_date'])) . ' ~ ' . date("Y年m月d日", strtotime($row['end_date']));
     } elseif ($period === 'month') {
         $label = date("Y年m月", strtotime($row['label'] . '-01'));
     } elseif ($period === 'day') {
-        $label = date("m月d日", strtotime($row['label']));
+        $label = date("Y年m月d日", strtotime($row['label']));
     } else {
         $label = htmlspecialchars($row['label']);
     }
