@@ -224,22 +224,28 @@
 }
 
   </style>
+  <link rel="stylesheet" href="/res/top-ranking.css?v=20261014-style2">
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <div class="card-title">
-        <span>
-<span id="ranking-title">当日场地业绩排行榜</span>
-<span id="total-income" style="margin-left: 12px; font-size: 16px;">总收入: 0.00 元</span>
-        </span>
-
+      <header class="ranking-header">
+        <div><h1 id="ranking-title">当日场地业绩排行榜</h1><div class="ranking-meta"><span id="ranking-count">加载中</span><span id="ranking-updated"></span></div></div>
+        <button type="button" class="refresh-button" id="refresh-ranking" title="刷新排行榜" aria-label="刷新排行榜"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
+      </header>
+      <section class="ranking-summary" aria-label="业绩汇总">
+        <div class="summary-item summary-primary"><div class="summary-label" id="summary-main-label">总收入</div><div class="summary-value" id="total-income">—</div></div>
+        <div class="summary-item"><div class="summary-label">驾驶收入</div><div class="summary-value" id="total-drive-income">—</div></div>
+        <div class="summary-item"><div class="summary-label">礼物收入</div><div class="summary-value" id="total-gift-income">—</div></div>
+        <div class="summary-item"><div class="summary-label">订单数</div><div class="summary-value" id="total-order-count">—</div></div>
+      </section>
+      <div class="ranking-toolbar">
         <div class="controls">
           <!-- 搜索输入 -->
-         <input type="text"
+         <label class="search-field"><i class="fas fa-search" aria-hidden="true"></i><input type="text"
                id="venue-search"
                class="select-input search-input"
-               placeholder="搜索场地名称或 ID">
+               placeholder="搜索场地名称或 ID" aria-label="搜索场地名称或ID"></label>
 
         
           
@@ -252,7 +258,7 @@
 <!-- 自定义下拉包装 -->
           <div class="custom-select-wrapper">
             <!-- 伪下拉显示区域 -->
-            <div class="custom-select" id="venue-select-display">
+            <div class="custom-select" id="venue-select-display" role="combobox" tabindex="0" aria-label="筛选场地" aria-expanded="false" aria-controls="venue-options">
               <span class="selected-text">全部场地</span>
               <i class="fas fa-chevron-down"></i>
             </div>
@@ -273,15 +279,16 @@
 
         </div>
       </div>
-
-      <div id="ranking-list"></div>
+      <div class="ranking-table-head" aria-hidden="true"><span>排名</span><span>场地</span><span>订单数</span><span>预约人数</span><span>驾驶收入</span><span>礼物收入</span><span>总收入</span><span></span></div>
+      <div id="ranking-feedback" role="status" aria-live="polite"></div>
+      <div id="ranking-list" aria-label="场地业绩排名"></div>
     </div>
   </div>
 
-  <script src="canvas-nest-colorful.js"></script>
   <script>
     // ====== 全局状态 ======
     let allData = [];              // 当前日期的完整数据（数组）
+    let rankingRequestId = 0;
     let selectedVenueId = 'all';   // 当前筛选的 venue_id（字符串 or 'all'）
 let currentPeriod = 'day';     // 'day' | 'week' | 'month'
 let currentDateKey = 'today';  // today | yesterday | YYYY-MM-DD，单日用
@@ -488,6 +495,8 @@ function updateURLState() {
 
 // ====== 加载数据 ======
 function loadRankingData(dateKey) {
+  const requestId = ++rankingRequestId;
+  allData = [];
   // 点击今天/昨天按钮时，切回单日模式
   if (dateKey) {
     setSingleDate(dateKey);
@@ -495,6 +504,15 @@ function loadRankingData(dateKey) {
 
   updateDateTitle();
   updateURLState();
+  document.getElementById('today-button').classList.toggle('active', currentDateKey === 'today');
+  document.getElementById('yesterday-button').classList.toggle('active', currentDateKey === 'yesterday');
+  document.getElementById('refresh-ranking').disabled = true;
+  document.getElementById('ranking-list').setAttribute('aria-busy', 'true');
+  document.getElementById('ranking-feedback').textContent = '正在加载业绩数据...';
+  document.getElementById('ranking-list').replaceChildren();
+  ['total-income','total-drive-income','total-gift-income','total-order-count'].forEach(id => document.getElementById(id).textContent = '—');
+  document.getElementById('ranking-count').textContent = '加载中';
+  document.getElementById('ranking-updated').textContent = '';
 
   const params = new URLSearchParams();
   params.set('rank_type', currentRankType);
@@ -509,25 +527,32 @@ function loadRankingData(dateKey) {
 
   const url = `https://open.rcwulian.cn/api/operat/topv2.php?${params.toString()}`;
 
-  fetch(url)
-    .then(r => r.json())
+  return fetch(url)
+    .then(r => { if (!r.ok) throw new Error('数据加载失败，请稍后重试'); return r.json(); })
     .then(data => {
+      if (requestId !== rankingRequestId) return;
       if (data.code !== 0 || !Array.isArray(data.data)) {
-        alert(data.msg || '未找到业绩数据');
-        allData = [];
-        populateVenueDropdown([]);
-        applyFilterAndRender();
-        return;
+        throw new Error(data.msg || '未找到业绩数据');
       }
 
       allData = data.data.map(normalizeVenueRow);
 
       populateVenueDropdown(allData);
       applyFilterAndRender();
+      document.getElementById('ranking-feedback').textContent = '';
+      document.getElementById('ranking-updated').textContent = '更新于 ' + new Intl.DateTimeFormat('zh-CN', {timeZone:'Asia/Shanghai',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date());
     })
     .catch(err => {
+      if (requestId !== rankingRequestId) return;
+      allData = [];
       console.error('数据加载失败:', err);
-      alert('数据加载失败，请稍后重试');
+      document.getElementById('ranking-feedback').textContent = err.message || '数据加载失败，请稍后重试';
+      document.getElementById('ranking-count').textContent = '加载失败';
+    })
+    .finally(() => {
+      if (requestId !== rankingRequestId) return;
+      document.getElementById('refresh-ranking').disabled = false;
+      document.getElementById('ranking-list').setAttribute('aria-busy', 'false');
     });
 }
 
@@ -595,6 +620,7 @@ function loadRankingData(dateKey) {
       if (!venueOptionsBox.classList.contains('show')) {
         venueOptionsBox.classList.add('show');
         venueSelectDisplay.classList.add('open');
+        venueSelectDisplay.setAttribute('aria-expanded', 'true');
       }
     });
 
@@ -667,7 +693,16 @@ function loadRankingData(dateKey) {
       const cfg = getRankConfig();
       const total = list.reduce((sum, v) => sum + toNumber(v[cfg.field]), 0);
       const label = selectedVenueId === 'all' ? cfg.totalLabel : cfg.filterLabel;
-      document.getElementById('total-income').innerText = `${label}: ${total.toFixed(2)} 元`;
+      document.getElementById('summary-main-label').textContent = label;
+      document.getElementById('total-income').textContent = formatMoney(total);
+      document.getElementById('total-drive-income').textContent = formatMoney(list.reduce((s,v) => s + toNumber(v.driveIncome),0));
+      document.getElementById('total-gift-income').textContent = formatMoney(list.reduce((s,v) => s + toNumber(v.giftIncome),0));
+      document.getElementById('total-order-count').textContent = list.reduce((s,v) => s + toNumber(v.orderCount),0).toLocaleString('zh-CN');
+      document.getElementById('ranking-count').textContent = selectedVenueId === 'all' ? `${list.length}个场地 · ${cfg.name}排行` : `已筛选1个场地 · ${cfg.name}排行`;
+    }
+
+    function formatMoney(value) {
+      return '¥' + toNumber(value).toLocaleString('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2});
     }
 
     // ====== 排行榜渲染 ======
@@ -676,12 +711,22 @@ function loadRankingData(dateKey) {
       const cfg = getRankConfig();
 
       rankingList.innerHTML = '';
+      const rankMap = new Map(sortByCurrentRank(allData).map((v,i) => [String(v.venue_id), i + 1]));
+      if (!venues.length) {
+        const empty = document.createElement('div');
+        empty.className = 'ranking-empty';
+        empty.innerHTML = '<i class="fas fa-chart-bar" aria-hidden="true"></i><span>暂无业绩记录</span>';
+        rankingList.appendChild(empty);
+        return;
+      }
 
       venues.forEach((venue, index) => {
-        const card = document.createElement('div');
+        const card = document.createElement('a');
         card.classList.add('venue-card');
-        card.style.cursor = 'pointer';
-        card.onclick = () => goToDetail(venue.venue_id);
+        card.href = '/api/venue/venue_detail.php?venue_id=' + encodeURIComponent(venue.venue_id);
+        card.setAttribute('aria-label', venue.venue_name + '，查看场地明细');
+        const rank = rankMap.get(String(venue.venue_id)) || index + 1;
+        if (rank <= 3) card.classList.add('rank-top-' + rank);
 
         const driveIncome = toNumber(venue.driveIncome);
         const giftIncome = toNumber(venue.giftIncome);
@@ -692,15 +737,14 @@ function loadRankingData(dateKey) {
         const totalClass = currentRankType === 'total' ? 'rank-metric' : '';
 
         card.innerHTML = `
-          <div class="rank">${index + 1}</div>
-          <div class="venue-info">
-            <span><strong>${venue.venue_id}-${escapeHTML(venue.venue_name)}</strong></span>
-            <span>订单数: ${venue.orderCount}</span>
-            <span>预约人数: ${venue.reservationCount}</span>
-            <span class="${driveClass}">驾驶收入: ${driveIncome.toFixed(2)} 元</span>
-            <span class="${giftClass}">礼物收入: ${giftIncome.toFixed(2)} 元</span>
-            <span class="${totalClass}">总收入: ${totalIncome.toFixed(2)} 元</span>
-          </div>
+          <div class="rank">${rank <= 3 ? '<i class="fas fa-trophy" aria-hidden="true"></i>' : ''}<span>${rank}</span></div>
+          <div class="venue-info"><strong>${escapeHTML(venue.venue_name)}</strong><span>场地ID ${escapeHTML(venue.venue_id)}</span></div>
+          <div class="row-stat"><span class="mobile-label">订单数</span><strong>${toNumber(venue.orderCount).toLocaleString('zh-CN')}</strong></div>
+          <div class="row-stat"><span class="mobile-label">预约人数</span><strong>${toNumber(venue.reservationCount).toLocaleString('zh-CN')}</strong></div>
+          <div class="row-stat row-money ${driveClass}"><span class="mobile-label">驾驶收入</span><strong>${formatMoney(driveIncome)}</strong></div>
+          <div class="row-stat row-money ${giftClass}"><span class="mobile-label">礼物收入</span><strong>${formatMoney(giftIncome)}</strong></div>
+          <div class="row-stat row-money row-total ${totalClass}"><span class="mobile-label">总收入</span><strong>${formatMoney(totalIncome)}</strong></div>
+          <i class="fas fa-chevron-right detail-arrow" aria-hidden="true"></i>
         `;
         rankingList.appendChild(card);
       });
@@ -727,13 +771,20 @@ function loadRankingData(dateKey) {
 
     function closeCustomDropdown() {
       venueSelectDisplay.classList.remove('open');
+      venueSelectDisplay.setAttribute('aria-expanded', 'false');
       venueOptionsBox.classList.remove('show');
     }
 
     venueSelectDisplay.addEventListener('click', () => {
       venueSelectDisplay.classList.toggle('open');
       venueOptionsBox.classList.toggle('show');
+      venueSelectDisplay.setAttribute('aria-expanded', String(venueOptionsBox.classList.contains('show')));
     });
+    venueSelectDisplay.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); venueSelectDisplay.click(); }
+      if (e.key === 'Escape') closeCustomDropdown();
+    });
+    document.getElementById('refresh-ranking').addEventListener('click', () => loadRankingData());
 
     // 点击外面关闭下拉
     document.addEventListener('click', (e) => {

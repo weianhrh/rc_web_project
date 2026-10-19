@@ -1,5 +1,6 @@
 <?php
-require_once '../Database.php';
+require_once __DIR__ . '/../Database.php';
+date_default_timezone_set('Asia/Shanghai');
 $database = new Database();
 
 // -------------------- 参数 --------------------
@@ -18,8 +19,8 @@ $hasDetailRange = isValidDateYmd($detail_start) && isValidDateYmd($detail_end);
 // 注册统计字段
 $timeField  = 'users.created_at';
 $pageTitle  = '注册用户统计';
-$trendName  = '今日注册趋势';
-$seriesName = '今日注册';
+$trendName  = '注册趋势';
+$seriesName = '注册总人数';
 $inviteCondition = "users.invitation_code IS NOT NULL AND users.invitation_code <> '' AND users.invitation_code <> '0000'";
 
 // -------------------- 列表统计 SQL（day/week/month） --------------------
@@ -88,67 +89,56 @@ switch ($period) {
 
 $data = $database->query($sql);
 
-// -------------------- 今日趋势（按半小时） --------------------
-$startHour = 0;
-$endHour = 24;
-
-$slots = [];
-$slotCounts = [];
-$slotInviteCounts = [];
-$slotSelfCounts = [];
-$slotMap = [];
-
-$idx = 0;
-for ($h = $startHour; $h <= $endHour; $h++) {
-  foreach ([0, 30] as $m) {
-    $label = str_pad((string)$h, 2, '0', STR_PAD_LEFT) . ":" . ($m === 0 ? "00" : "30");
-    $slots[] = $label;
-    $slotCounts[] = 0;
-    $slotInviteCounts[] = 0;
-    $slotSelfCounts[] = 0;
-    $slotMap[$label] = $idx++;
+// The trend has an independent, bounded interval; the end is exclusive.
+$trendStart = new DateTimeImmutable('today');
+$trendEnd = $trendStart->modify('+1 day');
+$trendError = '';
+$rawTrendStart = $_GET['trend_start'] ?? '';
+$rawTrendEnd = $_GET['trend_end'] ?? '';
+if ($rawTrendStart !== '' || $rawTrendEnd !== '') {
+  $s = is_string($rawTrendStart) ? DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $rawTrendStart) : false;
+  $e = is_string($rawTrendEnd) ? DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $rawTrendEnd) : false;
+  if (!$s || !$e || $s->format('Y-m-d\TH:i') !== $rawTrendStart || $e->format('Y-m-d\TH:i') !== $rawTrendEnd) {
+    $trendError = '请填写有效的开始和结束时间，已恢复今日范围。';
+  } elseif ($e <= $s || $e->getTimestamp() - $s->getTimestamp() > 31 * 86400) {
+    $trendError = '结束时间须晚于开始时间，且范围不超过31天，已恢复今日范围。';
+  } else {
+    $trendStart = $s; $trendEnd = $e;
   }
 }
-
-$trendSql = "
-  SELECT
-    DATE_FORMAT({$timeField}, '%H') AS hh,
-    CASE WHEN MINUTE({$timeField}) < 30 THEN '00' ELSE '30' END AS mm,
-    COUNT(*) AS c,
-    SUM(CASE WHEN {$inviteCondition} THEN 1 ELSE 0 END) AS invite_c,
-    SUM(CASE WHEN {$inviteCondition} THEN 0 ELSE 1 END) AS self_c
-  FROM users
-  WHERE {$timeField} >= CURDATE()
-    AND {$timeField} < CURDATE() + INTERVAL 1 DAY
-    AND HOUR({$timeField}) BETWEEN {$startHour} AND {$endHour}
-  GROUP BY hh, mm
-  ORDER BY hh, mm
-";
-$trendRows = $database->query($trendSql);
-
-foreach ($trendRows as $r) {
-  $label = $r['hh'] . ":" . $r['mm'];
-  if (isset($slotMap[$label])) {
-    $i = $slotMap[$label];
+$trendDaily = $trendEnd->getTimestamp() - $trendStart->getTimestamp() > 2 * 86400;
+$trendBucketLabel = $trendDaily ? '按天聚合' : '按半小时聚合';
+$trendRangeLabel = $trendStart->format('Y-m-d H:i') . ' ~ ' . $trendEnd->format('Y-m-d H:i');
+$slots = []; $slotMap = []; $slotCounts = []; $slotInviteCounts = []; $slotSelfCounts = [];
+$cursor = $trendDaily ? $trendStart->setTime(0, 0) : $trendStart->setTime((int)$trendStart->format('H'), (int)(floor((int)$trendStart->format('i') / 30) * 30));
+while ($cursor < $trendEnd) {
+  $key = $cursor->format($trendDaily ? 'Y-m-d' : 'Y-m-d H:i');
+  $slotMap[$key] = count($slots);
+  $slots[] = $cursor->format($trendDaily ? 'm-d' : 'm-d H:i');
+  $slotCounts[] = 0; $slotInviteCounts[] = 0; $slotSelfCounts[] = 0;
+  $cursor = $cursor->modify($trendDaily ? '+1 day' : '+30 minutes');
+}
+$bucketSql = $trendDaily ? "DATE_FORMAT({$timeField}, '%Y-%m-%d')" : "CONCAT(DATE_FORMAT({$timeField}, '%Y-%m-%d %H:'), IF(MINUTE({$timeField}) < 30, '00', '30'))";
+$trendRows = $database->query("SELECT {$bucketSql} AS bucket, COUNT(*) AS c,
+  SUM(CASE WHEN {$inviteCondition} THEN 1 ELSE 0 END) AS invite_c,
+  SUM(CASE WHEN {$inviteCondition} THEN 0 ELSE 1 END) AS self_c
+  FROM users WHERE {$timeField} >= ? AND {$timeField} < ?
+  GROUP BY bucket ORDER BY bucket", [$trendStart->format('Y-m-d H:i:s'), $trendEnd->format('Y-m-d H:i:s')]);
+if ($trendRows === false) {
+  $trendError = '趋势数据查询失败，请刷新重试。';
+  $todayTotal = $todayInviteTotal = $todaySelfTotal = null;
+} else {
+  foreach ($trendRows as $r) {
+    if (!isset($slotMap[$r['bucket']])) continue;
+    $i = $slotMap[$r['bucket']];
     $slotCounts[$i] = (int)$r['c'];
     $slotInviteCounts[$i] = (int)$r['invite_c'];
     $slotSelfCounts[$i] = (int)$r['self_c'];
   }
+  $todayTotal = array_sum($slotCounts);
+  $todayInviteTotal = array_sum($slotInviteCounts);
+  $todaySelfTotal = array_sum($slotSelfCounts);
 }
-
-$todayTotalSql = "
-  SELECT
-    COUNT(*) AS cnt,
-    SUM(CASE WHEN {$inviteCondition} THEN 1 ELSE 0 END) AS invite_cnt,
-    SUM(CASE WHEN {$inviteCondition} THEN 0 ELSE 1 END) AS self_cnt
-  FROM users
-  WHERE {$timeField} >= CURDATE()
-    AND {$timeField} < CURDATE() + INTERVAL 1 DAY
-";
-$todayRow = $database->query($todayTotalSql)[0] ?? [];
-$todayTotal = (int)($todayRow['cnt'] ?? 0);
-$todayInviteTotal = (int)($todayRow['invite_cnt'] ?? 0);
-$todaySelfTotal = (int)($todayRow['self_cnt'] ?? 0);
 
 $inviteDetail = [];
 $inviteDetailTotal = 0;
@@ -518,23 +508,37 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
         <div class="hd-left">
           <span class="layui-badge-dot" style="background:var(--primary)"></span>
           <span><?= htmlspecialchars($trendName) ?></span>
-          <span class="hd-sub">（按半小时聚合）</span>
+          <span class="hd-sub">（<?= $trendBucketLabel ?>）</span>
         </div>
         <div class="mini-note">更新：<?= date('Y-m-d H:i') ?></div>
       </div>
 
+      <form class="filters" method="get" id="trendForm">
+        <?php foreach (['period', 'start_date', 'end_date', 'detail_date', 'detail_start', 'detail_end'] as $param):
+          if (!isset($_GET[$param]) || !is_string($_GET[$param])) continue; ?>
+          <input type="hidden" name="<?= $param ?>" value="<?= htmlspecialchars($_GET[$param], ENT_QUOTES, 'UTF-8') ?>">
+        <?php endforeach; ?>
+        <div class="left">
+          <label>开始时间 <input class="layui-input" type="datetime-local" name="trend_start" id="trendStart" value="<?= $trendStart->format('Y-m-d\TH:i') ?>" required></label>
+          <label>结束时间 <input class="layui-input" type="datetime-local" name="trend_end" id="trendEnd" value="<?= $trendEnd->format('Y-m-d\TH:i') ?>" required></label>
+          <button class="layui-btn layui-btn-normal" type="submit">查询</button>
+          <button class="layui-btn layui-btn-primary" type="button" onclick="resetTrend()">今日</button>
+        </div>
+        <span class="mini-note">北京时间，含开始、不含结束；最长31天</span>
+      </form>
+      <?php if ($trendError !== ''): ?><div role="alert" style="padding:0 14px;color:#b42318"><?= htmlspecialchars($trendError) ?></div><?php endif; ?>
       <div class="kpi">
         <div class="kpi-item">
-          <div class="kpi-title">今日注册用户</div>
-          <div class="kpi-value"><?= $todayTotal ?> <span style="font-size:14px;font-weight:700;color:var(--muted)">人</span></div>
+          <div class="kpi-title">所选时段注册用户</div>
+          <div class="kpi-value"><?= $todayTotal ?? '—' ?> <span style="font-size:14px;font-weight:700;color:var(--muted)">人</span></div>
           <div class="split-row">
             <span class="split-pill"><span class="split-dot invite"></span>推广 <?= $todayInviteTotal ?> 人</span>
             <span class="split-pill"><span class="split-dot self"></span>自行 <?= $todaySelfTotal ?> 人</span>
           </div>
-          <div class="kpi-foot">统计口径：users.created_at ∈ 今日</div>
+          <div class="kpi-foot"><?= htmlspecialchars($trendRangeLabel) ?></div>
         </div>
         <div class="kpi-item">
-          <div class="kpi-title">筛选状态</div>
+          <div class="kpi-title">下方周期统计筛选</div>
           <div class="kpi-value" style="font-size:18px;">
             <?= $hasRange ? (htmlspecialchars($start_date).' ~ '.htmlspecialchars($end_date)) : '（默认最近区间）' ?>
           </div>
@@ -702,6 +706,14 @@ function activeClass($a, $b) { return $a === $b ? 'layui-btn-normal' : 'layui-bt
   }
 
   function goRegister(){ window.location.href = buildUrl('/api/index/user_register_detail.php', {}); }
+  function resetTrend(){ window.location.href = buildUrl('/api/index/user_register_detail.php', {trend_start:null, trend_end:null}); }
+  document.getElementById('trendForm').addEventListener('submit', function(event){
+    const s = new Date(document.getElementById('trendStart').value);
+    const e = new Date(document.getElementById('trendEnd').value);
+    if (!Number.isFinite(+s) || !Number.isFinite(+e) || e <= s || e - s > 31 * 86400000) {
+      event.preventDefault(); alert('请选择有效时间范围：结束晚于开始，最长31天。');
+    }
+  });
   function goActive(){ window.location.href = buildUrl('/api/index/user_active_detail.php', {}); }
 
   function changePeriod(p){

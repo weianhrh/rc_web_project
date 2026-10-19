@@ -21,6 +21,10 @@ if (!$user || !$user['role_id']) {
     jsonOut(1001, '用户未登录或无权访问');
 }
 
+if (!empty($user['is_mcn'])) {
+    jsonOut(403, 'MCN账号请通过主播调配功能变更绑定');
+}
+
 $uid = intval($_POST['uid'] ?? 0);
 $streamer_venue = intval($_POST['streamer_venue'] ?? ($_POST['venue_id'] ?? 0));
 

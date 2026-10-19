@@ -1,5 +1,13 @@
 [
     {
+        "id": "venue-history",
+        "label": "历史经营数据",
+        "title": "历史经营数据",
+        "href": "venue_history.html",
+        "page": "venue_history.html",
+        "icon": "fa-chart-line"
+    },
+    {
         "id": "reservation-management",
         "label": "驾驶订单",
         "title": "驾驶订单",

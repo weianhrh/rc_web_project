@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>语音房排名预览</title><link rel="stylesheet" href="/res/fa/css/all.min.css"><link rel="stylesheet" href="/res/voice-room-rank.css?v=1"></head>
+<body><main><header><div><h1>语音房排名预览</h1><p>已接入 App 推荐 · 平台全局排序视图</p></div><button id="rules"><i class="fas fa-info-circle"></i> 排名口径</button></header>
+<section class="summary"><div>可推荐场地<strong id="eligible">—</strong></div><div>当前语音房开放<strong id="visible">—</strong></div><div>暂未入选<strong id="excluded">—</strong></div><div>数据更新<strong class="time" id="time">—</strong></div></section>
+<div class="toolbar"><input id="search" placeholder="场地名称 / ID" aria-label="搜索场地"><select id="mode" aria-label="显示范围"><option value="eligible">可推荐场地</option><option value="top">前10位展示模拟</option><option value="all">全部场地</option><option value="excluded">暂未入选</option></select><button id="refresh"><i class="fas fa-sync-alt"></i> 刷新</button></div>
+<p id="notice" role="status">正在读取真实数据…</p><div class="table-wrap"><table><thead><tr><th>展示位 / 综合名次</th><th>场地</th><th>原规则参考名次</th><th>试算分</th><th>7日 / 今日有效引流</th><th>跨日复购</th><th>预约完成率</th><th>空闲车辆</th><th>状态</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+<footer>试算使用近7个完整自然日及今日引流数据；排除能量、礼物消费。当前设备状态仅作推荐资格筛选，不代表历史在线率。</footer>
+</main><dialog id="dialog"><div class="dialog-head"><h2 id="title"></h2><button id="close" aria-label="关闭" title="关闭"><i class="fas fa-times"></i></button></div><div id="content"></div></dialog><script src="/res/voice-room-rank.js?v=2-live"></script></body></html>

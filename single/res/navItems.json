@@ -1,5 +1,12 @@
 [
     {
+        "id": "voice-room-rank-preview",
+        "title": "语音房排名预览",
+        "href": "voice_room_rank.html",
+        "page": "voice_room_rank.html",
+        "icon": "fas fa-sort-amount-down"
+    },
+    {
         "id": "Withdrawal-approval",
         "title": "提现审批",
         "icon": "fas fa-file-invoice-dollar",
@@ -22,6 +29,14 @@
         "href": "Promotion_Reward_Settlement_Admin.html",
         "page": "Promotion_Reward_Settlement_Admin.html",
         "icon": "fas fa-file-invoice-dollar"
+    },
+    {
+        "id": "venue-ai-score",
+        "label": "AI场地评分",
+        "title": "AI场地评分",
+        "href": "venue_ai_score.html",
+        "page": "venue_ai_score.html",
+        "icon": "fas fa-chart-line"
     },
     {
         "id": "xls",

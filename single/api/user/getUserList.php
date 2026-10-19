@@ -260,6 +260,7 @@ if ($result !== false) {
         'msg'   => '',
         'count' => $totalCount,
         'can_view_login_ip' => in_array($role_id, [1, 2], true),
+        'can_reset_nickname' => in_array($role_id, [1, 2], true),
         'data'  => $result
     ]);
 } else {

@@ -21,6 +21,10 @@ if (!$user || !$user['role_id']) {
     jsonOut(1001, '用户未登录或无权访问');
 }
 
+if (!empty($user['is_mcn'])) {
+    jsonOut(403, 'MCN账号不能修改主播身份，请通过主播调配管理场地绑定');
+}
+
 $uid = intval($_GET['uid'] ?? 0);
 $type = intval($_GET['type'] ?? -1); // 0普通用户，1主播，2管理员
 if ($uid <= 0) {

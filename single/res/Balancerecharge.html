@@ -259,6 +259,8 @@ body{
 .btn-undelete{background:#18c08f;}
 .btn-consume{background:var(--secondary);}
 .btn-nickname{background:#2f6bff;}
+.btn-reset-nickname{background:#68778d;}
+.btn-reset-nickname:disabled{opacity:.55;cursor:not-allowed;}
 .btn-clear-invite{background:#b54708;}
 
 /* 分页 */
@@ -918,7 +920,7 @@ async function loadTableData(params = {}) {
             const invitation = item.invitation_code || '未设置';
             const hasActiveInvitation = invitation !== '未设置' && invitation !== '0000';
 
-            const safeUsername = (item.username || '').replace(/'/g, "\\'");
+            const safeUsername = escapeUserNickname(item.username || '');
 
             const userHTML = `
               <div class="user-card">
@@ -932,7 +934,7 @@ async function loadTableData(params = {}) {
                             : (Number(item.is_streamer) === 2 ? '<span class="badge-streamer">管理员</span>' : '')
                         }
                       ${Number(item.is_mute) === 1 ? '<span class="badge-muted">禁言</span>' : ''}
-                      ${item.username || '-'}
+                      ${safeUsername || '-'}
                       ${isDeleted ? '<span class="badge-deleted">已注销</span>' : ''}
                     </span>
                   <span>ID: ${item.id}</span>
@@ -976,13 +978,21 @@ async function loadTableData(params = {}) {
           <i class="fas fa-user-shield"></i> 设为管理员
         </button>
         <div class="action-row action-row-full">
-          <button class="action-btn btn-nickname" onclick="changeNicknameByAdmin(${item.id}, '${safeUsername}')">
+          <button class="action-btn btn-nickname" data-nickname="${safeUsername}" onclick="changeNicknameByAdmin(${item.id}, this.dataset.nickname)">
             <i class="fas fa-user-edit"></i> 改昵称
           </button>
         </div>
       </div>
       `
   }
+
+${data.can_reset_nickname === true ? `
+<div class="action-row action-row-full">
+  <button class="action-btn btn-reset-nickname" onclick="resetNicknameByAdmin(${item.id}, this)">
+    <i class="fas fa-undo-alt"></i> 重置昵称
+  </button>
+</div>
+` : ''}
 
 <div class="action-row">
   <button class="action-btn btn-recharge" onclick="rechargeUser(${item.id})">
@@ -1219,6 +1229,48 @@ async function clearUserInvitationCode(uid) {
     alert(error.message || '清除邀请码失败，请稍后重试');
   }
 }
+  // 昵称作为普通文本展示；不把用户昵称直接拼进onclick代码。
+  function escapeUserNickname(value) {
+    const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(value).replace(/[&<>"']/g, ch => entities[ch]);
+  }
+
+  const nicknameResetInFlight = new Set();
+  async function resetNicknameByAdmin(uid, button) {
+    const key = String(uid);
+    if (nicknameResetInFlight.has(key)) return;
+    if (!confirm(`确认将用户 UID ${key} 的昵称重置为默认值吗？\n\n默认格式：Rc用户_时间戳\n只修改昵称，不改变UID、余额、金币或邀请码。`)) return;
+
+    nicknameResetInFlight.add(key);
+    const previousHtml = button ? button.innerHTML : '';
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 重置中';
+    }
+    try {
+      const response = await fetch('/api/user/resetUserNickname.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: key })
+      });
+      if (!response.ok) throw new Error('请求失败，请刷新列表确认结果后再试');
+      const result = await response.json();
+      if (result.success !== true) throw new Error(result.message || '重置昵称失败');
+      alert(`昵称已重置为：${result.nickname}`);
+      loadTableData(lastParams);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || '重置失败，请刷新列表确认结果后再试');
+    } finally {
+      nicknameResetInFlight.delete(key);
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = previousHtml;
+      }
+    }
+  }
+
   // 改昵称（保持你原逻辑）
   async function changeNicknameByAdmin(uid, current='') {
     const n = prompt('新昵称（≤25个字符）', current || '')?.trim();
