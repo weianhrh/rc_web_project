@@ -216,6 +216,42 @@ if ($method === 'POST') {
     // 获取 action 参数 
     $action = $_POST['action'] ?? ''; 
  
+    // 场地置顶：复用 APP 的 pinned_at 微秒时间排序，仅管理员可操作。
+    if ($action === 'set_venue_pin') {
+        if (!in_array((int)$role_id, [1, 2], true)) {
+            echo json_encode(['code' => 403, 'msg' => '仅管理员可以设置场地置顶']);
+            exit;
+        }
+        $venueId = filter_var($_POST['venue_id'] ?? null, FILTER_VALIDATE_INT);
+        $pin = $_POST['is_pinned'] ?? null;
+        if (!$venueId || $venueId < 1 || !in_array($pin, ['0', '1'], true)) {
+            echo json_encode(['code' => 400, 'msg' => '场地ID或置顶参数无效']);
+            exit;
+        }
+        try {
+            $venue = $database->query('SELECT id FROM venues WHERE id = ? LIMIT 1', [$venueId]);
+            if ($venue === false) {
+                throw new Exception('venue lookup failed');
+            }
+            if (!$venue) {
+                echo json_encode(['code' => 404, 'msg' => '场地不存在']);
+                exit;
+            }
+            $sql = $pin === '1'
+                ? 'UPDATE venues SET is_pinned = 1, pinned_at = CURRENT_TIMESTAMP(6) WHERE id = ? LIMIT 1'
+                : 'UPDATE venues SET is_pinned = 0, pinned_at = NULL WHERE id = ? LIMIT 1';
+            $result = $database->query($sql, [$venueId], true);
+            if ($result === false) {
+                throw new Exception('venue pin update failed');
+            }
+            echo json_encode(['code' => 200, 'msg' => $pin === '1' ? '已置顶，将排在置顶场地最前面' : '已取消置顶']);
+        } catch (Throwable $e) {
+            error_log('set_venue_pin: ' . $e->getMessage());
+            echo json_encode(['code' => 500, 'msg' => '置顶设置失败，请确认已导入置顶升级SQL后重试']);
+        }
+        exit;
+    }
+
     if ($action === 'addvenues') { 
         // 获取请求参数 
         $venue_name = $_POST['venue_name'] ?? ''; 
@@ -1457,6 +1493,8 @@ elseif ($action === 'loadingdata') {
             $query = "SELECT 
                         v.id, 
                         v.dr_venue_id,
+                        v.is_pinned,
+                        v.pinned_at,
                         v.venue_name,  
                         COALESCE(NULLIF(TRIM(v.venue_level), ''), 'A') AS venue_level,
                         v.is_disabled_sound,

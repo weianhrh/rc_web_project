@@ -147,6 +147,7 @@ $offset = ($page - 1) * $limit;
 if (!in_array($role_id, [1, 2], true)) {
     // 非管理员
     $sql = "SELECT uid AS id,
+                   (unionid IS NULL) AS can_reset_password,
                    nickname AS username,
                    IFNULL(headimgurl, 'https://rcwulian.cn/img/logo.png') AS avatar,
                    created_at,
@@ -160,6 +161,7 @@ if (!in_array($role_id, [1, 2], true)) {
 } else {
     // 管理员
     $sql = "SELECT uid AS id,
+                   (unionid IS NULL) AS can_reset_password,
                    nickname AS username,
                    IFNULL(headimgurl, 'https://rcwulian.cn/img/logo.png') AS avatar,
                    phone_number AS phone,
@@ -260,6 +262,7 @@ if ($result !== false) {
         'msg'   => '',
         'count' => $totalCount,
         'can_view_login_ip' => in_array($role_id, [1, 2], true),
+        'can_reset_password' => in_array($role_id, [1, 2], true),
         'can_reset_nickname' => in_array($role_id, [1, 2], true),
         'data'  => $result
     ]);

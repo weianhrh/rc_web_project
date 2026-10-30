@@ -2,6 +2,7 @@
 require_once '../Database.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: private, no-store');
 date_default_timezone_set('Asia/Shanghai');
 
 function respond($code, $msg, $data = []) {
@@ -48,15 +49,20 @@ try {
         return (int)$venue['id'];
     }, $authorizedVenues);
     $in = placeholders($venueIds);
-    $todayStart = date('Y-m-d 00:00:00');
-    $todayEnd = date('Y-m-d 23:59:59');
+    $period = $_GET['period'] ?? 'today';
+    if (!is_string($period) || !in_array($period, ['today', 'yesterday'], true)) {
+        respond(1004, '请选择今天或昨天');
+    }
+    $reportDate = new DateTimeImmutable($period === 'yesterday' ? 'yesterday' : 'today');
+    $todayStart = $reportDate->format('Y-m-d 00:00:00');
+    $todayEnd = $reportDate->modify('+1 day')->format('Y-m-d 00:00:00');
 
     $orderParams = array_merge([$todayStart, $todayEnd], $venueIds);
     $orderRows = $database->query(
         "SELECT COUNT(*) AS order_count,
                 COALESCE(SUM(payment_amount), 0) AS order_total
          FROM orders
-         WHERE end_time >= ? AND end_time <= ?
+         WHERE end_time >= ? AND end_time < ?
            AND status = '已完成'
            AND pays_type != '能量'
            AND (note <> 'gift' OR note IS NULL)
@@ -71,7 +77,7 @@ try {
          FROM orders o
          INNER JOIN users u ON u.uid = o.uid
          INNER JOIN venues promotion_venue ON promotion_venue.invite_code = u.invitation_code
-         WHERE o.end_time >= ? AND o.end_time <= ?
+         WHERE o.end_time >= ? AND o.end_time < ?
            AND o.status = '已完成'
            AND o.pays_type != '能量'
            AND (o.note <> 'gift' OR o.note IS NULL)
@@ -85,7 +91,7 @@ try {
     $giftRows = $database->query(
         "SELECT COALESCE(SUM(payment_amount), 0) AS gift_total
          FROM gift_orders
-         WHERE send_time >= ? AND send_time <= ?
+         WHERE send_time >= ? AND send_time < ?
            AND reservation_id IN ($in)",
         $giftParams
     );
@@ -97,7 +103,7 @@ try {
          FROM orders o
          INNER JOIN users u ON u.uid = o.uid
          INNER JOIN venues promotion_venue ON promotion_venue.invite_code = u.invitation_code
-         WHERE o.end_time >= ? AND o.end_time <= ?
+         WHERE o.end_time >= ? AND o.end_time < ?
            AND o.status = '已完成'
            AND o.pays_type != '能量'
            AND (o.note <> 'gift' OR o.note IS NULL)
@@ -114,7 +120,7 @@ try {
         "SELECT COUNT(DISTINCT u.uid) AS invite_user_count
          FROM users u
          INNER JOIN venues v ON v.invite_code = u.invitation_code
-         WHERE u.created_at >= ? AND u.created_at <= ?
+         WHERE u.created_at >= ? AND u.created_at < ?
            AND v.id IN ($in)",
         $inviteParams
     );
@@ -144,7 +150,7 @@ try {
          LEFT JOIN (
              SELECT reservation_id, COUNT(*) AS order_count, SUM(payment_amount) AS order_total
              FROM orders
-             WHERE end_time >= ? AND end_time <= ?
+             WHERE end_time >= ? AND end_time < ?
                AND status = '已完成'
                AND pays_type != '能量'
                AND (note <> 'gift' OR note IS NULL)
@@ -157,7 +163,7 @@ try {
              FROM orders o
              INNER JOIN users u ON u.uid = o.uid
              INNER JOIN venues promotion_venue ON promotion_venue.invite_code = u.invitation_code
-             WHERE o.end_time >= ? AND o.end_time <= ?
+             WHERE o.end_time >= ? AND o.end_time < ?
                AND o.status = '已完成'
                AND o.pays_type != '能量'
                AND (o.note <> 'gift' OR o.note IS NULL)
@@ -168,7 +174,7 @@ try {
          LEFT JOIN (
              SELECT reservation_id, SUM(payment_amount) AS gift_total
              FROM gift_orders
-             WHERE send_time >= ? AND send_time <= ?
+             WHERE send_time >= ? AND send_time < ?
                AND reservation_id IN ($in)
              GROUP BY reservation_id
          ) g ON g.reservation_id = v.id
@@ -177,7 +183,7 @@ try {
              FROM venues iv
              LEFT JOIN users u
                     ON u.invitation_code = iv.invite_code
-                   AND u.created_at >= ? AND u.created_at <= ?
+                   AND u.created_at >= ? AND u.created_at < ?
              WHERE iv.id IN ($in)
              GROUP BY iv.id
          ) i ON i.venue_id = v.id
@@ -186,7 +192,16 @@ try {
         array_merge($breakdownParams, $venueIds)
     );
 
+    foreach ([$orderRows, $deductionRows, $giftRows, $promotionRows, $inviteRows, $breakdownRows] as $rows) {
+        if ($rows === false) {
+            throw new RuntimeException('MCN summary query failed');
+        }
+    }
+
     respond(0, 'ok', [
+        'period' => $period,
+        'report_date' => $reportDate->format('Y-m-d'),
+        'is_estimate' => true,
         'is_all' => true,
         'venue_count' => count($venueIds),
         'venue_id' => null,

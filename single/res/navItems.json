@@ -1,5 +1,12 @@
 [
     {
+        "id": "voice-room-recommendation",
+        "title": "语音房限时推荐",
+        "href": "voice_room_recommendation.html",
+        "page": "voice_room_recommendation.html",
+        "icon": "fas fa-thumbtack"
+    },
+    {
         "id": "voice-room-rank-preview",
         "title": "语音房排名预览",
         "href": "voice_room_rank.html",

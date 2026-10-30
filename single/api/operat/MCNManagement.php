@@ -130,7 +130,7 @@ try {
 
     if ($action === 'create') {
         list($name, $username, $password, $venueIds, $defaultVenueId, $venueRows) = validate_payload($database);
-        if (strlen($password) < 8) respond(1004, '初始密码不能少于8位');
+        if (strlen($password) < 6) respond(1004, '初始密码不能少于6位');
         if ($database->query('SELECT id FROM admin_users WHERE username = ? LIMIT 1', [$username])) {
             respond(1005, '登录账号已存在');
         }
@@ -193,7 +193,7 @@ try {
         list($name, $username, $password, $venueIds, $defaultVenueId, $venueRows) = validate_payload($database, $mcnId);
         $sameUsername = $database->query('SELECT id FROM admin_users WHERE username = ? AND id <> ? LIMIT 1', [$username, $adminUserId]);
         if ($sameUsername) respond(1005, '登录账号已存在');
-        if ($password !== '' && strlen($password) < 8) respond(1004, '新密码不能少于8位');
+        if ($password !== '' && strlen($password) < 6) respond(1004, '新密码不能少于6位');
 
         $venueMap = [];
         foreach ($venueRows as $row) $venueMap[(int)$row['id']] = $row;

@@ -7,6 +7,7 @@ function render(){const rows=$('rows');rows.replaceChildren();if(!report)return;
 async function load(){report=null;render();$('refresh').disabled=true;$('notice').textContent='正在读取真实数据…';for(const id of ['eligible','visible','excluded','time'])$(id).textContent='—';try{const res=await fetch('/api/index/VoiceRoomRankPreview.php',{credentials:'same-origin'});if(!res.ok)throw Error(`请求失败 (${res.status})`);const j=await res.json();if(j.code!==0)throw Error(j.msg||'读取失败');report=j.data;$('eligible').textContent=report.rows.filter(r=>!r.excluded.length).length;$('visible').textContent=report.rows.filter(r=>r.current_visible).length;$('excluded').textContent=report.rows.filter(r=>r.excluded.length).length;$('time').textContent=report.generated_at;$('notice').textContent=`${report.start_date} 至 ${report.end_date} · 数据缓存60秒 · 已接入85分代理指标，折算为百分制 · 已应用线上，用户黑名单仍单独过滤`;render();}catch(e){$('notice').textContent=e.message;}finally{$('refresh').disabled=false;}}
 $('rules').onclick=()=>{show('排名口径与缺失数据');for(const line of [
 '本页规则已接入App语音房排序，不是训练后的预测模型。用户黑名单会过滤场地，因此本页全局名次不等于每个用户的实际名次；列表排序也不等于真实曝光结果。',
+'限时推荐：符合原推荐资格的场地在有效期内排到自然推荐之前。多个临时推荐按优先级从高到低、同级按生效时间及场地ID排列。到期或取消后恢复自然排序，不改变综合分、封禁规则、等级或分账。',
 '有效引流40分：近7个完整注册日产生真实付费驾驶的去重用户占32分，今天注册并付费占8分。用户在任意场地消费均归原邀请码场地。使用同批可推荐场地正值P90对数归一化，最高封顶；邀请码缺失或重复不归属。',
 '承接25分暂用近7个完整日的跨日付费复购率；体验20分暂用同期创建预约的已完成 /（已完成＋已取消）。两项均乘 √(样本量 / (样本量＋20)) 降低小样本高分。预约不含能量、礼物类型，未终结预约不计入分母。',
 '缺少进房事件、投诉与异常中断的完整数据，不能把代理指标当成真实进房转化或故障率。个性化15分缺少指定用户上下文，不打分；现有85分折算成百分制，后续接入会改变名次。',

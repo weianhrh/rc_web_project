@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Database.php';
 require_once __DIR__ . '/VoiceRoomRankService.php';
+require_once __DIR__ . '/VoiceRoomRecommendation.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
@@ -9,7 +10,11 @@ try {
     $admin=is_string($token)&&$token!==''?$db->getUserBySessionToken($token):null;
     if(!$admin)throw new RuntimeException('请先登录',1001);
     if((int)$admin['role_id']!==1)throw new RuntimeException('仅超级管理员可查看',403);
-    echo json_encode(['code'=>0,'msg'=>'ok','data'=>getVoiceRoomRanking($db)],JSON_UNESCAPED_UNICODE);
+    $ranking=getVoiceRoomRanking($db);
+    try {
+        $ranking=voiceRecommendationPreview($ranking,voiceRecommendationActive($db,voiceRecommendationRedis()));
+    } catch(Throwable $e) { error_log('Voice recommendation preview fallback: '.$e->getMessage()); }
+    echo json_encode(['code'=>0,'msg'=>'ok','data'=>$ranking],JSON_UNESCAPED_UNICODE);
 }catch(Throwable $e){
     $code=in_array($e->getCode(),[405,1001,403],true)?$e->getCode():500;
     if($code===500)error_log('VoiceRoomRankPreview: '.$e->getMessage());

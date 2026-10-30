@@ -911,6 +911,11 @@ body {
     max-width: 100%;
 }
 
+.venue-pill-pin { cursor: pointer; font-family: inherit; order: 7; }
+.venue-pill-pin:hover { filter: brightness(0.96); }
+.venue-pill-pin:focus-visible { outline: 2px solid #4f7cff; outline-offset: 2px; }
+.venue-pill-pin:disabled { cursor: wait; opacity: 0.65; }
+
 /* 标签本身 */
 .venue-detail-grid .venue-pill {
     display: inline-flex !important;
@@ -1400,7 +1405,42 @@ body {
 .level-history-btn:hover {
     background: #e8efff;
 }
-    </style>
+    
+/* 可点击状态标签与简化操作区 */
+.venue-pill-toggle { cursor: pointer; font-family: inherit; }
+.venue-pill-toggle:hover { filter: brightness(.95); }
+.venue-pill-toggle:focus-visible { outline: 2px solid #4f7cff; outline-offset: 2px; }
+.venue-action-area .venue-actions button {
+    background: #f5f7fc;
+    color: #526581;
+    border: 1px solid #dbe3ef;
+    box-shadow: none;
+}
+.venue-action-area .venue-actions button:hover { background: #eaf0fb; }
+.venue-action-area .venue-actions .live-btn:not(.cancel),
+.venue-action-area .venue-actions .edit-btn {
+    background: #edf3ff;
+    color: #3569d4;
+    border-color: #d3e0ff;
+}
+.venue-action-area .venue-actions .ban-btn,
+.venue-action-area .venue-actions .voice-room-close-btn {
+    background: #fff6f5;
+    color: #c75252;
+    border-color: #f1d6d3;
+}
+
+/* 封禁场地按钮单独使用红底白字 */
+.venue-action-area .venue-actions .ban-btn {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+.venue-action-area .venue-actions .ban-btn:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+</style>
 </head>
 
 <body>
@@ -1764,6 +1804,7 @@ function renderVenues(list) {
         const isBuild = status === '建设中';
         const venueTypeNum = Number(venue.venue_type);
         const isLive = isVenueLive(venue);
+        const isPinned = Number(venue.is_pinned) === 1;
         const isAnchorLiveEnabled = Number(venue.anchor_live_enabled || 0) === 1;
         const isPriorityReview = needPriorityReview(venue);
 
@@ -1844,13 +1885,15 @@ ${isLive ? `
         开放时间：${escapeHtml(venue.start_time || '未设置')}
     </span>
 
-    <span class="venue-pill venue-pill-sound ${isSoundDisabled ? 'venue-pill-red' : 'venue-pill-green'}">
+    <button type="button" class="venue-pill venue-pill-sound venue-pill-toggle ${isSoundDisabled ? 'venue-pill-red' : 'venue-pill-green'}"
+    onclick="setVenueSoundDisabled(${venue.id}, ${isSoundDisabled ? 0 : 1})" title="${isSoundDisabled ? '点击解封喇叭麦克风' : '点击封禁喇叭麦克风'}">
         喇叭麦克风：${isSoundDisabled ? '已封禁' : '正常'}
-    </span>
+    </button>
 
-    <span class="venue-pill venue-pill-spending ${isSpendingAlert ? 'venue-pill-orange' : 'venue-pill-gray'}">
+    <button type="button" class="venue-pill venue-pill-spending venue-pill-toggle ${isSpendingAlert ? 'venue-pill-orange' : 'venue-pill-gray'}"
+    onclick="setVenueSpendingAlert(${venue.id}, ${isSpendingAlert ? 0 : 1})" title="${isSpendingAlert ? '点击关闭高消费提示' : '点击开启高消费提示'}">
         高消费：${isSpendingAlert ? '已开启' : '未开启'}
-    </span>
+    </button>
 
 <button type="button"
     class="venue-pill venue-pill-mic venue-pill-mic-switch ${isUserMicEnabled ? 'venue-pill-green' : 'venue-pill-red'}"
@@ -1858,9 +1901,10 @@ ${isLive ? `
     title="点击${isUserMicEnabled ? '关闭' : '开启'}用户上麦">
     用户上麦：${isUserMicEnabled ? '已开启' : '已关闭'}
 </button>
-<span class="venue-pill venue-pill-voice-room ${isVoiceRoomBanned ? 'venue-pill-red' : 'venue-pill-green'}">
+<button type="button" class="venue-pill venue-pill-voice-room venue-pill-toggle ${isVoiceRoomBanned ? 'venue-pill-red' : 'venue-pill-green'}"
+    onclick="${isVoiceRoomBanned ? 'setVoiceRoomUnban' : 'openVoiceRoomBanModal'}(${venue.id})" title="${isVoiceRoomBanned ? '点击解除语音房封禁' : '点击设置语音房封禁'}">
     语音房：${isVoiceRoomBanned ? '已封禁' : '正常'}
-</span>
+</button>
 
 ${showVoiceRoomSceneBtn ? `
     <button type="button"
@@ -1870,12 +1914,23 @@ ${showVoiceRoomSceneBtn ? `
         场景：${voiceRoomSceneText}
     </button>
 ` : ''}
+${[1, 2].includes(Number(window.role)) ? `
+    <button type="button"
+        class="venue-pill venue-pill-pin ${isPinned ? 'venue-pill-amber' : 'venue-pill-gray'}"
+        onclick="setVenuePin(${Number(venue.id)}, ${isPinned ? 0 : 1}, this)"
+        aria-pressed="${isPinned ? 'true' : 'false'}"
+        title="${isPinned ? '点击取消置顶' : '点击置顶，排在所有置顶场地最前面'}">
+        置顶：${isPinned ? '已开启' : '未开启'}
+    </button>
+` : ''}
+
 </div>
                     </div>
                 </div>
 
 <div class="venue-action-area">
     <div class="venue-actions venue-actions-main">
+
         ${[1, 2].includes(Number(window.role))
             ? (isAnchorLiveEnabled
                 ? `<button class="live-btn cancel" onclick="setVenueLiveStream(${venue.id}, 0, this)">关播</button>`
@@ -1891,10 +1946,7 @@ ${showVoiceRoomSceneBtn ? `
         <button class="edit-btn" onclick="editVenue(${venue.id})">修改场地信息</button>
         <button class="level-history-btn" onclick="openVenueLevelLogs(${venue.id})">等级记录</button>
 
-        ${Number(venue.is_spending_alert || 0) === 1
-            ? `<button class="spending-alert-off-btn" onclick="setVenueSpendingAlert(${venue.id}, 0)">关闭高消费提示</button>`
-            : `<button class="spending-alert-on-btn" onclick="setVenueSpendingAlert(${venue.id}, 1)">开启高消费提示</button>`
-        }
+
     </div>
 
     <div class="venue-actions venue-actions-ban">
@@ -1903,20 +1955,14 @@ ${showVoiceRoomSceneBtn ? `
             : `<button class="ban-btn" onclick="openBanModal(${venue.id})">封禁场地</button>`
         }
 
-        ${isVoiceRoomBanned
-            ? `<button class="voice-room-unban-btn" onclick="setVoiceRoomUnban(${venue.id})">解除语音房封禁</button>`
-            : `<button class="voice-room-ban-btn" onclick="openVoiceRoomBanModal(${venue.id})">封禁语音房</button>`
-        }
+
 
         ${[1, 2].includes(Number(window.role)) && venue.venue_room_id
             ? `<button class="voice-room-close-btn" onclick="closeVoiceRoom(${venue.id}, this)">违规关播</button>`
             : ''
         }
 
-        ${Number(venue.is_disabled_sound || 0) === 1
-            ? `<button class="sound-unban-btn" onclick="setVenueSoundDisabled(${venue.id}, 0)">解封喇叭麦克风</button>`
-            : `<button class="sound-ban-btn" onclick="setVenueSoundDisabled(${venue.id}, 1)">封禁喇叭麦克风</button>`
-        }
+
     </div>
 </div>
             </div>
@@ -2255,6 +2301,31 @@ window.setVenueSpendingAlert = function (venueId, isSpendingAlert) {
         alert('请求异常');
     });
 };
+            window.setVenuePin = async function(venueId, pin, button) {
+                if (![1, 2].includes(Number(window.role)) || button.disabled) return;
+                if (!confirm(pin === 1 ? '确定置顶此场地？将排在所有置顶场地最前面。' : '确定取消此场地置顶？')) return;
+                const oldText = button.textContent;
+                button.disabled = true;
+                button.textContent = '处理中…';
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'set_venue_pin');
+                    formData.append('venue_id', venueId);
+                    formData.append('is_pinned', pin);
+                    const response = await fetch('/api/venue/VenuesManagement.php', {
+                        method: 'POST', credentials: 'same-origin', body: formData
+                    });
+                    const data = await response.json();
+                    if (data.code !== 200) throw new Error(data.msg || '置顶操作失败');
+                    loadVenues();
+                } catch (error) {
+                    alert(error.message || '请求失败，请刷新列表确认状态后重试');
+                } finally {
+                    button.disabled = false;
+                    button.textContent = oldText;
+                }
+            };
+
             function loadVenues() {
                 loading.style.display = 'block';
                 venueList.innerHTML = '';
@@ -2286,6 +2357,16 @@ window.setVenueSpendingAlert = function (venueId, isSpendingAlert) {
                         });
 
 allVenues = venues.sort((a, b) => {
+    const aPinned = Number(a.is_pinned) === 1;
+    const bPinned = Number(b.is_pinned) === 1;
+    if (aPinned !== bPinned) return aPinned ? -1 : 1;
+    if (aPinned && bPinned) {
+        // 比较数据库时间字符串，保留微秒精度；历史 NULL 置顶时间排后面。
+        const aTime = String(a.pinned_at || '');
+        const bTime = String(b.pinned_at || '');
+        if (aTime !== bTime) return aTime > bTime ? -1 : 1;
+        return Number(a.id) - Number(b.id);
+    }
     const statusDiff = getStatusOrder(a) - getStatusOrder(b);
     if (statusDiff !== 0) return statusDiff;
 

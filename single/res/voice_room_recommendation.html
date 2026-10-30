@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>语音房限时推荐</title><link rel="stylesheet" href="/res/fa/css/all.min.css"><link rel="stylesheet" href="/res/voice-room-recommendation.css?v=1"></head>
+<body><main>
+<header><div><h1>语音房限时推荐</h1><p>北京时间 · 到期自动恢复原排序</p></div><div class="actions"><a href="/res/voice_room_rank.html">排名预览</a><button id="refresh" title="刷新" aria-label="刷新"><i class="fas fa-sync-alt"></i></button></div></header>
+<div id="notice" role="status" aria-live="polite">正在加载...</div>
+<form id="settings"><h2>设置推荐</h2><fieldset id="fields" disabled><div class="form-grid">
+<label>场地<select id="venue" required><option value="">请选择场地</option></select></label>
+<label>推荐时长<select id="duration"><option value="30">30分钟</option><option value="60">1小时</option><option value="120">2小时</option><option value="240">4小时</option><option value="1440">1天</option><option value="custom">自定义</option></select></label>
+<label id="customWrap" hidden>时长（分钟，最多7天）<input id="minutes" type="number" min="1" max="10080" step="1" value="60"></label>
+<label>优先级（1–100，越大越靠前）<input id="priority" type="number" min="1" max="100" step="1" value="50" required></label>
+<label class="reason">操作原因<input id="reason" maxlength="200" required autocomplete="off"></label>
+</div><div class="form-footer"><span id="current">同优先级按生效时间、场地ID排序；封禁或不满足推荐资格的场地不展示。</span><button class="primary" id="save" type="submit"><i class="fas fa-thumbtack"></i> 设置推荐</button></div></fieldset></form>
+<section><div class="section-head"><h2>推荐记录 <span id="count"></span></h2><div class="filters"><input id="search" placeholder="场地名称 / ID" aria-label="搜索场地"><select id="filter" aria-label="记录状态"><option value="active">生效中</option><option value="all">全部设置</option><option value="expired">已到期</option><option value="cancelled">已取消</option></select></div></div>
+<div class="table-wrap"><table><thead><tr><th>场地</th><th>状态</th><th>优先级</th><th>生效时间</th><th>截止时间</th><th>原因</th><th>操作</th></tr></thead><tbody id="rows"></tbody></table></div></section>
+<section><h2>操作日志 <small>最近100条</small></h2><div class="table-wrap"><table><thead><tr><th>操作时间</th><th>场地</th><th>操作</th><th>管理员ID</th><th>优先级 / 截止时间</th><th>原因</th></tr></thead><tbody id="logs"></tbody></table></div></section>
+</main>
+<dialog id="cancelDialog"><form id="cancelForm"><h2>取消推荐</h2><p id="cancelName"></p><label>取消原因<input id="cancelReason" maxlength="200" required></label><div class="dialog-actions"><button id="closeDialog" type="button">返回</button><button class="danger" id="confirmCancel" type="submit">确认取消</button></div></form></dialog>
+<script src="/res/voice-room-recommendation.js?v=1"></script></body></html>

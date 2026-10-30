@@ -563,6 +563,26 @@ let venueFilterEventsBound = false;
     // 0 = 全部用户
     // 1 = 只看主播
     // 2 = 只看管理员
+  async function resetUserPassword(uid, button) {
+    if (button.disabled) return;
+    if (!confirm(`确认将用户 UID ${uid} 的密码恢复为默认密码 123456 吗？`)) return;
+    if (!confirm(`慎重操作！这是第二次确认。\n用户 UID：${uid}\n原密码将失效，新密码为：123456。\n仅unionid为NULL的用户可恢复。\n请确认用户身份，并提醒用户及时修改密码。\n确定继续恢复吗？`)) return;
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/user/resetUserPassword.php', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: String(uid), confirmed: true })
+      });
+      const data = await response.json();
+      alert(data.msg || '操作失败，请稍后重试');
+    } catch (e) {
+      alert('请求异常，未能确认重置结果，请核实后再试');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   let venueList = [];
   let currentPage = 1;
   let totalPages = 1;
@@ -985,6 +1005,14 @@ async function loadTableData(params = {}) {
       </div>
       `
   }
+
+${data.can_reset_password === true && Number(item.can_reset_password) === 1 ? `
+<div class="action-row action-row-full">
+  <button class="action-btn btn-delete" onclick="resetUserPassword(${item.id}, this)">
+    <i class="fas fa-key"></i> 恢复默认密码
+  </button>
+</div>
+` : ''}
 
 ${data.can_reset_nickname === true ? `
 <div class="action-row action-row-full">

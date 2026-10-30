@@ -1076,6 +1076,13 @@ body.all-venue-mode #nav-container {
   }
 }
 
+      #mcnReportControls[hidden],
+      .all-venue-mode #inviteActions,
+      .all-venue-mode #inviteMeta,
+      .all-venue-mode #inviteProgress,
+      .all-venue-mode #inviteTargetBadge {
+        display: none !important;
+      }
     </style>
 </head>
 <body>
@@ -1127,9 +1134,20 @@ body.all-venue-mode #nav-container {
 </div>
 
 
+<div id="mcnReportControls" hidden style="margin:12px 0 16px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <label for="mcnReportPeriod">统计日期</label>
+    <select id="mcnReportPeriod" style="height:36px;padding:0 12px;border:1px solid #e4e9f2;border-radius:6px;background:#fff;color:#172033">
+      <option value="today">今天</option>
+      <option value="yesterday">昨天</option>
+    </select>
+    <span id="mcnReportStatus" role="status" aria-live="polite" style="font-size:13px;color:#667085"></span>
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:#667085">北京时间 · 经营预估口径，非财务结算账单；引流按当前邀请码归属统计。</div>
+</div>
 <div class="metrics-grid">
     <div class="metric-item main-metric">
-        <div class="metric-label">预估今日收益</div>
+        <div class="metric-label" id="reportIncomeLabel">预估今日收益</div>
         <div class="metric-value" id="totalPayment">¥0.00</div>
         <i class="fas fa-chart-line metric-icon"></i>
     </div>
@@ -1153,7 +1171,7 @@ body.all-venue-mode #nav-container {
     </div>
 
     <div class="metric-item promo-metric" onclick="window.location.href='/res/Promotion_Reward.html'">
-        <div class="metric-label">预估推广收益</div>
+        <div class="metric-label" id="reportPromotionLabel">预估推广收益</div>
         <div class="metric-value" id="promotionIncome">¥0.00</div>
         <i class="fas fa-award metric-icon"></i>
     </div>
@@ -1178,7 +1196,7 @@ body.all-venue-mode #nav-container {
     </a>
 </div>
 <div class="all-venue-summary" id="allVenueBreakdown" hidden>
-  <div class="all-venue-summary-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">各场地今日数据<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="venue-enter-btn" href="/res/mcn_anchor_transfer.html" style="text-decoration:none;font-size:14px"><i class="fas fa-user-friends" aria-hidden="true"></i> 主播调配</a><a class="venue-enter-btn" href="/res/mcn_vehicle_transfer.html" style="text-decoration:none;font-size:14px"><i class="fas fa-exchange-alt" aria-hidden="true"></i> 车辆调配</a></div></div>
+  <div class="all-venue-summary-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span id="mcnBreakdownTitle">各场地今日数据</span><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="venue-enter-btn" href="/res/mcn_anchor_transfer.html" style="text-decoration:none;font-size:14px"><i class="fas fa-user-friends" aria-hidden="true"></i> 主播调配</a><a class="venue-enter-btn" href="/res/mcn_vehicle_transfer.html" style="text-decoration:none;font-size:14px"><i class="fas fa-exchange-alt" aria-hidden="true"></i> 车辆调配</a></div></div>
   <div class="all-venue-table-wrap" id="allVenueTableWrap"></div>
 </div>
         </div>
@@ -1315,20 +1333,42 @@ body.all-venue-mode #nav-container {
           };
         }
 
-        async function loadDashboardData(scope) {
+        let dashboardRequestId = 0;
+        let loadedMcnPeriod = 'today';
+
+        async function loadDashboardData(scope, period = 'today') {
+          const requestId = ++dashboardRequestId;
           const isAll = scope === 'all';
+          const periodSelect = document.getElementById('mcnReportPeriod');
+          const reportStatus = document.getElementById('mcnReportStatus');
+          document.getElementById('mcnReportControls').hidden = !isAll;
+          if (isAll) {
+            periodSelect.disabled = true;
+            reportStatus.textContent = '正在加载...';
+            periodSelect.onchange = () => loadDashboardData('all', periodSelect.value);
+          }
           const endpoint = isAll
-            ? '/api/index/MultiVenueSummary.php?_=' + Date.now()
+            ? '/api/index/MultiVenueSummary.php?period=' + encodeURIComponent(period) + '&_=' + Date.now()
             : '/api/index/DailySummaryStatsv2.php?_=' + Date.now();
 
           try {
             const response = await fetch(endpoint);
             const result = await response.json();
+            if (requestId !== dashboardRequestId) return;
             if (!result || result.code !== 0 || !result.data) {
               throw new Error(result?.msg || '数据加载失败');
             }
 
             const data = result.data;
+            const dayLabel = isAll && data.period === 'yesterday' ? '昨日' : '今日';
+            document.getElementById('reportIncomeLabel').textContent = `预估${dayLabel}收益`;
+            document.getElementById('reportPromotionLabel').textContent = isAll ? `${dayLabel}预估推广收益` : '预估推广收益';
+            if (isAll) {
+              loadedMcnPeriod = data.period;
+              periodSelect.value = data.period;
+              reportStatus.textContent = `${data.report_date} · ${data.venue_count || 0}个场地`;
+              document.getElementById('mcnBreakdownTitle').textContent = `各场地${dayLabel}数据`;
+            }
             window.__allVenueReadonly = isAll;
             window.__venueId = isAll ? null : data.venue_id;
             document.body.classList.toggle('all-venue-mode', isAll);
@@ -1365,7 +1405,7 @@ body.all-venue-mode #nav-container {
             inviteProgress.hidden = isAll;
 
             if (isAll) {
-              inviteMetricLabel.textContent = '今日引流总人数';
+              inviteMetricLabel.textContent = `${dayLabel}引流总人数`;
               inviteGoal.textContent = '人';
               inviteStatusText.textContent = '切换到具体场地查看达标进度';
               inviteProgressFill.style.width = '0%';
@@ -1416,6 +1456,12 @@ body.all-venue-mode #nav-container {
             }
           } catch (error) {
             console.error('数据加载失败:', error);
+            if (isAll && requestId === dashboardRequestId) {
+              periodSelect.value = loadedMcnPeriod;
+              reportStatus.textContent = '加载失败，未切换日期，请重试';
+            }
+          } finally {
+            if (requestId === dashboardRequestId) periodSelect.disabled = false;
           }
         }
 
@@ -1424,7 +1470,7 @@ body.all-venue-mode #nav-container {
           const wrap = document.getElementById('allVenueTableWrap');
           const table = document.createElement('table');
           table.className = 'all-venue-table';
-          table.innerHTML = '<thead><tr><th>场地</th><th>订单数</th><th>设备实付</th><th>推广扣减</th><th>礼物收益</th><th>预估收益</th><th>有效引流</th><th>操作</th></tr></thead>';
+          table.innerHTML = '<thead><tr><th>场地</th><th>订单数</th><th>设备实付</th><th>推广扣减</th><th>礼物收益</th><th>预估收益</th><th>邀请码注册</th><th>操作</th></tr></thead>';
           const body = document.createElement('tbody');
 
           rows.forEach(row => {
