@@ -29,6 +29,11 @@ if (!$adminUser || empty($adminUser['role_id'])) {
     jsonOut(1001, '用户未登录或无权访问');
 }
 
+// 仅平台管理员可手动增减金币，场地及MCN账号无此权限。
+if (!in_array((int)$adminUser['role_id'], [1, 2], true)) {
+    jsonOut(1002, '无权限操作用户金币');
+}
+
 $operatorId = !empty($adminUser['uid']) ? intval($adminUser['uid']) : 10000;
 
 // =========================
