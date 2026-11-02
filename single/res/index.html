@@ -9,6 +9,16 @@
     <link rel="stylesheet" href="/res/fa/css/all.min.css">
 
     <style>
+        /* 身份确认前不展示统计，避免126场地主播短暂看到其他收益卡片。 */
+        html:not(.home-access-ready) .metrics-grid { visibility: hidden; }
+        html.home-anchor-126 .metrics-grid > :not(.promo-metric):not(.invite-metric) {
+            display: none !important;
+        }
+        html.home-anchor-126 #allVenueBreakdown,
+        html.home-anchor-126 #mcnReportControls {
+            display: none !important;
+        }
+
         :root {
             --primary: #1677ff;
             --primary-strong: #0958d9;
@@ -1729,8 +1739,24 @@ Promise.all([
   fetch('/api/operat/get_current_user.php?_=' + Date.now()).then(res => res.json()).catch(() => null)
 ]).then(([navData, userInfo]) => {
 
-  const roleId  = Number(userInfo?.data?.role_id || 0);
-  const venueId = Number(userInfo?.data?.venue_id || 0);
+  if (Number(userInfo?.code) !== 0 || !userInfo?.data || !Number(userInfo.data.role_id)) {
+    throw new Error('登录身份获取失败，请刷新或重新登录');
+  }
+  const roleId  = Number(userInfo.data.role_id);
+  const venueId = Number(userInfo.data.venue_id);
+  const isVenue126Anchor = roleId === 4 && venueId === 126;
+  document.documentElement.classList.toggle('home-anchor-126', isVenue126Anchor);
+  document.documentElement.classList.add('home-access-ready');
+  const venue126AnchorNavIds = new Set([
+    'vehicleslite',          // 设备管理
+    'venue-management1',     // 场地管理
+    'FaultDevicesApproval',  // 故障审批
+    'Reporthand',            // 投诉处理
+    'ban_Record',            // 违规记录
+    'item_1757385929175',     // 拉黑用户
+    'item_1769658662283',     // 推广奖励
+    'item_1780731430102'      // 开播时长
+  ]);
   // role_id = 4 时要隐藏的 9 个红框功能
   const role4HideIds = new Set([
     'moeny-details',          // 财务对账
@@ -1755,6 +1781,10 @@ Promise.all([
   // 自动化运行涉及真实设备动作，仅超级管理员、管理员和加盟商显示入口。
   if (![1, 2, 3].includes(roleId)) {
     finalNavData = finalNavData.filter(item => item.id !== 'device-automation-run');
+  }
+  // 126场地主播采用白名单，新增功能也不会自动显示。
+  if (isVenue126Anchor) {
+    finalNavData = finalNavData.filter(item => venue126AnchorNavIds.has(item.id));
   }
   // 渲染过滤后的菜单
   renderNavGrid(finalNavData);
