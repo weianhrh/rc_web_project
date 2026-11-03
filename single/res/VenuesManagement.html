@@ -1943,6 +1943,8 @@ ${[1, 2].includes(Number(window.role)) ? `
             : `<button class="live-btn" onclick="setVenueLiveMark(${venue.id}, 1, this)">标记直播中</button>`
         }
 
+        ${[1, 2].includes(Number(window.role))
+            ? `<button class="edit-btn" onclick="syncVenueToXinghe(${Number(venue.id)}, this)">同步到星河（含设备配置）</button>` : ''}
         <button class="edit-btn" onclick="editVenue(${venue.id})">修改场地信息</button>
         <button class="level-history-btn" onclick="openVenueLevelLogs(${venue.id})">等级记录</button>
 
@@ -2873,6 +2875,7 @@ allVenues = venues.sort((a, b) => {
             </form>
         </div>
     </div>
+<script src="xinghe-venue-sync.js?v=20261103-supplement"></script>
 </body>
 
 </html>
