@@ -81,9 +81,30 @@
             try {
                 const data = await request({ venue_id: Number(venueId), zone }); dialog.close();
                 const missingCameras = Array.isArray(data.missing_camera_refs) ? data.missing_camera_refs : [];
-                let report = (missingCameras.length ? '补充同步完成（有图传缺项）' : '同步成功') + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
+                const skippedDevices = Array.isArray(data.skipped_devices) ? data.skipped_devices : [];
+                const skippedPricing = Array.isArray(data.skipped_pricing_options) ? data.skipped_pricing_options : [];
+                const skippedCameras = Array.isArray(data.skipped_camera_configurations) ? data.skipped_camera_configurations : [];
+                let report = (missingCameras.length || skippedDevices.length || skippedPricing.length || skippedCameras.length ? '同步完成（有保留或跳过项）' : '同步成功') + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
                     '\n新增设备：' + data.created_devices + '\n更新设备：' + data.updated_devices + '\n控制配置：' + data.configurations +
                     '\n摄像头图传：' + data.camera_configurations + '\n计费规则：' + (data.billing_rules || 0);
+                if (data.restored_venue) report += '\n已按原映射恢复缺失的星河场地：' + data.xinghe_venue_id;
+                if (data.pricing_summary) report += '\n套餐处理：新增 ' + data.pricing_summary.created + ' / 更新 ' + data.pricing_summary.updated + ' / 复用 ' + data.pricing_summary.reused;
+                if (data.camera_summary) report += '\n图传处理：新增 ' + data.camera_summary.created + ' / 复用 ' + data.camera_summary.reused;
+                if ((data.bound_unassigned_devices || []).length) report += '\n绑定原未绑定设备：' + data.bound_unassigned_devices.length + ' 台';
+                if (skippedDevices.length) {
+                    report += '\n\n跳过星河其他场地设备：' + skippedDevices.length + ' 台（保留原归属及配置）';
+                    for (const item of skippedDevices.slice(0, 20)) report += '\n' + item.serial_number + ' → 星河场地 ' + item.existing_venue_id + (item.existing_venue_name ? '（' + item.existing_venue_name + '）' : '');
+                    if (skippedDevices.length > 20) report += '\n其余跳过设备请查看接口响应。';
+                }
+                if (skippedPricing.length) {
+                    report += '\n\n跳过其他场地套餐：' + skippedPricing.length + ' 条（保留原套餐及归属）';
+                    for (const item of skippedPricing.slice(0, 20)) report += '\n' + item.title + ' → 星河套餐 ' + item.target_pricing_id + ' / 场地 ' + item.existing_venue_id;
+                }
+                if (skippedCameras.length) {
+                    report += '\n\n跳过冲突图传：' + skippedCameras.length + ' 条（保留星河记录，待核对）';
+                    for (const item of skippedCameras.slice(0, 20)) report += '\n图传设备 ' + item.device_id + ' / 房间 ' + (item.room_id || '未设置');
+                    for (const item of (data.skipped_camera_fields || []).slice(0, 20)) report += '\n' + item.serial_number + ' / ' + (item.field === 'image_device_serial' ? '前摄' : '后摄') + ' → ' + (item.action === 'preserved_existing' ? '保留原图传' : '保持未配置');
+                }
                 if (Array.isArray(data.source_missing_settings) && data.source_missing_settings.length) {
                     const unset = data.unconfigured_devices || [];
                     report += '\n\nRC未设置控制配置：' + data.source_missing_settings.length + ' 台（设备已同步）' +
