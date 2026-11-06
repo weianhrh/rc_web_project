@@ -44,12 +44,14 @@ try {
         xhReply(0, '星河专区列表', xhRemote($config, ['version' => 2, 'source' => 'RC', 'action' => 'list_zones', 'source_venue_id' => (int)$id]));
     }
     xhTransactional($conn, ['venues', 'vehicles', 'vehicle_control_settings']);
-    xhTransactional($conn, ['PricingOptions']);
+    xhTransactional($conn, ['PricingOptions', 'venue_invite_codes']);
     $conn->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     $conn->begin_transaction(MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
     $venues = xhQuery($conn, 'SELECT * FROM venues WHERE id=?', [$id]);
     if (count($venues) !== 1) throw new RuntimeException('场地不存在');
     $venue = $venues[0];
+    $inviteRows = xhQuery($conn, 'SELECT venue_id,invite_code,is_enabled FROM venue_invite_codes WHERE venue_id=?', [$id]);
+    if (count($inviteRows) > 1) throw new RuntimeException('RC该场地存在多条邀请码记录，请先核对 venue_invite_codes');
     $pricing = xhQuery($conn, 'SELECT * FROM PricingOptions WHERE BindLocation=? ORDER BY ID', [(string)$id]);
     // Current projects bind by numeric venue ID. Do not match names (names need not be unique).
     $vehicles = xhQuery($conn, 'SELECT * FROM vehicles WHERE bind_site=? ORDER BY serial_number', [(string)$id]);
@@ -114,10 +116,11 @@ try {
         $vehicle = xhPick($vehicle, xhVehicleFields());
     }
     unset($vehicle);
-    $payload = ['version' => 5, 'source' => 'RC', 'source_venue_id' => (int)$id,
-        'venue' => xhPick($venue, xhVenueFields()), 'vehicles' => $vehicles, 'settings' => $settings,
+    $payload = ['version' => 6, 'source' => 'RC', 'source_venue_id' => (int)$id,
+        'venue' => xhPick($venue, array_merge(xhVenueFields(), ['venue_room_id'])), 'vehicles' => $vehicles, 'settings' => $settings,
         'cameras' => array_values($cameras), 'camera_refs' => $cameraRefs, 'missing_camera_refs' => $missingCameraRefs,
         'billing_rules' => array_values($billingRules), 'pricing_options' => $pricing,
+        'venue_invite_code' => $inviteRows ? $inviteRows[0] : null,
         'zone' => $input['zone'] ?? ['mode' => 'keep']];
     $conn->commit();
     $data = xhRemote($config, $payload);
