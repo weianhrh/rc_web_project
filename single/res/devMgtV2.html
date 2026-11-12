@@ -1427,6 +1427,8 @@ button.device-name {
     }
 }
     </style> 
+<link rel="stylesheet" href="xinghe-device-sync.css?v=20261110">
+<script src="xinghe-device-sync.js?v=20261110" defer></script>
 </head> 
  
 <body> 
@@ -1464,6 +1466,7 @@ button.device-name {
   <div class="toolbar-actions">
     <a href="addDev.html" class="add-device-btn">添加设备</a>
     <a href="latest_device_run.html" class="add-device-btn">设备面板</a>
+    <a href="xinghe-device-sync.html" id="xinghe-device-sync-link" class="add-device-btn" style="display:none">批量同步到星河</a>
     <a href="vehicles_manage.html" class="add-device-btn">批量绑定管理地</a>
     <a href="online-devices.html" class="add-device-btn">全场地在线设备</a>
   </div>
@@ -1944,6 +1947,7 @@ async function fetchCurrentUserRole() {
         const result = await res.json();
         currentUserRoleId = Number(result?.data?.role_id || 0);
         userCanDirectEditName = currentUserRoleId === 1 || currentUserRoleId === 2;
+        document.getElementById('xinghe-device-sync-link').style.display = userCanDirectEditName ? '' : 'none';
 
         // 如果角色信息比设备列表晚返回，重新渲染一次，让 role_id 1/2 的设备名称变成可点击。
         if (allDevices.length) {
@@ -2337,6 +2341,7 @@ function displayDevices(devices) {
         升级
     </button>
 </div>
+                ${userCanDirectEditName ? `<button type="button" class="xds-device-button" data-xds-serial="${escapeHtml(device.serial_number || '')}" data-xds-name="${escapeHtml(device.name || '')}">同步到星河</button>` : ''}
             </div>
         `;
 

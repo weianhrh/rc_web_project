@@ -107,6 +107,10 @@ function fetchVehicleControlSettings($database, $device_id) {
             is_display,
             cooldown,
             bullet_channel,
+            excavator_bucket,
+            excavator_boom,
+            excavator_arm,
+            excavator_rotation,
             ch1,
             ch2,
             ch3,
@@ -289,7 +293,7 @@ if ($device_id === '') {
 } 
 //  var_dump($data);
 // 查询默认的挡位,方向和油门值 
-$query = "SELECT audio_source_type,is_show_achievements,is_display,cooldown,bullet_channel,ch1,ch2,ch3,ch4,ch5,ch6, car_type, direction_mid,throttle_mid, driver_type, throttle_max,  throttle_min, direction, throttle
+$query = "SELECT audio_source_type,is_show_achievements,is_display,cooldown,bullet_channel,excavator_bucket,excavator_boom,excavator_arm,excavator_rotation,ch1,ch2,ch3,ch4,ch5,ch6, car_type, direction_mid,throttle_mid, driver_type, throttle_max,  throttle_min, direction, throttle
           FROM vehicle_control_settings 
           WHERE serial_number = ?";
 $stmt = $database->getConnection()->prepare($query); 
@@ -333,6 +337,10 @@ $response = [
         'is_show_achievements' => $settings['is_show_achievements'] === null ? 0 : (int)$settings['is_show_achievements'],
         'cooldown' => $settings['cooldown'],
         'bullet_channel' => $settings['bullet_channel'],
+        'excavator_bucket' => (int)($settings['excavator_bucket'] ?? 0),
+        'excavator_boom' => (int)($settings['excavator_boom'] ?? 0),
+        'excavator_arm' => (int)($settings['excavator_arm'] ?? 0),
+        'excavator_rotation' => (int)($settings['excavator_rotation'] ?? 0),
         'audio_source_type' => $settings['audio_source_type'] === null ? 0 : (int)$settings['audio_source_type']
     ] 
 ]; 
@@ -359,6 +367,30 @@ if ($action !== 'save') {
         'data' => []
     ], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// 在任何写入前校验四项换位参数，拒绝越权、非挖机与非法取值的整次请求。
+$excavatorDirectionFields = ['excavator_bucket', 'excavator_boom', 'excavator_arm', 'excavator_rotation'];
+$canManageExcavatorDirection = in_array((int)$role_id, [1, 2], true);
+$targetCarType = $canManageExcavatorDirection && array_key_exists('car_type', $data)
+    ? max(1, min(9, (int)$data['car_type']))
+    : (int)$settings['car_type'];
+foreach ($excavatorDirectionFields as $field) {
+    if (!array_key_exists($field, $data)) continue;
+    $errorCode = 1005;
+    $errorMessage = '';
+    if (!$canManageExcavatorDirection) {
+        $errorCode = 1003;
+        $errorMessage = '仅平台管理员可修改挖机方向换位配置';
+    } elseif (!in_array($targetCarType, [3, 9], true)) {
+        $errorMessage = '仅挖掘机、液压挖掘机可设置方向换位';
+    } elseif (!in_array($data[$field], [0, 1, '0', '1'], true)) {
+        $errorMessage = '挖机方向换位只能为 0（不换位）或 1（换位）';
+    }
+    if ($errorMessage !== '') {
+        echo json_encode(['code' => $errorCode, 'msg' => $errorMessage, 'data' => []], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 // 普通字段只在明确提交时更新；不按图传类型覆盖，也不截断非法小数。
@@ -589,6 +621,13 @@ foreach ($adminIntFields as $field => $range) {
     $knownKeys[$field] = true;
     if (array_key_exists($field, $data)) {
         $addUpdate($field, $clampInt($data[$field], $range[0], $range[1]), 'i', $isAdmin, '仅平台管理员可修改该字段');
+    }
+}
+
+foreach ($excavatorDirectionFields as $field) {
+    $knownKeys[$field] = true;
+    if (array_key_exists($field, $data)) {
+        $addUpdate($field, (int)$data[$field], 'i', $isAdmin, '仅平台管理员可修改挖机方向换位配置');
     }
 }
 

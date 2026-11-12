@@ -1,4 +1,3 @@
-
 <?php 
 // /api/vehicle/modifDevicecfg.php
 
@@ -108,6 +107,10 @@ function fetchVehicleControlSettings($database, $device_id) {
             is_display,
             cooldown,
             bullet_channel,
+            excavator_bucket,
+            excavator_boom,
+            excavator_arm,
+            excavator_rotation,
             ch1,
             ch2,
             ch3,
@@ -286,7 +289,7 @@ if (!$data) {
 $device_id = $data['device_id']; 
 //  var_dump($data);
 // 查询默认的挡位,方向和油门值 
-$query = "SELECT audio_source_type,is_show_achievements,is_display,cooldown,bullet_channel,ch1,ch2,ch3,ch4,ch5,ch6, car_type, direction_mid,throttle_mid, driver_type, throttle_max,  throttle_min, direction, throttle
+$query = "SELECT audio_source_type,is_show_achievements,is_display,cooldown,bullet_channel,excavator_bucket,excavator_boom,excavator_arm,excavator_rotation,ch1,ch2,ch3,ch4,ch5,ch6, car_type, direction_mid,throttle_mid, driver_type, throttle_max,  throttle_min, direction, throttle
           FROM vehicle_control_settings 
           WHERE serial_number = ?";
 $stmt = $database->getConnection()->prepare($query); 
@@ -329,6 +332,10 @@ $response = [
         'is_show_achievements' => $settings['is_show_achievements'] === null ? 0 : (int)$settings['is_show_achievements'],
         'cooldown' => $settings['cooldown'],
         'bullet_channel' => $settings['bullet_channel'],
+        'excavator_bucket' => (int)($settings['excavator_bucket'] ?? 0),
+        'excavator_boom' => (int)($settings['excavator_boom'] ?? 0),
+        'excavator_arm' => (int)($settings['excavator_arm'] ?? 0),
+        'excavator_rotation' => (int)($settings['excavator_rotation'] ?? 0),
         'audio_source_type' => $settings['audio_source_type'] === null ? 0 : (int)$settings['audio_source_type']
     ] 
 ]; 
@@ -355,6 +362,21 @@ if ($action !== 'save') {
         'data' => []
     ], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// 换位配置统一通过事务接口保存，避免旧接口忽略字段却提示成功。
+foreach (['excavator_bucket', 'excavator_boom', 'excavator_arm', 'excavator_rotation'] as $field) {
+    if (array_key_exists($field, $data)) {
+        $admin = in_array((int)$role_id, [1, 2], true);
+        echo json_encode([
+            'code' => $admin ? 1007 : 1003,
+            'msg' => $admin
+                ? '请刷新设备配置页面，并通过新版配置保存接口设置挖机方向换位'
+                : '仅平台管理员可修改挖机方向换位配置',
+            'data' => []
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 // 新字段由当前页面使用的事务接口保存，旧接口不得忽略该字段后返回成功。

@@ -2,6 +2,7 @@
 require_once '../Database.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: private, no-store');
 
 function logSql($sql, $params = []) {
     $logFile = __DIR__ . '/sql_log.txt';
@@ -73,6 +74,13 @@ if (!$user || !$user['role_id']) {
 $role_id = intval($user['role_id'] ?? 0);
 $user_venue_id = intval($user['venue_id'] ?? 0);
 $username = trim($user['username'] ?? '');
+// MCN identity comes only from the authenticated account, never query parameters.
+$isMcnAccount = !empty($user['is_mcn']) || ($user['account_type'] ?? 'single') === 'mcn';
+$canViewViolationMedia = !$isMcnAccount;
+$deviceImageSelect = $canViewViolationMedia ? 'db.image_url' : 'NULL AS image_url';
+$venueImageSelect = $canViewViolationMedia
+    ? 'vb.image_url, vb.image_url_2, vb.image_url_3, vb.image_url AS image1, vb.image_url_2 AS image2, vb.image_url_3 AS image3'
+    : 'NULL AS image_url, NULL AS image_url_2, NULL AS image_url_3, NULL AS image1, NULL AS image2, NULL AS image3';
 
 /**
  * 针对指定后台账号隐藏 2026 年 7 月之前的违规记录数据
@@ -140,6 +148,7 @@ if ($isDateLimitedUser) {
                 'selected_venue_id' => null,
                 'role_id' => $role_id,
                 'is_venue_limited' => ($role_id === 3 || $role_id === 4),
+                'can_view_violation_media' => $canViewViolationMedia,
                 'visible_from' => $visibleFrom
             ]
         ], JSON_UNESCAPED_UNICODE);
@@ -207,7 +216,7 @@ try {
             db.venue_id,
             db.serial_number,
             db.created_at,
-            db.image_url,
+            {$deviceImageSelect},
             db.ban_duration,
             db.ban_end_time,
             db.ban_reason
@@ -246,15 +255,7 @@ try {
             NULL AS serial_number,
             vb.created_at,
 
-            -- 兼容旧字段
-            vb.image_url,
-            vb.image_url_2,
-            vb.image_url_3,
-
-            -- 前端按 image1 / image2 / image3 使用
-            vb.image_url AS image1,
-            vb.image_url_2 AS image2,
-            vb.image_url_3 AS image3,
+            {$venueImageSelect},
 
             vb.ban_duration,
             vb.ban_end_time,
@@ -395,6 +396,7 @@ try {
             'selected_venue_id' => $selectedVenueId,
             'role_id' => $role_id,
             'is_venue_limited' => ($role_id === 3 || $role_id === 4),
+            'can_view_violation_media' => $canViewViolationMedia,
             'visible_from' => $isDateLimitedUser ? $visibleFrom : ''
         ]
     ], JSON_UNESCAPED_UNICODE);

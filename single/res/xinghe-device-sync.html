@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>批量同步车辆到星河</title>
+<link rel="stylesheet" href="xinghe-device-sync.css?v=20261110">
+<script src="xinghe-device-sync.js?v=20261110" defer></script>
+</head>
+<body class="xds-body"><main class="xds-page" id="xds-batch-page">
+<header class="xds-page-header"><div><h1>批量同步车辆到星河</h1><p class="xds-muted">筛选并勾选 RC 设备，点击同步后选择星河已有场地。</p></div><a href="devMgtV2.html">返回设备管理</a></header>
+<section class="xds-panel">
+<fieldset id="xds-batch-fields" disabled>
+<div class="xds-filters">
+<label for="xds-source-venue">RC 场地<select id="xds-source-venue"><option value="">全部场地</option></select></label>
+<label for="xds-keyword">搜索设备<input id="xds-keyword" type="search" placeholder="UID / 序列号 / 名称 / 场地 ID 或名称" autocomplete="off"></label>
+<label for="xds-source-status">设备状态<select id="xds-source-status"><option value="">全部状态</option><option value="online">在线 / 占有</option><option value="offline">离线</option></select></label>
+</div>
+<div class="xds-selection-bar"><div class="xds-actions">
+<label class="xds-check-label"><input type="checkbox" id="xds-select-all">全选当前筛选结果</label>
+<label class="xds-check-label"><input type="checkbox" id="xds-only-selected">只看已选</label>
+</div><div class="xds-actions"><span class="xds-selection-count" id="xds-selected-count">已选 0 台</span><button type="button" class="xds-btn" id="xds-clear" disabled>清空选择</button><button type="button" class="xds-btn xds-primary" id="xds-batch-sync" disabled>批量同步到星河</button></div></div>
+<details class="xds-selection-details" id="xds-picked-details" hidden><summary>查看已选设备（点击设备可移除）</summary><div class="xds-chips" id="xds-picked-chips"></div></details>
+</fieldset>
+<div id="xds-batch-status" class="xds-status" role="status" aria-live="polite">正在读取设备列表…</div>
+<button type="button" id="xds-reload" class="xds-btn xds-target-retry">刷新设备列表</button>
+</section>
+<div class="xds-list-heading"><span id="xds-filter-count">每次最多同步 100 台</span><span class="xds-muted">切换筛选会保留已选设备</span></div>
+<div id="xds-vehicle-list" class="xds-vehicle-list"></div>
+<nav class="xds-pagination" aria-label="设备列表分页"><span id="xds-page-info"></span><div class="xds-actions"><button type="button" id="xds-prev" class="xds-btn" disabled>上一页</button><button type="button" id="xds-next" class="xds-btn" disabled>下一页</button></div></nav>
+</main></body></html>

@@ -359,7 +359,25 @@
   .copy-paste-actions .submit-btn{ flex: 1 1 100%; }
 }
 
-    </style> 
+    /* 挖机换位：四项独立设置，小屏下保持标签与选项对齐。 */
+#excavator-direction-group .radio-group {
+  display: grid;
+  grid-template-columns: minmax(98px, 1fr) 16px auto 16px auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: #fff;
+}
+#excavator-direction-group .radio-group label { margin: 0; white-space: nowrap; }
+#excavator-direction-group input[type="radio"] { margin: 0; }
+@media (max-width: 380px) {
+  #excavator-direction-group { padding: 10px 8px; }
+  #excavator-direction-group .radio-group { gap: 5px; padding: 8px 6px; }
+  #excavator-direction-group .radio-group label { font-size: 12px; }
+}
+</style> 
 </head> 
  
 <body> 
@@ -463,6 +481,42 @@
                 </div>
 
 
+                <div class="shoot-group" id="excavator-direction-group" style="display:none;">
+                    <div class="shoot-group-title">挖机方向换位（仅管理员）</div>
+
+                    <div class="form-field radio-group">
+                        <label>挖机铲斗</label>
+                        <input type="radio" id="excavator_bucket_normal" name="excavator_bucket" value="0" disabled>
+                        <label for="excavator_bucket_normal">不换位</label>
+                        <input type="radio" id="excavator_bucket_swap" name="excavator_bucket" value="1" disabled>
+                        <label for="excavator_bucket_swap">换位</label>
+                    </div>
+
+                    <div class="form-field radio-group">
+                        <label>挖机大臂</label>
+                        <input type="radio" id="excavator_boom_normal" name="excavator_boom" value="0" disabled>
+                        <label for="excavator_boom_normal">不换位</label>
+                        <input type="radio" id="excavator_boom_swap" name="excavator_boom" value="1" disabled>
+                        <label for="excavator_boom_swap">换位</label>
+                    </div>
+
+                    <div class="form-field radio-group">
+                        <label>挖机小臂</label>
+                        <input type="radio" id="excavator_arm_normal" name="excavator_arm" value="0" disabled>
+                        <label for="excavator_arm_normal">不换位</label>
+                        <input type="radio" id="excavator_arm_swap" name="excavator_arm" value="1" disabled>
+                        <label for="excavator_arm_swap">换位</label>
+                    </div>
+
+                    <div class="form-field radio-group">
+                        <label>挖机左右旋转</label>
+                        <input type="radio" id="excavator_rotation_normal" name="excavator_rotation" value="0" disabled>
+                        <label for="excavator_rotation_normal">不换位</label>
+                        <input type="radio" id="excavator_rotation_swap" name="excavator_rotation" value="1" disabled>
+                        <label for="excavator_rotation_swap">换位</label>
+                    </div>
+                </div>
+
                 <div class="form-field" id="car-type-field" style="display:none;">
                     <label for="car_type">车辆类型</label>
                     <select id="car_type" name="car_type">
@@ -529,6 +583,8 @@
  
 <script>
 const channels = ['ch1','ch2','ch3','ch4','ch5','ch6'];
+const EXCAVATOR_DIRECTION_FIELDS = ['excavator_bucket', 'excavator_boom', 'excavator_arm', 'excavator_rotation'];
+const isExcavatorType = value => [3, 9].includes(Number(value));
 let CURRENT_ROLE_ID = null;   // 保存当前用户角色
 let DEVICE_DATA = null;       // 保存设备配置
 const isPlatformAdmin = () => (Number(CURRENT_ROLE_ID) === 1 || Number(CURRENT_ROLE_ID) === 2);
@@ -694,8 +750,17 @@ function updateValue(id, v){ setBaseNumberValue(id, mapFromRange(v)); }
 function updateThrottleMidValue(v){ setBaseNumberValue('throttle_mid', mapThrottleMidFromRange(v)); }
 function updateCooldownValue(v){ document.getElementById('cooldown').value = v; markDirty('cooldown'); }
 
+function refreshExcavatorDirectionVisibility() {
+  const group = document.getElementById('excavator-direction-group');
+  const carType = document.getElementById('car_type').value;
+  const editable = !!DEVICE_DATA && isPlatformAdmin() && isExcavatorType(carType);
+  group.style.display = editable ? 'block' : 'none';
+  group.querySelectorAll('input').forEach(input => input.disabled = !editable);
+}
+
 /** 根据角色与车种决定是否显示 CH1~CH6 容器 */
 function refreshChannelVisibility() {
+  refreshExcavatorDirectionVisibility();
   const box = document.getElementById('channel-switches');
   if (!box) return;
 
@@ -862,6 +927,8 @@ modifyFormEl.addEventListener('change', (e) => {
   const el = e.target;
   if (!el) return;
 
+  if (el.name === 'car_type') refreshExcavatorDirectionVisibility();
+
   if (el.name === 'direction' || el.name === 'throttle') {
     markDirty(el.name);
     return;
@@ -971,6 +1038,13 @@ function collectCurrentFormConfigSnapshot() {
     audio_source_type: Number(getValueFromEl('audio_source_type', DEVICE_DATA.audio_source_type || 0)),
     is_show_achievements: Number(getCheckedValue('is_show_achievements') || DEVICE_DATA.is_show_achievements || 0)
   };
+
+  if (isPlatformAdmin() && isExcavatorType(DEVICE_DATA.car_type)) {
+    EXCAVATOR_DIRECTION_FIELDS.forEach(field => {
+      const checked = getCheckedValue(field);
+      cfg[field] = checked === '' ? Number(DEVICE_DATA[field] || 0) : Number(checked);
+    });
+  }
 
   channels.forEach(ch => {
     cfg[ch] = buildCurrentChannelRaw(ch);
@@ -1114,6 +1188,16 @@ function buildPasteSaveData(parsed) {
 
   if (isPlatformAdmin()) {
     addPasteNumberChanged(data, 'driver_type', cfg.driver_type, DEVICE_DATA.driver_type);
+    if (isExcavatorType(DEVICE_DATA.car_type)) {
+      EXCAVATOR_DIRECTION_FIELDS.forEach(field => {
+        // 旧版复制内容没有这些字段时，保持当前设备设置。
+        if (cfg[field] === undefined) return;
+        if (![0, 1, '0', '1'].includes(cfg[field])) {
+          throw new Error('挖机方向换位只能为 0（不换位）或 1（换位）');
+        }
+        addPasteChanged(data, field, Number(cfg[field]), DEVICE_DATA[field] ?? 0);
+      });
+    }
     if (cfg.audio_source_type !== undefined) {
       addPasteChanged(data, 'audio_source_type', Number(cfg.audio_source_type) === 1 ? 1 : 0, DEVICE_DATA.audio_source_type);
     }
@@ -1205,7 +1289,13 @@ async function pasteAndSaveConfig() {
   const parsed = previewPastedConfig();
   if (!parsed) return;
 
-  const data = buildPasteSaveData(parsed);
+  let data;
+  try {
+    data = buildPasteSaveData(parsed);
+  } catch (error) {
+    setPasteStatus(error.message || '粘贴配置格式错误', 'err');
+    return;
+  }
   const metaKeys = ['action', 'device_id', 'paste_config', 'paste_source_car_type', 'paste_source_serial_number', 'paste_version'];
   const changedKeys = Object.keys(data).filter(k => !metaKeys.includes(k));
 
@@ -1334,6 +1424,11 @@ window.addEventListener('DOMContentLoaded',  async function () {
 document.getElementById('is_display_true').checked  = Number(DEVICE_DATA.is_display) === 1;
 document.getElementById('is_display_false').checked = Number(DEVICE_DATA.is_display) === 0;
 
+    EXCAVATOR_DIRECTION_FIELDS.forEach(field => {
+      const value = Number(DEVICE_DATA[field]) === 1 ? '1' : '0';
+      document.querySelector(`input[name="${field}"][value="${value}"]`).checked = true;
+    });
+
     // 4) 按角色 + 车种 刷新可见性
     refreshChannelVisibility();
     IS_FILLING = false;
@@ -1423,6 +1518,11 @@ document.getElementById('modify-form').addEventListener('submit', async function
           addChanged(data, 'driver_type',          document.getElementById('driver_type').value,          DEVICE_DATA.driver_type);
           addChanged(data, 'audio_source_type',    document.getElementById('audio_source_type').value,    DEVICE_DATA.audio_source_type);
           addChanged(data, 'is_show_achievements', getCheckedValue('is_show_achievements'),              DEVICE_DATA.is_show_achievements);
+          if (isExcavatorType(document.getElementById('car_type').value)) {
+            EXCAVATOR_DIRECTION_FIELDS.forEach(field => {
+              addChanged(data, field, getCheckedValue(field), DEVICE_DATA[field] ?? 0);
+            });
+          }
         }
 
         // ✅ 发射配置：管理员 / role=3/4 才提交

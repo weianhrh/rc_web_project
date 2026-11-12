@@ -123,10 +123,19 @@ try {
     if ($method === 'GET') {
         $ids = array_map('strval', array_keys($venueMap));
         $vehicles = transferQuery($db,
-            'SELECT id, serial_number, name, bind_site, status, vehicle_status, sharing_status,
-             is_banned, driver_id, Reservation_lock, image_device_serial, bk_image_device_serial
-             FROM vehicles WHERE bind_site IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
-             ORDER BY bind_site, id DESC', $ids);
+            'SELECT v.id, v.serial_number, v.name, v.bind_site, v.status, v.vehicle_status, v.sharing_status,
+             v.is_banned, v.driver_id, v.Reservation_lock, v.image_device_serial, v.bk_image_device_serial,
+             wifi.wifi_essid AS last_wifi_name, wifi.created_at AS last_wifi_at
+             FROM vehicles v
+             LEFT JOIN device_information di ON CAST(di.id AS CHAR) = v.image_device_serial
+             LEFT JOIN camera_wifi_send_records wifi ON wifi.id = (
+                 SELECT w.id FROM camera_wifi_send_records w
+                 WHERE w.room_id = COALESCE(NULLIF(di.room_id, \'\'), NULLIF(v.image_device_serial, \'\'))
+                   AND w.zego_code = 0
+                 ORDER BY w.id DESC LIMIT 1
+             )
+             WHERE v.bind_site IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
+             ORDER BY v.bind_site, v.id DESC', $ids);
         $rows = [];
         $state = transferState($db, $vehicles);
         foreach ($vehicles as $vehicle) {
@@ -137,6 +146,7 @@ try {
                 'name' => $vehicle['name'], 'venue_id' => (int)$vehicle['bind_site'],
                 'venue_name' => $venueMap[(int)$vehicle['bind_site']]['venue_name'],
                 'status' => $vehicle['status'], 'sharing_status' => $vehicle['sharing_status'],
+                'last_wifi_name' => $vehicle['last_wifi_name'], 'last_wifi_at' => $vehicle['last_wifi_at'],
                 'can_transfer' => $reason === '', 'blocked_reason' => $reason
             ];
         }

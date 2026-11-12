@@ -246,13 +246,16 @@
       .page-input { flex: 1; min-width: 90px; }
     }
   </style>
+  <link rel="stylesheet" href="/res/fa/css/all.min.css" />
+  <link rel="stylesheet" href="/res/finance-calendar.css?v=20261111-1" />
 </head>
 
 <body>
   <div class="container" id="pageRoot">
     <div class="card">
       <div class="card-title">
-        <span>财务对账</span>
+        <span><i class="fas fa-calendar-alt" aria-hidden="true"></i> 财务对账</span>
+        <div class="calendar-legend"><span><i class="legend-dot pending"></i>待核对</span><span><i class="legend-dot checked-dot"></i>已核对</span></div>
       </div>
 
       <!-- role_id == 1/2 才显示 -->
@@ -275,8 +278,8 @@
           <input type="checkbox" id="hide_zero" />
           <span>隐藏0收入</span>
         </label>
-        <button class="btn primary" id="btnSearch">查询</button>
-        <button class="btn" id="btnResetFilter">重置</button>
+        <button class="btn primary" id="btnSearch"><i class="fas fa-search" aria-hidden="true"></i> 查询</button>
+        <button class="btn" id="btnResetFilter" title="重置筛选" aria-label="重置筛选"><i class="fas fa-undo" aria-hidden="true"></i></button>
       </div>
 
       <div class="summary">
@@ -284,15 +287,16 @@
         <span id="roleText"></span>
       </div>
 
+      <p class="calendar-note">日期为收益账期；仅展示当前页账单，空白日期不表示收入为0。</p>
       <div id="revenue-details"></div>
       <div id="loading" class="loading" style="display:none;">正在加载...</div>
 
       <div class="pager" id="pager">
-        <button class="btn" id="btnFirst">首页</button>
-        <button class="btn" id="btnPrev">上一页</button>
+        <button class="btn" id="btnFirst" title="首页" aria-label="首页"><i class="fas fa-angle-double-left" aria-hidden="true"></i></button>
+        <button class="btn" id="btnPrev" title="上一页" aria-label="上一页"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
         <span class="pager-info" id="pageInfo">第 1 / 1 页</span>
-        <button class="btn" id="btnNext">下一页</button>
-        <button class="btn" id="btnLast">尾页</button>
+        <button class="btn" id="btnNext" title="下一页" aria-label="下一页"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+        <button class="btn" id="btnLast" title="尾页" aria-label="尾页"><i class="fas fa-angle-double-right" aria-hidden="true"></i></button>
         <input class="page-input" type="number" id="jumpPage" min="1" placeholder="页码" />
         <button class="btn primary" id="btnJump">跳转</button>
       </div>
@@ -454,7 +458,31 @@
       return;
     }
 
+    const groups = new Map();
+    const ungrouped = [];
     rows.forEach(revenue => {
+      const date = String(revenue.date || '');
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+      const value = match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : null;
+      if (!value || value.toISOString().slice(0, 10) !== date) {
+        ungrouped.push(revenue);
+        return;
+      }
+      const month = date.slice(0, 7);
+      if (!groups.has(month)) groups.set(month, new Map());
+      const days = groups.get(month);
+      if (!days.has(date)) days.set(date, []);
+      days.get(date).push(revenue);
+    });
+
+    const dialog = document.createElement('dialog');
+    dialog.className = 'bill-dialog';
+    dialog.setAttribute('aria-labelledby', 'billDialogTitle');
+    dialog.innerHTML = '<div class="bill-dialog-head"><div><h2 id="billDialogTitle"></h2><p id="billDialogMeta"></p></div><button class="btn bill-close" type="button" title="关闭账单" aria-label="关闭账单"><i class="fas fa-times" aria-hidden="true"></i></button></div><div class="bill-dialog-content"></div>';
+    dialog.querySelector('.bill-close').onclick = () => dialog.close();
+    dialog.addEventListener('click', event => { if (event.target === dialog) { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); } });
+
+    function billItem(revenue) {
       const venueId = String(revenue.venue_id ?? '');
       const venueName = revenue.venue_name || venueMap[venueId] || '';
       const venueText = venueName ? `${venueId} - ${venueName}` : `场地ID：${venueId || '-'}`;
@@ -497,7 +525,82 @@
         </div>
       `;
 
-      revenueDetails.appendChild(item);
+      return item;
+    }
+
+    function openBills(date, bills) {
+      dialog.querySelector('#billDialogTitle').textContent = date ? `${date} 账单` : '账单详情';
+      dialog.querySelector('#billDialogMeta').textContent = `共 ${bills.length} 笔账单`;
+      const content = dialog.querySelector('.bill-dialog-content');
+      content.replaceChildren(...bills.map(billItem));
+      dialog.showModal();
+    }
+
+    const todayParts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    const part = type => todayParts.find(item => item.type === type).value;
+    const today = `${part('year')}-${part('month')}-${part('day')}`;
+
+    [...groups.keys()].sort().reverse().forEach(month => {
+      const days = groups.get(month);
+      const [year, monthNumber] = month.split('-').map(Number);
+      const monthSection = document.createElement('section');
+      monthSection.className = 'calendar-month';
+      const billCount = [...days.values()].reduce((count, bills) => count + bills.length, 0);
+      monthSection.innerHTML = `<div class="month-heading"><h2>${year}年<span>${monthNumber}月</span></h2><span>本页 ${billCount} 笔账单</span></div><div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>`;
+      const grid = document.createElement('div');
+      grid.className = 'calendar-grid';
+      const offset = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() + 6) % 7;
+      const dayCount = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+      const cellCount = Math.ceil((offset + dayCount) / 7) * 7;
+      for (let index = 0; index < cellCount; index++) {
+        const day = index - offset + 1;
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day';
+        if (day < 1 || day > dayCount) {
+          cell.classList.add('outside-month');
+          cell.setAttribute('aria-hidden', 'true');
+          grid.appendChild(cell);
+          continue;
+        }
+        const date = `${month}-${String(day).padStart(2, '0')}`;
+        const bills = days.get(date) || [];
+        if (date === today) cell.classList.add('is-today');
+        if (index % 7 >= 5) cell.classList.add('is-weekend');
+        if (!bills.length) {
+          cell.classList.add('no-bills');
+          cell.innerHTML = `<span class="day-number">${day}</span><span class="no-bill-mark" title="当前页没有该日期账单">—</span>`;
+          cell.setAttribute('aria-label', `${date}，当前页无账单`);
+        } else {
+          cell.classList.add('has-bills');
+          const pending = bills.some(bill => Number(bill.is_checked) !== 1);
+          const button = document.createElement('button');
+          button.className = `calendar-day-open ${pending ? 'has-pending' : 'all-checked'}`;
+          button.type = 'button';
+          const first = bills[0];
+          const amount = escapeHtml(first.total_revenue || '0.00');
+          const shortName = state.isAdmin ? String(first.venue_name || venueMap[String(first.venue_id)] || `场地${first.venue_id || '-'}`) : '';
+          button.setAttribute('aria-label', `${date}，${bills.length}笔账单，${pending ? '有待核对账单' : '已全部核对'}，查看详情`);
+          button.title = `${date} · ${bills.length}笔账单${shortName ? ' · ' + shortName : ''}`;
+          button.innerHTML = `<span class="day-number">${day}${date === today ? '<small>今天</small>' : ''}</span><span class="day-amount"><b class="day-amount-number" title="${bills.length > 1 ? bills.length + '笔账单' : amount + '元'}">${bills.length > 1 ? bills.length : amount}</b><small>${bills.length > 1 ? '笔账单' : '元'}</small></span>${shortName && bills.length === 1 ? `<span class="day-venue" title="${escapeHtml(shortName)}">${escapeHtml(shortName)}</span>` : ''}<span class="day-bill-status">${pending ? '待核对' : '已核对'}</span>${bills.length > 1 ? '<span class="day-more">查看全部</span>' : ''}`;
+          button.onclick = () => openBills(date, bills);
+          cell.appendChild(button);
+        }
+        grid.appendChild(cell);
+      }
+      monthSection.appendChild(grid);
+      revenueDetails.appendChild(monthSection);
+    });
+
+    ungrouped.forEach(revenue => revenueDetails.appendChild(billItem(revenue)));
+    revenueDetails.appendChild(dialog);
+    requestAnimationFrame(() => {
+      revenueDetails.querySelectorAll('.day-amount-number').forEach(number => {
+        let size = parseFloat(getComputedStyle(number).fontSize);
+        while (number.scrollWidth > number.clientWidth && size > 10) {
+          size -= 0.5;
+          number.style.fontSize = `${size}px`;
+        }
+      });
     });
   }
 

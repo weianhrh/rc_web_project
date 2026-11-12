@@ -782,6 +782,7 @@
     let isMultiVenueMode = true;
     let venueMap = {};
     let allRecordsCache = [];
+    let canViewViolationMedia = false;
     let venueStatsCache = [];
     let currentUser = null;
     let currentRoleId = 0;
@@ -1048,6 +1049,9 @@ function fetchVenueOwnerRecords() {
     }
 
     function fetchBanData(url) {
+        canViewViolationMedia = false;
+        closePreviewModal();
+        document.getElementById('record-list').innerHTML = '<p style="color:#7f8fa4;">正在加载...</p>';
         fetch(url, {
             method: 'GET',
             credentials: 'include'
@@ -1059,6 +1063,7 @@ function fetchVenueOwnerRecords() {
                     return;
                 }
 
+                canViewViolationMedia = res.data.can_view_violation_media === true;
                 const deviceRecords = (res.data.device_bans || []).map(r => ({ ...r, type: 'device' }));
                 const venueRecords = (res.data.venue_bans || []).map(r => ({ ...r, type: 'venue' }));
                 const voiceRoomRecords = (res.data.voice_room_bans || []).map(r => ({ ...r, type: 'voice_room' }));
@@ -1368,9 +1373,9 @@ function renderRecords() {
                 .filter(url => url !== '' && url.toLowerCase() !== 'null')
         )].slice(0, 3);
 
-        let imageHtml = '';
+        let imageHtml = canViewViolationMedia ? '' : '<span style="color:#7f8fa4;font-size:12px;">当前账号无权查看违规图片及视频</span>';
 
-        if (imageUrls.length > 0) {
+        if (canViewViolationMedia && imageUrls.length > 0) {
             const createdAtTime = item.created_at
                 ? new Date(String(item.created_at).replace(/-/g, '/')).getTime()
                 : Date.now();
@@ -1566,6 +1571,7 @@ function closePreviewModal() {
 }
 
 function showModal(url) {
+    if (!canViewViolationMedia) return;
     let modal = document.getElementById('media-modal');
 
     if (!modal) {
