@@ -90,6 +90,7 @@ if (strpos($commandType, 'reverse_') === 0) {
         'reverse_bucket_on' => '+RV#ws#1-',
         'reverse_bucket_off' => '+RV#ws#0-',
         'reverse_arm_toggle' => '+RV#xs#2-',
+        'reverse_rotation_toggle' => '+RV#lz#2-',
     ];
     if (!isset($reverseCommands[$commandType]) || $message !== $reverseCommands[$commandType]) {
         json_out(400, '反转类型与指令不匹配');

@@ -888,6 +888,7 @@ user023968912_80039"></textarea>
       <button class="edit-btn secondary" type="button" data-send="reverse_arm_off">小臂反转关</button>
       <button class="edit-btn secondary" type="button" data-send="reverse_boom_off">大臂反转关</button>
       <button class="edit-btn secondary" type="button" data-send="reverse_bucket_off">挖斗反转关</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_rotation_toggle">旋转反转切换</button>
     </div>
   </div>
 </div>
@@ -1059,7 +1060,8 @@ user023968912_80039"></textarea>
       reverse_boom_off: { message: '+RV#dx#0-', label: '大臂反转关' },
       reverse_bucket_on: { message: '+RV#ws#1-', label: '挖斗反转开' },
       reverse_bucket_off: { message: '+RV#ws#0-', label: '挖斗反转关' },
-      reverse_arm_toggle: { message: '+RV#xs#2-', label: '小臂反转切换' }
+      reverse_arm_toggle: { message: '+RV#xs#2-', label: '小臂反转切换' },
+      reverse_rotation_toggle: { message: '+RV#lz#2-', label: '旋转反转切换' }
     });
     let controlContextVersion = 0;
     let reverseRoomId = '';
@@ -1307,7 +1309,7 @@ voltage_reset: '电压回传地址恢复默认指令已发送'
       showToast(successText);
     }
   } catch (e) {
-    showToast(type === 'reverse_arm_toggle' ? '发送结果未确认，请先观察设备状态，勿重复点击切换' : '网络错误：发送失败');
+    showToast(isReverse && type.endsWith('_toggle') ? '发送结果未确认，请先观察设备状态，勿重复点击切换' : '网络错误：发送失败');
   } finally {
     if (isReverse) {
       reverseSending = false;
