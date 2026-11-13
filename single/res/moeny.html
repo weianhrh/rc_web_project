@@ -247,7 +247,7 @@
     }
   </style>
   <link rel="stylesheet" href="/res/fa/css/all.min.css" />
-  <link rel="stylesheet" href="/res/finance-calendar.css?v=20261111-1" />
+  <link rel="stylesheet" href="/res/finance-calendar.css?v=20261112-2" />
 </head>
 
 <body>
@@ -259,6 +259,12 @@
       </div>
 
       <!-- role_id == 1/2 才显示 -->
+      <div class="month-controls">
+        <button class="btn" id="monthPrev" title="上个月" aria-label="上个月"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+        <label for="calendarMonth">账期月份</label><input type="month" id="calendarMonth" min="2000-01" aria-label="账期月份" />
+        <button class="btn" id="monthNext" title="下个月" aria-label="下个月"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+        <button class="btn" id="monthCurrent">本月</button>
+      </div>
       <div class="toolbar" id="adminToolbar">
         <div class="field">
           <span class="label">场地筛选：</span>
@@ -266,13 +272,13 @@
             <option value="">全部场地</option>
           </select>
         </div>
-        <div class="field">
-          <span class="label">开始日期：</span>
-          <input type="date" id="start_date" />
+        <div class="field" hidden>
+          <span class="label" hidden>开始日期：</span>
+          <input type="date" id="start_date" hidden />
         </div>
-        <div class="field">
-          <span class="label">结束日期：</span>
-          <input type="date" id="end_date" />
+        <div class="field" hidden>
+          <span class="label" hidden>结束日期：</span>
+          <input type="date" id="end_date" hidden />
         </div>
         <label class="filter-check" title="勾选后不展示总收入为 0 的记录">
           <input type="checkbox" id="hide_zero" />
@@ -287,18 +293,12 @@
         <span id="roleText"></span>
       </div>
 
-      <p class="calendar-note">日期为收益账期；仅展示当前页账单，空白日期不表示收入为0。</p>
+      <p class="calendar-note">按完整自然月展示收益账单；空白日期表示没有符合当前条件的账单，不等于收入为0。</p>
       <div id="revenue-details"></div>
       <div id="loading" class="loading" style="display:none;">正在加载...</div>
 
-      <div class="pager" id="pager">
-        <button class="btn" id="btnFirst" title="首页" aria-label="首页"><i class="fas fa-angle-double-left" aria-hidden="true"></i></button>
-        <button class="btn" id="btnPrev" title="上一页" aria-label="上一页"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
-        <span class="pager-info" id="pageInfo">第 1 / 1 页</span>
-        <button class="btn" id="btnNext" title="下一页" aria-label="下一页"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-        <button class="btn" id="btnLast" title="尾页" aria-label="尾页"><i class="fas fa-angle-double-right" aria-hidden="true"></i></button>
-        <input class="page-input" type="number" id="jumpPage" min="1" placeholder="页码" />
-        <button class="btn primary" id="btnJump">跳转</button>
+      <div class="calendar-footer" id="pager">
+        <span id="monthInfo"></span><button class="btn" id="monthRefresh" title="刷新本月账单" aria-label="刷新本月账单"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>
       </div>
     </div>
   </div>
@@ -317,6 +317,7 @@
   const VENUE_API = '/api/operat/EnergyGift.php'; // action=get_venues
 
   const state = {
+    month: currentMonth(),
     page: 1,
     limit: 31,
     total: 0,
@@ -342,6 +343,13 @@
   const startDateInput = $('start_date');
   const endDateInput = $('end_date');
   const hideZeroInput = $('hide_zero');
+  $('calendarMonth').value = state.month;
+  $('calendarMonth').max = currentMonth();
+
+  function currentMonth() {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+    return `${parts.find(part => part.type === 'year').value}-${parts.find(part => part.type === 'month').value}`;
+  }
 
   function escapeHtml(s) {
     return String(s ?? '')
@@ -401,6 +409,7 @@
     const params = new URLSearchParams();
     params.set('page', page);
     params.set('limit', state.limit);
+    params.set('month', state.month);
 
     // ✅ 只有 role_id=1/2 才传这些筛选条件；普通场地账号由后端强制限制自己的 venue_id
     if (state.isAdmin) {
@@ -453,12 +462,8 @@
   function renderRows(rows) {
     revenueDetails.innerHTML = '';
 
-    if (!Array.isArray(rows) || rows.length === 0) {
-      revenueDetails.innerHTML = '<div class="empty">暂无数据</div>';
-      return;
-    }
-
-    const groups = new Map();
+    rows = Array.isArray(rows) ? rows : [];
+    const groups = new Map([[state.month, new Map()]]);
     const ungrouped = [];
     rows.forEach(revenue => {
       const date = String(revenue.date || '');
@@ -546,7 +551,7 @@
       const monthSection = document.createElement('section');
       monthSection.className = 'calendar-month';
       const billCount = [...days.values()].reduce((count, bills) => count + bills.length, 0);
-      monthSection.innerHTML = `<div class="month-heading"><h2>${year}年<span>${monthNumber}月</span></h2><span>本页 ${billCount} 笔账单</span></div><div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>`;
+      monthSection.innerHTML = `<div class="month-heading"><h2>${year}年<span>${monthNumber}月</span></h2><span>当月 ${billCount} 笔账单</span></div><div class="calendar-weekdays" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>`;
       const grid = document.createElement('div');
       grid.className = 'calendar-grid';
       const offset = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() + 6) % 7;
@@ -605,29 +610,25 @@
   }
 
   function renderPager() {
-    const totalPages = Math.max(1, Number(state.totalPages || 1));
-    const page = Math.max(1, Number(state.page || 1));
-
-    $('summaryText').textContent = `共 ${state.total} 条，每页 ${state.limit} 条`;
-    $('pageInfo').textContent = `第 ${page} / ${totalPages} 页`;
-    $('jumpPage').max = totalPages;
-    $('jumpPage').value = page;
-
-    $('btnFirst').disabled = page <= 1 || state.loading;
-    $('btnPrev').disabled = page <= 1 || state.loading;
-    $('btnNext').disabled = page >= totalPages || state.loading;
-    $('btnLast').disabled = page >= totalPages || state.loading;
-    $('btnJump').disabled = state.loading;
+    $('summaryText').textContent = state.loading ? '正在加载月份账单...' : `${state.month} · 共 ${state.total} 笔账单`;
+    $('monthInfo').textContent = state.loading ? '' : `${state.month} · 整月账期`;
+    $('calendarMonth').disabled = state.loading;
+    $('monthPrev').disabled = state.month <= '2000-01' || state.loading;
+    $('monthNext').disabled = state.month >= currentMonth() || state.loading;
+    $('monthCurrent').disabled = state.loading;
+    $('monthRefresh').disabled = state.loading;
   }
 
   function loadRevenueData(page) {
     if (state.loading) return;
 
     state.loading = true;
+    state.total = 0;
     state.reqSeq += 1;
     const reqSeq = state.reqSeq;
 
     showLoading(true);
+    revenueDetails.innerHTML = '';
     renderPager();
 
     xhrGetJson(buildListUrl(page), function (res, status) {
@@ -639,18 +640,29 @@
       if (status !== 200) {
         revenueDetails.innerHTML = `<div class="empty">请求失败：HTTP ${status}</div>`;
         renderPager();
+        $('summaryText').textContent = '该月份账单未加载成功';
+        $('monthInfo').textContent = '';
         return;
       }
 
       if (res.code !== 0) {
+        if (res.role_id !== undefined) { state.roleId = Number(res.role_id); applyRoleUI(); }
         revenueDetails.innerHTML = `<div class="empty">${escapeHtml(res.msg || '加载失败')}</div>`;
+        renderPager();
+        $('summaryText').textContent = '该月份账单未加载成功';
+        $('monthInfo').textContent = '';
+        return;
+      }
+      if (res.month !== state.month || !Array.isArray(res.data) || res.data.some(row => !String(row.date || '').startsWith(state.month + '-'))) {
+        revenueDetails.innerHTML = '<div class="empty">返回的账期不匹配，请刷新后重试</div>';
+        state.total = 0;
         renderPager();
         return;
       }
 
       state.roleId = Number(res.role_id || 0);
       state.page = Number(res.page || page || 1);
-      state.limit = Number(res.limit || state.limit || 31);
+      state.limit = 31;
       state.total = Number(res.count || 0);
       state.totalPages = Number(res.total_pages || 1);
 
@@ -732,34 +744,28 @@
     });
   });
 
-  $('btnFirst').addEventListener('click', function () {
-    if (state.page > 1) loadRevenueData(1);
-  });
+  function selectMonth(month) {
+    if (state.loading) return;
+    if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month) || month > currentMonth()) {
+      $('calendarMonth').value = state.month;
+      showToast('请选择有效账期月份');
+      return;
+    }
+    state.month = month;
+    $('calendarMonth').value = month;
+    loadRevenueData(1);
+  }
+  function moveMonth(delta) {
+    const [year, month] = state.month.split('-').map(Number);
+    selectMonth(new Date(Date.UTC(year, month - 1 + delta, 1)).toISOString().slice(0, 7));
+  }
+  $('monthPrev').onclick = () => moveMonth(-1);
+  $('monthNext').onclick = () => moveMonth(1);
+  $('monthCurrent').onclick = () => selectMonth(currentMonth());
+  $('calendarMonth').onchange = () => selectMonth($('calendarMonth').value);
+  $('monthRefresh').onclick = () => loadRevenueData(1);
 
-  $('btnPrev').addEventListener('click', function () {
-    if (state.page > 1) loadRevenueData(state.page - 1);
-  });
-
-  $('btnNext').addEventListener('click', function () {
-    if (state.page < state.totalPages) loadRevenueData(state.page + 1);
-  });
-
-  $('btnLast').addEventListener('click', function () {
-    if (state.page < state.totalPages) loadRevenueData(state.totalPages);
-  });
-
-  $('btnJump').addEventListener('click', function () {
-    let p = parseInt($('jumpPage').value, 10);
-    if (!Number.isFinite(p) || p < 1) p = 1;
-    if (p > state.totalPages) p = state.totalPages;
-    loadRevenueData(p);
-  });
-
-  $('jumpPage').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') $('btnJump').click();
-  });
-
-  // 初始化：不再用手机下滑无限加载，改成明确分页
+  // Calendar mode fetches one complete natural month, never a 31-row approximation.
   loadRevenueData(1);
 })();
 </script>

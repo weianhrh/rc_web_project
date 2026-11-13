@@ -57,6 +57,14 @@ $permissions = [
 
 try {
 
+    if ($action === 'room_control_context') {
+        $roomId = trim((string)($_GET['room_id'] ?? ''));
+        if ($roomId === '') j(422, 'room_id 不能为空', []);
+        require_once __DIR__ . '/DeviceRoomVehicle.php';
+        header('Cache-Control: no-store');
+        j(200, '房间关联车辆查询成功', getRoomVehicleControlContext($database, $roomId));
+    }
+
     if ($action === 'list') {
         // ✅ 默认展开：直接返回全部记录
         $sql = "SELECT id, device_id, playing_stream_id, room_id, rtc_user_id
@@ -312,7 +320,7 @@ try {
     }
 
     j(400, '未知 action', [
-        'allow' => ['list', 'create', 'batch_create', 'update']
+        'allow' => ['list', 'room_control_context', 'create', 'batch_create', 'update']
     ]);
 
 } catch (Exception $e) {

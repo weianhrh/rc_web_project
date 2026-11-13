@@ -80,6 +80,32 @@ $message = (string)($_POST['message'] ?? '');
 $toUserIds = parse_to_user_ids($_POST['to_user_ids'] ?? '');
 $commandType = trim((string)($_POST['command_type'] ?? ''));
 
+// 反转快捷按钮复用现有 ZEGO 原始命令通道，发送前重新核对当前房间车型。
+if (strpos($commandType, 'reverse_') === 0) {
+    $reverseCommands = [
+        'reverse_arm_on' => '+RV#xs#1-',
+        'reverse_arm_off' => '+RV#xs#0-',
+        'reverse_boom_on' => '+RV#dx#1-',
+        'reverse_boom_off' => '+RV#dx#0-',
+        'reverse_bucket_on' => '+RV#ws#1-',
+        'reverse_bucket_off' => '+RV#ws#0-',
+        'reverse_arm_toggle' => '+RV#xs#2-',
+    ];
+    if (!isset($reverseCommands[$commandType]) || $message !== $reverseCommands[$commandType]) {
+        json_out(400, '反转类型与指令不匹配');
+    }
+    if ($roomId === '') json_out(400, 'room_id 不能为空');
+    require_once __DIR__ . '/DeviceRoomVehicle.php';
+    try {
+        $roomContext = getRoomVehicleControlContext($database, $roomId);
+    } catch (Exception $e) {
+        json_out(500, '房间关联车辆查询失败，指令未发送');
+    }
+    if ($roomContext['car_type'] !== 3) {
+        json_out(400, '当前房间未关联车型为 3 的挖机，指令未发送');
+    }
+}
+
 // Automatic motion commands are a privileged, allowlisted subset of this API.
 // Keep the existing camera-management commands unchanged.
 $isExcavatorCommand = strpos($commandType, 'excavator_') === 0;

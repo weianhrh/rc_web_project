@@ -583,6 +583,26 @@
   grid-column: 1 / -1;
 }
 
+#controlModal #excavatorReverseGroup[hidden] {
+  display: none;
+}
+
+#controlModal .reverse-scroll {
+  overflow-x: auto;
+}
+
+#controlModal .reverse-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(118px, 1fr));
+  gap: 10px;
+}
+
+#controlModal .reverse-actions .edit-btn {
+  width: 100%;
+  white-space: nowrap;
+  padding: 10px 12px;
+}
+
 #controlModal .cmd-group-title {
   font-size: 16px;
   font-weight: 700;
@@ -857,6 +877,21 @@ user023968912_80039"></textarea>
   </div>
 </div>
 
+<div class="cmd-group cmd-group-full" id="excavatorReverseGroup" hidden>
+  <div class="cmd-group-title">挖机反转</div>
+  <div class="reverse-scroll">
+    <div class="reverse-actions">
+      <button class="edit-btn secondary" type="button" data-send="reverse_arm_on">小臂反转开</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_boom_on">大臂反转开</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_bucket_on">挖斗反转开</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_arm_toggle">小臂反转切换</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_arm_off">小臂反转关</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_boom_off">大臂反转关</button>
+      <button class="edit-btn secondary" type="button" data-send="reverse_bucket_off">挖斗反转关</button>
+    </div>
+  </div>
+</div>
+
 <div class="cmd-group cmd-group-half">
           <div class="cmd-group-title">抓图上传</div>
           <div class="row">
@@ -1015,6 +1050,20 @@ user023968912_80039"></textarea>
     const cVoltageUploadUrl = document.getElementById('cmd_voltage_upload_url');
     const cCustomMessage = document.getElementById('cmd_custom_message');
     let currentControlRow = null;
+    const reverseGroup = document.getElementById('excavatorReverseGroup');
+    const reverseButtons = reverseGroup.querySelectorAll('[data-send]');
+    const REVERSE_COMMANDS = Object.freeze({
+      reverse_arm_on: { message: '+RV#xs#1-', label: '小臂反转开' },
+      reverse_arm_off: { message: '+RV#xs#0-', label: '小臂反转关' },
+      reverse_boom_on: { message: '+RV#dx#1-', label: '大臂反转开' },
+      reverse_boom_off: { message: '+RV#dx#0-', label: '大臂反转关' },
+      reverse_bucket_on: { message: '+RV#ws#1-', label: '挖斗反转开' },
+      reverse_bucket_off: { message: '+RV#ws#0-', label: '挖斗反转关' },
+      reverse_arm_toggle: { message: '+RV#xs#2-', label: '小臂反转切换' }
+    });
+    let controlContextVersion = 0;
+    let reverseRoomId = '';
+    let reverseSending = false;
     
     const syncFields = [fDeviceId, fRoomId, fStreamId];
     let activeSyncSourceId = null;
@@ -1039,6 +1088,9 @@ function refreshCaptureUploadUrl() {
 }
 
 function buildCommandText(type) {
+  if (Object.prototype.hasOwnProperty.call(REVERSE_COMMANDS, type)) {
+    return REVERSE_COMMANDS[type].message;
+  }
   switch (type) {
     case 'osd_on':
       return JSON.stringify({ type: 'cfg_osd', data: { enable: 1 } });
@@ -1115,7 +1167,30 @@ case 'voltage_reset':
   }
 }
 
+async function loadRoomControlContext(roomId, version) {
+  if (!roomId) return;
+  try {
+    const resp = await fetch(`${API}?action=room_control_context&room_id=${encodeURIComponent(roomId)}`, {
+      credentials: 'include', cache: 'no-store'
+    });
+    const json = await resp.json();
+    // 关闭或切换设备后，丢弃旧请求，避免把上一台设备的按钮显示到当前房间。
+    if (version !== controlContextVersion || roomId !== cRoomId.value.trim()) return;
+    if (!resp.ok || json.code !== 200) throw new Error('lookup failed');
+    if (String(json.data?.room_id) === roomId && Number(json.data?.car_type) === 3) {
+      reverseRoomId = roomId;
+      reverseButtons.forEach(btn => { btn.disabled = reverseSending; });
+      reverseGroup.hidden = false;
+    }
+  } catch (e) {
+    if (version === controlContextVersion) showToast('关联车型查询失败，请重新打开控制窗口');
+  }
+}
+
 function openControlModal(row) {
+  const contextVersion = ++controlContextVersion;
+  reverseRoomId = '';
+  reverseGroup.hidden = true;
   currentControlRow = row || null;
   controlModal.style.display = 'flex';
 
@@ -1138,15 +1213,21 @@ function openControlModal(row) {
   document.getElementById('btnOtaHistory').textContent = '查看发送记录';
 
   controlModalTitle.textContent = `设备控制 - ${row?.device_id ?? ''}`;
+  loadRoomControlContext(cRoomId.value.trim(), contextVersion);
 }
 
 function closeControlModal() {
+  ++controlContextVersion;
+  reverseRoomId = '';
+  reverseGroup.hidden = true;
   controlModal.style.display = 'none';
   currentControlRow = null;
 }
 async function sendDeviceCommandByType(type, triggerBtn = null) {
   const room_id = (cRoomId.value || '').trim();
   const from_user_id = (cFromUserId.value || '').trim() || 'server_bot_1';
+  const isReverse = Object.prototype.hasOwnProperty.call(REVERSE_COMMANDS, type);
+  if (isReverse && (reverseGroup.hidden || reverseRoomId !== room_id || reverseSending)) return;
 
   if (!room_id) {
     showToast('room_id 不能为空');
@@ -1166,6 +1247,10 @@ async function sendDeviceCommandByType(type, triggerBtn = null) {
   }
 
   let oldText = '';
+  if (isReverse) {
+    reverseSending = true;
+    reverseButtons.forEach(btn => { btn.disabled = true; });
+  }
   if (triggerBtn) {
     oldText = triggerBtn.textContent;
     triggerBtn.disabled = true;
@@ -1212,15 +1297,22 @@ const successTextMap = {
 voltage_reset: '电压回传地址恢复默认指令已发送'
 };
 
+    const successText = isReverse
+      ? `${REVERSE_COMMANDS[type].label}指令已发送`
+      : (successTextMap[type] || '发送成功');
     const failUsers = json.data?.fail_users || [];
     if (Array.isArray(failUsers) && failUsers.length > 0) {
-      showToast(`${successTextMap[type] || '发送成功'}，但有 ${failUsers.length} 个用户未收到`);
+      showToast(`${successText}，但有 ${failUsers.length} 个用户未收到`);
     } else {
-      showToast(successTextMap[type] || '发送成功');
+      showToast(successText);
     }
   } catch (e) {
-    showToast('网络错误：发送失败');
+    showToast(type === 'reverse_arm_toggle' ? '发送结果未确认，请先观察设备状态，勿重复点击切换' : '网络错误：发送失败');
   } finally {
+    if (isReverse) {
+      reverseSending = false;
+      reverseButtons.forEach(btn => { btn.disabled = false; });
+    }
     if (triggerBtn) {
       triggerBtn.disabled = false;
       triggerBtn.textContent = oldText;

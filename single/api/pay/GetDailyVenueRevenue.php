@@ -13,6 +13,7 @@
 require_once '../Database.php';
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: private, no-store');
 date_default_timezone_set('Asia/Shanghai');
 
 function out_json($code, $msg = '', $data = [], $extra = []) {
@@ -70,6 +71,11 @@ try {
     $startDate     = req_date('start_date');
     $endDate       = req_date('end_date');
     $hideZero      = req_int('hide_zero', 0, 0, 1);
+    // Calendar mode is opt-in; existing paginated callers keep their original behavior.
+    $calendarMonth = $_GET['month'] ?? '';
+    if (!is_string($calendarMonth) || ($calendarMonth !== '' && !preg_match('/^(20\d{2})-(0[1-9]|1[0-2])$/', $calendarMonth))) {
+        out_json(1004, '月份无效，请选择2000年至2099年的月份', []);
+    }
 
     // 日期反了就自动交换，避免前端误填后查不到
     if ($startDate !== '' && $endDate !== '' && $startDate > $endDate) {
@@ -112,12 +118,35 @@ try {
     }
 
     $whereSql = 'WHERE ' . implode(' AND ', $where);
+    if ($calendarMonth !== '') {
+        $monthStart = new DateTimeImmutable($calendarMonth . '-01');
+        $where[] = 'd.date >= ?';
+        $where[] = 'd.date < ?';
+        $params[] = $monthStart->format('Y-m-d');
+        $params[] = $monthStart->modify('+1 month')->format('Y-m-d');
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+    }
 
     // -------------------- 总数 --------------------
+    if ($calendarMonth !== '') {
+        $connection = $database->getConnection();
+        if (!$connection->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') || !$connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY)) {
+            throw new RuntimeException('Calendar read snapshot failed');
+        }
+    }
     $countSql = "SELECT COUNT(*) AS count FROM DailyVenueRevenue d {$whereSql}";
     $countRes = $database->query($countSql, $params);
     $totalCount = intval($countRes[0]['count'] ?? 0);
     $totalPages = $totalCount > 0 ? intval(ceil($totalCount / $limit)) : 1;
+    if ($calendarMonth !== '') {
+        if ($totalCount > 10000) {
+            out_json(1005, '该月份账单较多，请先选择具体场地再查看，未展示不完整账单', [], ['role_id'=>$role_id, 'is_admin'=>$isAdmin ? 1 : 0]);
+        }
+        $page = 1;
+        $offset = 0;
+        $limit = max(1, $totalCount);
+        $totalPages = 1;
+    }
 
     // 如果请求页码超过最大页，自动回到最大页
     if ($page > $totalPages) {
@@ -149,7 +178,13 @@ try {
     $dataParams[] = intval($limit);
 
     $data = $database->query($dataSql, $dataParams);
+    if ($calendarMonth !== '' && ($countRes === false || $data === false)) {
+        out_json(500, '月份账单加载失败，请稍后重试', []);
+    }
     if (!is_array($data)) $data = [];
+    if ($calendarMonth !== '' && !$connection->commit()) {
+        throw new RuntimeException('Calendar read snapshot failed');
+    }
 
     out_json(0, '成功', $data, [
         'count'            => $totalCount,
@@ -158,6 +193,7 @@ try {
         'total_pages'      => $totalPages,
         'role_id'          => $role_id,
         'is_admin'         => $isAdmin ? 1 : 0,
+        'month'            => $calendarMonth,
         'current_venue_id' => $isAdmin ? $filterVenueId : $userVenueId,
         'filters'          => [
             'start_date' => $isAdmin ? $startDate : '',

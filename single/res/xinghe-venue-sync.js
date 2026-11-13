@@ -126,6 +126,12 @@
                 let report = (missingCameras.length || skippedDevices.length || skippedPricing.length || skippedCameras.length ? '同步完成（有保留或跳过项）' : '同步成功') + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
                     '\n新增设备：' + data.created_devices + '\n更新设备：' + data.updated_devices + '\n控制配置：' + data.configurations +
                     '\n摄像头图传：' + data.camera_configurations + '\n计费规则：' + (data.billing_rules || 0);
+                const invite = data.invite_code_sync;
+                const inviteCode = invite && invite.invite_code != null ? String(invite.invite_code) : '';
+                if (inviteCode.length === 4 && /^[0-9]{4}$/.test(inviteCode)) {
+                    const assignmentLabel = invite.assignment === 'generated' ? '（新分配）' : invite.assignment === 'preserved' ? '（保留现有）' : '';
+                    report += '\n星河邀请码：' + inviteCode + assignmentLabel;
+                }
                 if (data.restored_venue) report += '\n已按原映射恢复缺失的星河场地：' + data.xinghe_venue_id;
                 if (data.pricing_summary) report += '\n套餐处理：新增 ' + data.pricing_summary.created + ' / 更新 ' + data.pricing_summary.updated + ' / 复用 ' + data.pricing_summary.reused;
                 if (data.camera_summary) report += '\n图传处理：新增 ' + data.camera_summary.created + ' / 复用 ' + data.camera_summary.reused;

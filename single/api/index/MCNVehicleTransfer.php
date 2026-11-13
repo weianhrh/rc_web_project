@@ -125,7 +125,8 @@ try {
         $vehicles = transferQuery($db,
             'SELECT v.id, v.serial_number, v.name, v.bind_site, v.status, v.vehicle_status, v.sharing_status,
              v.is_banned, v.driver_id, v.Reservation_lock, v.image_device_serial, v.bk_image_device_serial,
-             wifi.wifi_essid AS last_wifi_name, wifi.created_at AS last_wifi_at
+             wifi.wifi_essid AS last_wifi_name, wifi.created_at AS last_wifi_at,
+             COALESCE(NULLIF(di.room_id, \'\'), NULLIF(v.image_device_serial, \'\')) AS room_id
              FROM vehicles v
              LEFT JOIN device_information di ON CAST(di.id AS CHAR) = v.image_device_serial
              LEFT JOIN camera_wifi_send_records wifi ON wifi.id = (
@@ -147,6 +148,7 @@ try {
                 'venue_name' => $venueMap[(int)$vehicle['bind_site']]['venue_name'],
                 'status' => $vehicle['status'], 'sharing_status' => $vehicle['sharing_status'],
                 'last_wifi_name' => $vehicle['last_wifi_name'], 'last_wifi_at' => $vehicle['last_wifi_at'],
+                'room_id' => $vehicle['room_id'],
                 'can_transfer' => $reason === '', 'blocked_reason' => $reason
             ];
         }
