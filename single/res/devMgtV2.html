@@ -1427,8 +1427,9 @@ button.device-name {
     }
 }
     </style> 
-<link rel="stylesheet" href="xinghe-device-sync.css?v=20261110">
-<script src="xinghe-device-sync.js?v=20261110" defer></script>
+<link rel="stylesheet" href="xinghe-device-sync.css?v=20261113">
+<script src="xinghe-device-migration.js?v=20261113" defer></script>
+<script src="xinghe-device-sync.js?v=20261113" defer></script>
 </head> 
  
 <body> 
@@ -1477,6 +1478,17 @@ button.device-name {
 </div>
 </div>
 
+
+<section id="xhm-tools" class="xhm-tools" hidden aria-label="星河搬迁标识">
+  <div class="xhm-tool-row"><strong>星河搬迁标识</strong><div class="xhm-actions">
+    <button type="button" id="xhm-backfill" class="xhm-button">补标历史搬迁</button>
+    <button type="button" id="xhm-stop" class="xhm-button" hidden>暂停补标</button>
+    <button type="button" id="xhm-refresh" class="xhm-button">刷新标识</button>
+  </div></div>
+  <p class="xhm-note">按设备序列号核对全部 RC 设备，只保存搬迁标识，不复制或覆盖星河设备。首次部署后请执行一次补标。</p>
+  <div id="xhm-progress" class="xhm-progress" role="status" aria-live="polite"></div>
+  <div id="xhm-read-status" class="xhm-read-status" role="status" aria-live="polite"></div>
+</section>
 
             <div id="device-list"> 
                 <!-- 设备信息将动态加载 --> 
@@ -1948,6 +1960,8 @@ async function fetchCurrentUserRole() {
         currentUserRoleId = Number(result?.data?.role_id || 0);
         userCanDirectEditName = currentUserRoleId === 1 || currentUserRoleId === 2;
         document.getElementById('xinghe-device-sync-link').style.display = userCanDirectEditName ? '' : 'none';
+        window.xingheMigrationAllowed = userCanDirectEditName;
+        if (window.XingheDeviceMigration) window.XingheDeviceMigration.setAllowed(userCanDirectEditName);
 
         // 如果角色信息比设备列表晚返回，重新渲染一次，让 role_id 1/2 的设备名称变成可点击。
         if (allDevices.length) {
@@ -1957,6 +1971,8 @@ async function fetchCurrentUserRole() {
         console.warn('获取用户角色失败:', err);
         currentUserRoleId = 0;
         userCanDirectEditName = false;
+        window.xingheMigrationAllowed = false;
+        if (window.XingheDeviceMigration) window.XingheDeviceMigration.setAllowed(false);
     }
 }
         // 监听场地选择事件 
@@ -2270,6 +2286,7 @@ function displayDevices(devices) {
                 </div>
 
                 <div class="device-serial">序列号：${device.serial_number || '-'}</div>
+                ${userCanDirectEditName ? `<div class="xhm-device" data-xhm-serial="${escapeHtml(device.serial_number || '')}"><span class="xhm-badge xhm-unchecked">搬迁状态：待核对</span></div>` : ''}
 
                 <div class="device-meta-list">
                     <div class="device-image-row">
@@ -2410,6 +2427,7 @@ function displayDevices(devices) {
             getBanEndTime(device.serial_number);
         }
     });
+    if (userCanDirectEditName && window.XingheDeviceMigration) window.XingheDeviceMigration.refresh();
 }
  
     //     // 搜索图传 

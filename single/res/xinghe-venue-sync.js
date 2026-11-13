@@ -164,6 +164,7 @@
                     }
                     if (missingCameras.length > 20) report += '\n其余缺项请查看接口响应。';
                 }
+                if (data.migration_warning) report += '\n\n' + data.migration_warning;
                 window.alert(report);
             } catch (error) { message('同步未完成：' + error.message + '\n超时可用相同选择重试，已提交的映射会复用。', true); }
             finally { busy = false; fields.disabled = submit.disabled = cancel.disabled = false; mode(); }

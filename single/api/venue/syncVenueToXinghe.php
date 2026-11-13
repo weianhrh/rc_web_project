@@ -124,6 +124,13 @@ try {
         'zone' => $input['zone'] ?? ['mode' => 'keep']];
     $conn->commit();
     $data = xhRemote($config, $payload);
+    try {
+        require_once __DIR__ . '/xinghe_migration_hooks.php';
+        $data = xhmRecordVenueResult($conn, $data, $vehicles, $venue['venue_name'] ?? '');
+    } catch (Throwable $markError) {
+        error_log('RC migration hook unavailable: ' . $markError->getMessage());
+        $data['migration_warning'] = '星河同步已完成，但RC搬迁标识未保存。请补齐搬迁标识补丁文件及建表SQL，再点击“补标历史搬迁”。';
+    }
     xhReply(0, '场地、套餐、设备及图传配置已同步到星河', $data);
 } catch (Throwable $e) {
     if ($conn) { try { $conn->rollback(); } catch (Throwable $ignored) {} }

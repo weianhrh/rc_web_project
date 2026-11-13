@@ -122,7 +122,9 @@
             const data = await api({action:'sync',target_venue_id:chosen.target,devices_text:chosen.text,preview_token:chosen.data.preview_token});
             if (version !== epoch) return;
             renderResult(data, true); $('xds-cancel').textContent = '关闭';
-            status($('xds-modal-status'), '同步完成，设备已按结果处理。', 'success');
+            const migrationWarning = String(data.migration_warning || '');
+            status($('xds-modal-status'), '同步完成，设备已按结果处理。' + (migrationWarning ? '\n搬迁标识提示：' + migrationWarning : ''), migrationWarning ? 'warning' : 'success');
+            if (window.XingheDeviceMigration) window.XingheDeviceMigration.refresh(true);
             if (onCompleted) { try { onCompleted(data); } catch (error) { console.error('更新设备选择状态失败',error); } }
         } catch (error) {
             if (version === epoch) status($('xds-modal-status'), error.message + '\n请重新预览核对后重试。', 'error');
@@ -223,15 +225,22 @@
                 const info = node('div','xds-vehicle-info'), tags = node('div','xds-tags');
                 info.append(node('div','xds-vehicle-title',vehicle.name || '未命名设备'),node('div','xds-vehicle-serial','序列号：' + vehicle.serial_number));
                 tags.append(node('span','xds-tag',siteName(vehicle)),node('span','xds-tag','UID：' + (vehicle.uid || '未绑定')),node('span','xds-tag ' + (['在线','占有'].includes(vehicle.status) ? 'xds-online' : 'xds-offline'),vehicle.status || '未知'));
-                info.append(tags);card.append(checkbox,photo,info);$('xds-vehicle-list').append(card);
+                const migration = node('div','xhm-device'); migration.dataset.xhmSerial = vehicle.serial_number;
+                migration.append(node('span','xhm-badge xhm-unchecked','搬迁状态：待核对'));
+                info.append(tags,migration);card.append(checkbox,photo,info);$('xds-vehicle-list').append(card);
             }
+            if (window.XingheDeviceMigration) window.XingheDeviceMigration.refresh();
         }
         async function load() {
             if (loading) return; loading = true; $('xds-batch-fields').disabled = true; $('xds-reload').disabled = true;
+            window.xingheMigrationAllowed = false;
+            if (window.XingheDeviceMigration) window.XingheDeviceMigration.setAllowed(false);
             all = [];render();status($('xds-batch-status'),'正在读取 RC 场地和设备列表…');
             try {
                 const role = await getJSON('../api/operat/get_current_user.php');
                 if (![1,2].includes(Number(role.role_id))) throw new Error('仅平台管理员可同步设备到星河。');
+                window.xingheMigrationAllowed = true;
+                if (window.XingheDeviceMigration) window.XingheDeviceMigration.setAllowed(true);
                 const [vehicles, source] = await Promise.all([getJSON('../api/devMgr/vehicles_manage.php'),getJSON('../api/devMgr/devMgtV2.php?get_venues=1')]);
                 if (!Array.isArray(vehicles) || !Array.isArray(source.venues)) throw new Error('RC 场地或设备列表格式异常。');
                 const unique = new Map();
@@ -268,7 +277,7 @@
             if (loading || !selected.size) return;
             openSync(all.filter(v => selected.has(v.serial_number)),data => {
                 for (const row of data.rows) if (row.action !== 'skip') selected.delete(row.serial_number);
-                render();status($('xds-batch-status'),'本次同步已完成。成功设备已取消勾选，跳过的设备保留选择，便于核对。','success');
+                render();status($('xds-batch-status'),'本次同步已完成。成功设备已取消勾选，跳过的设备保留选择，便于核对。' + (data.migration_warning ? '\n搬迁标识提示：' + data.migration_warning : ''),data.migration_warning ? 'warning' : 'success');
             });
         });
         load();

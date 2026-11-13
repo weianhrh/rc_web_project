@@ -37,7 +37,17 @@ try {
         $payload['preview_token'] = $input['preview_token'] ?? null;
         $conn->commit();
     }
-    xhReply(0, $input['action'] === 'sync' ? '指定车辆同步完成' : '查询成功', xhRemote($config, $payload));
+    $data = xhRemote($config, $payload);
+    if ($input['action'] === 'sync') {
+        try {
+            require_once __DIR__ . '/xinghe_migration_hooks.php';
+            $data = xhmRecordSelectedResult($conn, $data, $payload['items']);
+        } catch (Throwable $markError) {
+            error_log('RC migration hook unavailable: ' . $markError->getMessage());
+            $data['migration_warning'] = '星河同步已完成，但RC搬迁标识未保存。请补齐搬迁标识补丁文件及建表SQL，再点击“补标历史搬迁”。';
+        }
+    }
+    xhReply(0, $input['action'] === 'sync' ? '指定车辆同步完成' : '查询成功', $data);
 } catch (Throwable $e) {
     if ($conn) { try { $conn->rollback(); } catch (Throwable $ignored) {} }
     error_log('RC selected-device sync: ' . $e->getMessage());

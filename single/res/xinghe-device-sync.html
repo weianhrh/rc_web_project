@@ -3,11 +3,22 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>批量同步车辆到星河</title>
-<link rel="stylesheet" href="xinghe-device-sync.css?v=20261110">
-<script src="xinghe-device-sync.js?v=20261110" defer></script>
+<link rel="stylesheet" href="xinghe-device-sync.css?v=20261113">
+<script src="xinghe-device-migration.js?v=20261113" defer></script>
+<script src="xinghe-device-sync.js?v=20261113" defer></script>
 </head>
 <body class="xds-body"><main class="xds-page" id="xds-batch-page">
 <header class="xds-page-header"><div><h1>批量同步车辆到星河</h1><p class="xds-muted">筛选并勾选 RC 设备，点击同步后选择星河已有场地。</p></div><a href="devMgtV2.html">返回设备管理</a></header>
+<section id="xhm-tools" class="xhm-tools" hidden aria-label="星河搬迁标识">
+  <div class="xhm-tool-row"><strong>星河搬迁标识</strong><div class="xhm-actions">
+    <button type="button" id="xhm-backfill" class="xhm-button">补标历史搬迁</button>
+    <button type="button" id="xhm-stop" class="xhm-button" hidden>暂停补标</button>
+    <button type="button" id="xhm-refresh" class="xhm-button">刷新标识</button>
+  </div></div>
+  <p class="xhm-note">按设备序列号核对全部 RC 设备，只保存搬迁标识，不复制或覆盖星河设备。首次部署后请执行一次补标。</p>
+  <div id="xhm-progress" class="xhm-progress" role="status" aria-live="polite"></div>
+  <div id="xhm-read-status" class="xhm-read-status" role="status" aria-live="polite"></div>
+</section>
 <section class="xds-panel">
 <fieldset id="xds-batch-fields" disabled>
 <div class="xds-filters">
