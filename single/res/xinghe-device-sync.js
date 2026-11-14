@@ -34,6 +34,34 @@
         return getJSON('../api/venue/syncDevicesToXinghe.php', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}, signal);
     }
 
+    function rcUnshareResult(data) {
+        const expected = new Map();
+        for (const row of Array.isArray(data.rows) ? data.rows : []) {
+            if (['create','update','bind'].includes(row.action) && typeof row.serial_number === 'string') expected.set(row.serial_number.toLowerCase(),row.serial_number);
+        }
+        const result = data.rc_unshare, warning = String(data.rc_unshare_warning || '');
+        const fallback = '星河已同步，但 RC 共享关闭结果未确认。请在 RC 核对并设为未共享，检查两端补丁是否部署完整。';
+        if (!result || typeof result.success !== 'boolean' || !Array.isArray(result.serial_numbers)
+            || !Number.isInteger(result.requested_count) || result.requested_count !== expected.size
+            || !Number.isInteger(result.unshared_count) || result.unshared_count < 0 || result.unshared_count !== result.serial_numbers.length
+            || !Number.isInteger(result.changed_count) || result.changed_count < 0 || result.changed_count > result.unshared_count) {
+            return {complete:false,serials:[],count:0,warning:warning || fallback};
+        }
+        const seen = new Set(), serials = [];
+        for (const sn of result.serial_numbers) {
+            const key = typeof sn === 'string' ? sn.toLowerCase() : '';
+            if (!expected.has(key) || seen.has(key)) return {complete:false,serials:[],count:0,warning:warning || fallback};
+            seen.add(key);serials.push(expected.get(key));
+        }
+        const complete = result.success && serials.length === expected.size && !warning;
+        return {complete,serials,count:serials.length,warning:warning || (complete ? '' : fallback)};
+    }
+    function rcUnshareMessage(result) {
+        return (result.complete ? '同步完成。' : '星河已同步，但 RC 共享关闭未完成。')
+            + '\nRC 已确认设为未共享：' + result.count + ' 台。'
+            + (result.warning ? '\n' + result.warning : ' 跳过设备的共享状态未改变。');
+    }
+
     let modal, operation = null, targets = [], targetsLoaded = false, preview = null, busy = '', epoch = 0, pending = null;
     function invalidatePreview() {
         preview = null; $('xds-preview-box').hidden = true;
@@ -110,7 +138,7 @@
             preview = eligible ? {target,text,data} : null;
             $('xds-confirm').hidden = !eligible;
             $('xds-confirm').textContent = '确认同步 ' + eligible + ' 台';
-            status($('xds-modal-status'), eligible ? '尚未写入数据。请核对目标场地和上方预览，再确认同步。' : '没有可同步的设备，请查看跳过原因。',eligible ? '' : 'error');
+            status($('xds-modal-status'), eligible ? '尚未写入数据。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。请核对目标场地和预览后确认。' : '没有可同步的设备，请查看跳过原因。',eligible ? '' : 'error');
         } catch (error) { if (version === epoch) status($('xds-modal-status'), error.message, 'error'); }
         finally { if (version === epoch) {pending = null; setBusy('');} }
     }
@@ -122,10 +150,11 @@
             const data = await api({action:'sync',target_venue_id:chosen.target,devices_text:chosen.text,preview_token:chosen.data.preview_token});
             if (version !== epoch) return;
             renderResult(data, true); $('xds-cancel').textContent = '关闭';
-            const migrationWarning = String(data.migration_warning || '');
-            status($('xds-modal-status'), '同步完成，设备已按结果处理。' + (migrationWarning ? '\n搬迁标识提示：' + migrationWarning : ''), migrationWarning ? 'warning' : 'success');
+            const sharing = rcUnshareResult(data), migrationWarning = String(data.migration_warning || '');
+            status($('xds-modal-status'), rcUnshareMessage(sharing) + (migrationWarning ? '\n搬迁标识提示：' + migrationWarning : ''), !sharing.complete || migrationWarning ? 'warning' : 'success');
+            if (sharing.serials.length) window.dispatchEvent(new CustomEvent('xinghe:rc-unshared',{detail:{serial_numbers:sharing.serials}}));
             if (window.XingheDeviceMigration) window.XingheDeviceMigration.refresh(true);
-            if (onCompleted) { try { onCompleted(data); } catch (error) { console.error('更新设备选择状态失败',error); } }
+            if (onCompleted) { try { onCompleted(data,sharing); } catch (error) { console.error('更新设备选择状态失败',error); } }
         } catch (error) {
             if (version === epoch) status($('xds-modal-status'), error.message + '\n请重新预览核对后重试。', 'error');
         } finally {
@@ -138,7 +167,7 @@
         modal.innerHTML = `<header class="xds-dialog-header"><div><h2 id="xds-modal-title">同步设备到星河</h2><p class="xds-muted">选择星河已有场地，核对后同步。</p></div><button id="xds-modal-close" type="button" class="xds-close" aria-label="关闭">×</button></header>
         <div class="xds-dialog-main"><div class="xds-device-summary"><strong id="xds-operation-summary"></strong><details id="xds-operation-details"><summary>查看本次设备</summary><ul id="xds-operation-devices"></ul></details></div>
         <fieldset id="xds-target-fields" disabled><div class="xds-target-fields"><label for="xds-target-search">搜索星河场地<input id="xds-target-search" type="search" placeholder="场地 ID / 名称" autocomplete="off"></label><label for="xds-target">目标场地<select id="xds-target"><option value="">请选择星河已有场地</option></select></label></div></fieldset>
-        <p class="xds-target-note">设备已属于星河其他场地时会跳过；图传及控制参数从 RC 自动读取。</p><button id="xds-target-retry" type="button" class="xds-btn xds-target-retry" hidden>重新读取星河场地</button>
+        <p class="xds-target-note">同步成功的设备将自动在 RC 设为未共享。设备已属于星河其他场地时会跳过，跳过设备不更改共享状态；图传及控制参数从 RC 自动读取。</p><button id="xds-target-retry" type="button" class="xds-btn xds-target-retry" hidden>重新读取星河场地</button>
         <section id="xds-preview-box" class="xds-preview-box" hidden><h3 id="xds-result-title">同步预览</h3><div class="xds-preview-summary" id="xds-preview-summary"></div><div class="xds-table-wrap"><table><thead><tr><th>设备</th><th>处理</th><th>说明</th></tr></thead><tbody id="xds-result-rows"></tbody></table></div></section>
         <div id="xds-modal-status" class="xds-status" role="status" aria-live="polite"></div></div>
         <footer class="xds-dialog-footer"><button id="xds-cancel" type="button" class="xds-btn">取消</button><button id="xds-preview" type="button" class="xds-btn xds-primary" disabled>预览同步</button><button id="xds-confirm" type="button" class="xds-btn xds-primary" hidden disabled>确认同步</button></footer>`;
@@ -225,6 +254,7 @@
                 const info = node('div','xds-vehicle-info'), tags = node('div','xds-tags');
                 info.append(node('div','xds-vehicle-title',vehicle.name || '未命名设备'),node('div','xds-vehicle-serial','序列号：' + vehicle.serial_number));
                 tags.append(node('span','xds-tag',siteName(vehicle)),node('span','xds-tag','UID：' + (vehicle.uid || '未绑定')),node('span','xds-tag ' + (['在线','占有'].includes(vehicle.status) ? 'xds-online' : 'xds-offline'),vehicle.status || '未知'));
+                if (vehicle.sharing_status) tags.append(node('span','xds-tag','RC：' + vehicle.sharing_status));
                 const migration = node('div','xhm-device'); migration.dataset.xhmSerial = vehicle.serial_number;
                 migration.append(node('span','xhm-badge xhm-unchecked','搬迁状态：待核对'));
                 info.append(tags,migration);card.append(checkbox,photo,info);$('xds-vehicle-list').append(card);
@@ -275,9 +305,13 @@
         $('xds-reload').addEventListener('click',load);
         $('xds-batch-sync').addEventListener('click',()=> {
             if (loading || !selected.size) return;
-            openSync(all.filter(v => selected.has(v.serial_number)),data => {
-                for (const row of data.rows) if (row.action !== 'skip') selected.delete(row.serial_number);
-                render();status($('xds-batch-status'),'本次同步已完成。成功设备已取消勾选，跳过的设备保留选择，便于核对。' + (data.migration_warning ? '\n搬迁标识提示：' + data.migration_warning : ''),data.migration_warning ? 'warning' : 'success');
+            openSync(all.filter(v => selected.has(v.serial_number)),(data,sharing) => {
+                const confirmed = new Set(sharing.serials.map(sn => sn.toLowerCase()));
+                for (const vehicle of all) {
+                    if (!confirmed.has(String(vehicle.serial_number).toLowerCase())) continue;
+                    vehicle.sharing_status = '未共享';selected.delete(vehicle.serial_number);
+                }
+                render();status($('xds-batch-status'),rcUnshareMessage(sharing) + '\n已确认关闭 RC 共享的设备已取消勾选；跳过或未确认关闭的设备保留选择，请核对。' + (data.migration_warning ? '\n搬迁标识提示：' + data.migration_warning : ''),!sharing.complete || data.migration_warning ? 'warning' : 'success');
             });
         });
         load();

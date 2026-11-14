@@ -1429,7 +1429,7 @@ button.device-name {
     </style> 
 <link rel="stylesheet" href="xinghe-device-sync.css?v=20261113">
 <script src="xinghe-device-migration.js?v=20261113" defer></script>
-<script src="xinghe-device-sync.js?v=20261113" defer></script>
+<script src="xinghe-device-sync.js?v=20261113-unshare" defer></script>
 </head> 
  
 <body> 
@@ -1952,6 +1952,19 @@ function buildCarTypeOptionsHtml(selectedValue) {
         let userCanDirectEditName = false;
         let currentDeviceNameEdit = null;
         const banTimers = {};
+
+// A sync result only updates the devices whose RC unshare was confirmed by the server.
+window.addEventListener('xinghe:rc-unshared', function (event) {
+    const serials = event.detail && event.detail.serial_numbers;
+    if (!Array.isArray(serials)) return;
+    const confirmed = new Set(serials.filter(sn => typeof sn === 'string').map(sn => sn.toLowerCase()));
+    let changed = false;
+    allDevices.forEach(function (device) {
+        if (!confirmed.has(String(device.serial_number || '').toLowerCase())) return;
+        device.sharing_status = '未共享';changed = true;
+    });
+    if (changed) renderDevices();
+});
 
 async function fetchCurrentUserRole() {
     try {

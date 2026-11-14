@@ -10,6 +10,27 @@
         if (!response.ok || result.code !== 0) throw new Error(result.msg || '请求失败');
         return result.data;
     }
+    function venueRcUnshareReport(data) {
+        const value = data.rc_unshare, warning = String(data.rc_unshare_warning || '');
+        const expected = data.created_devices + data.updated_devices;
+        let valid = Number.isInteger(data.created_devices) && data.created_devices >= 0
+            && Number.isInteger(data.updated_devices) && data.updated_devices >= 0
+            && value && typeof value.success === 'boolean' && value.requested_count === expected
+            && Number.isInteger(value.unshared_count) && value.unshared_count >= 0
+            && Number.isInteger(value.changed_count) && value.changed_count >= 0 && value.changed_count <= value.unshared_count
+            && Array.isArray(value.serial_numbers) && value.serial_numbers.length === value.unshared_count;
+        const seen = new Set();
+        if (valid) for (const sn of value.serial_numbers) {
+            if (typeof sn !== 'string' || !sn || seen.has(sn.toLowerCase())) {valid = false;break;}
+            seen.add(sn.toLowerCase());
+        }
+        valid = valid && value.unshared_count <= expected;
+        const count = valid ? value.unshared_count : 0;
+        const complete = !!(valid && value.success && count === expected && !warning);
+        return {complete,message:'RC 已确认设为未共享：' + count + ' 台。' + (complete
+            ? ' 跳过设备的共享状态未改变。'
+            : '\n' + (warning || 'RC 共享关闭结果未确认，请在 RC 核对并设为未共享，检查两端补丁是否部署完整。'))};
+    }
     function style() {
         if (document.getElementById('xh-sync-style')) return;
         const el = document.createElement('style'); el.id = 'xh-sync-style';
@@ -28,7 +49,7 @@
         pending.add(venueId); button.disabled = true; style();
         const dialog = document.createElement('dialog'); dialog.className = 'xh-sync-dialog';
         dialog.setAttribute('aria-label', '同步场地到星河');
-        dialog.innerHTML = `<h2>同步场地到星河</h2><p>同步场地资料、套餐、绑定设备、控制配置和关联摄像头图传。</p>
+        dialog.innerHTML = `<h2>同步场地到星河</h2><p>同步场地资料、套餐、绑定设备、控制配置和关联摄像头图传。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。</p>
         <form><fieldset class="xh-fields" disabled>
           <div class="xh-mode"><label><input type="radio" name="zone_mode" value="existing" checked> 选择星河已有专区</label><label><input type="radio" name="zone_mode" value="new"> 新建星河专区</label></div>
           <section class="xh-existing"><label class="xh-field"><span>目标专区</span><select name="zone_id" required aria-label="星河已有专区"></select></label></section>
@@ -105,7 +126,7 @@
             if (data.current_zone_id != null && Array.from(select.options).some(o => o.value === String(data.current_zone_id))) select.value = String(data.current_zone_id);
             if (!data.zones.length) form.elements.zone_mode.value = 'new';
             fields.disabled = false; loaded = true; submit.disabled = false; mode();
-            message('同步后场地归入所选专区；套餐和设备配置随场地更新。');
+            message('同步后场地归入所选专区；套餐和设备配置随场地更新。同步成功的设备将自动在 RC 设为未共享。');
         } catch (error) { if (dialog.isConnected) message('读取专区失败：' + error.message + '\n请检查两端文件及配置，关闭后重试。', true); }
         form.addEventListener('submit', async event => {
             event.preventDefault(); if (busy || !loaded || !form.reportValidity()) return;
@@ -123,7 +144,8 @@
                 const skippedDevices = Array.isArray(data.skipped_devices) ? data.skipped_devices : [];
                 const skippedPricing = Array.isArray(data.skipped_pricing_options) ? data.skipped_pricing_options : [];
                 const skippedCameras = Array.isArray(data.skipped_camera_configurations) ? data.skipped_camera_configurations : [];
-                let report = (missingCameras.length || skippedDevices.length || skippedPricing.length || skippedCameras.length ? '同步完成（有保留或跳过项）' : '同步成功') + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
+                const sharing = venueRcUnshareReport(data);
+                let report = (!sharing.complete ? '星河已同步，但 RC 共享关闭未完成' : missingCameras.length || skippedDevices.length || skippedPricing.length || skippedCameras.length ? '同步完成（有保留或跳过项）' : '同步成功') + '\n' + sharing.message + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
                     '\n新增设备：' + data.created_devices + '\n更新设备：' + data.updated_devices + '\n控制配置：' + data.configurations +
                     '\n摄像头图传：' + data.camera_configurations + '\n计费规则：' + (data.billing_rules || 0);
                 const invite = data.invite_code_sync;

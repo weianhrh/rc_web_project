@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/xinghe_sync_common.php';
 require_once __DIR__ . '/xinghe_device_sync.php';
+require_once __DIR__ . '/xinghe_sync_unshare.php';
 $conn = null;
 try {
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') xhReply(405, '仅支持POST请求');
@@ -34,11 +35,13 @@ try {
         $conn->begin_transaction(MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
         $payload['target_venue_id'] = $targetId;
         $payload['items'] = xdsSourceItems($conn, $requested);
+        if ($input['action'] === 'sync') $unshareIdentities = xsuCaptureSelected($conn, $payload['items']);
         $payload['preview_token'] = $input['preview_token'] ?? null;
         $conn->commit();
     }
     $data = xhRemote($config, $payload);
     if ($input['action'] === 'sync') {
+        $data = xsuAfterSelectedSync($conn, $data, $payload['items'], $unshareIdentities, $payload['target_venue_id']);
         try {
             require_once __DIR__ . '/xinghe_migration_hooks.php';
             $data = xhmRecordSelectedResult($conn, $data, $payload['items']);

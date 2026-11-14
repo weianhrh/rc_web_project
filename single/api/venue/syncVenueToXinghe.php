@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/xinghe_sync_common.php';
+require_once __DIR__ . '/xinghe_sync_unshare.php';
 function xhSourceCamera($conn, $value) {
     // Numeric front/back references may be local record IDs; preserve that precedence.
     if (ctype_digit($value)) {
@@ -55,6 +56,7 @@ try {
     $pricing = xhQuery($conn, 'SELECT * FROM PricingOptions WHERE BindLocation=? ORDER BY ID', [(string)$id]);
     // Current projects bind by numeric venue ID. Do not match names (names need not be unique).
     $vehicles = xhQuery($conn, 'SELECT * FROM vehicles WHERE bind_site=? ORDER BY serial_number', [(string)$id]);
+    $unshareIdentities = xsuCaptureVenue($conn, $vehicles);
     $settings = [];
     $serials = [];
     $cameras = [];
@@ -124,6 +126,7 @@ try {
         'zone' => $input['zone'] ?? ['mode' => 'keep']];
     $conn->commit();
     $data = xhRemote($config, $payload);
+    $data = xsuAfterVenueSync($conn, $data, $unshareIdentities, (string)$id);
     try {
         require_once __DIR__ . '/xinghe_migration_hooks.php';
         $data = xhmRecordVenueResult($conn, $data, $vehicles, $venue['venue_name'] ?? '');
