@@ -1450,7 +1450,7 @@ body {
             <button class="add-btn" id="add-venue-btn">添加场地</button>
             <button type="button" class="level-log-page-btn" onclick="openVenueLevelLogs()">等级变动记录</button>
 
-            <input list="venue_options" id="venue_search" placeholder="输入场地名称搜索" autocomplete="off"
+            <input list="venue_options" id="venue_search" placeholder="输入场地名称 / ID / 邀请码搜索" autocomplete="off"
                 style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px;">
             <datalist id="venue_options"></datalist>
 <select id="venue_level_filter" class="venue-level-filter">
@@ -1981,6 +1981,11 @@ ${[1, 2].includes(Number(window.role)) ? `
                 });
             }
 
+function getVenueSearchText(venue) {
+    const inviteCode = String(venue.invite_code || '').trim();
+    return `${venue.id} - ${venue.venue_name}${inviteCode ? `（邀请码：${inviteCode}）` : ''}`;
+}
+
 function applyFilters() {
     const keyword = venueSearch.value.trim().toLowerCase();
     const selectedLevel = venueLevelFilter.value.trim().toUpperCase();
@@ -1996,8 +2001,9 @@ function applyFilters() {
         filtered = filtered.filter(v => {
             const idText = String(v.id || '');
             const nameText = String(v.venue_name || '').toLowerCase();
-            const mixText = `${v.id} - ${v.venue_name}`.toLowerCase();
-            return idText.includes(keyword) || nameText.includes(keyword) || mixText.includes(keyword);
+            const inviteCode = String(v.invite_code || '').trim().toLowerCase();
+            const mixText = getVenueSearchText(v).toLowerCase();
+            return idText.includes(keyword) || nameText.includes(keyword) || inviteCode.includes(keyword) || mixText.includes(keyword);
         });
     }
 
@@ -2353,7 +2359,7 @@ window.setVenueSpendingAlert = function (venueId, isSpendingAlert) {
 
                         venues.forEach(venue => {
                             const option = document.createElement('option');
-                            option.value = `${venue.id} - ${venue.venue_name}`;
+                            option.value = getVenueSearchText(venue);
                             venueOptions.appendChild(option);
                             venueMap.set(venue.id, venue.venue_name);
                         });

@@ -1496,6 +1496,7 @@ elseif ($action === 'loadingdata') {
                         v.is_pinned,
                         v.pinned_at,
                         v.venue_name,  
+                        v.invite_code,
                         COALESCE(NULLIF(TRIM(v.venue_level), ''), 'A') AS venue_level,
                         v.is_disabled_sound,
                         v.is_user_mic_enabled,
