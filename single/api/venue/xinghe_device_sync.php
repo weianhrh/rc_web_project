@@ -1,5 +1,15 @@
 <?php
 // Standalone selected-device sync. Requires the existing xinghe_sync_common.php.
+function xdsTargetUid($value) {
+    if ($value === null) return null;
+    if (!is_string($value) && !is_int($value)) throw new RuntimeException('新绑定UID须为正整数，留空则按原同步规则');
+    $value = trim((string)$value);
+    if ($value === '') return null;
+    if (!preg_match('/^[0-9]+$/D', $value)) throw new RuntimeException('新绑定UID须为正整数，留空则按原同步规则');
+    $value = ltrim($value, '0');
+    if ($value === '' || filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) throw new RuntimeException('新绑定UID无效或超出范围');
+    return $value;
+}
 function xdsParseList($text) {
     if (!is_string($text) || strlen($text) > 32000) throw new RuntimeException('设备清单过长或格式错误');
     $items = []; $seen = [];
@@ -124,7 +134,8 @@ function xdsAssetPlan($conn, $table, $data, &$cache) {
     if (!$found && $table === 'device_information' && stripos($columns['id']['Extra'] ?? '', 'auto_increment') === false) throw new RuntimeException('星河图传表id须为自增主键');
     return ['table' => $table, 'data' => $data, 'existing_id' => $found ? (string)$found[0]['id'] : null];
 }
-function xdsPlan($conn, $targetId, $items) {
+function xdsPlan($conn, $targetId, $items, $targetUid = null) {
+    $targetUid = xdsTargetUid($targetUid);
     if (!is_array($items) || !$items || count($items) > 100) throw new RuntimeException('同步设备数量须为1至100台');
     $cache = [];
     $venueColumns = xdsColumns($conn, 'venues', $cache);
@@ -132,8 +143,21 @@ function xdsPlan($conn, $targetId, $items) {
     $settingColumns = xdsColumns($conn, 'vehicle_control_settings', $cache);
     $venue = xhQuery($conn, 'SELECT id,venue_name,zone_id FROM venues WHERE id=? FOR UPDATE', [$targetId]);
     if (count($venue) !== 1) throw new RuntimeException('所选星河场地不存在，请刷新列表重新选择');
+    $targetUser = null;
+    if ($targetUid !== null) {
+        // Validate and lock the target account again on both preview and commit.
+        // Blank UID deliberately keeps the old import behavior and needs no user lookup.
+        $userColumns = xdsColumns($conn, 'users', $cache);
+        xhCheckFields($userColumns, ['uid' => $targetUid, 'nickname' => ''], 'users');
+        xhCheckFields($vehicleColumns, ['uid' => $targetUid], 'vehicles');
+        $users = xhQuery($conn, 'SELECT uid,nickname FROM users WHERE uid=? FOR UPDATE', [$targetUid]);
+        if (count($users) !== 1) throw new RuntimeException('星河不存在指定UID的用户，请核对星河用户UID后重新预览');
+        $targetUser = ['uid' => (string)$users[0]['uid'], 'nickname' => (string)($users[0]['nickname'] ?? '')];
+        if ($targetUser['uid'] !== $targetUid) throw new RuntimeException('星河用户UID查询结果不一致，请核对后重新预览');
+    }
     // All imports share the existing global RC sync lock (acquired by the caller).
-    $plan = ['target' => $venue[0], 'rows' => [], 'assets' => []]; $seen = []; $identities = [];
+    // target_user is part of the signed preview so a changed UID requires a new preview.
+    $plan = ['target' => $venue[0], 'target_user' => $targetUser, 'rows' => [], 'assets' => []]; $seen = []; $identities = [];
     foreach ($items as $item) {
         if (!is_array($item) || !is_string($item['serial_number'] ?? null) || !preg_match('/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,99}$/D', $item['serial_number'])) throw new RuntimeException('同步包设备序列号无效');
         $sn = $item['serial_number']; $key = strtolower($sn);
@@ -143,6 +167,7 @@ function xdsPlan($conn, $targetId, $items) {
             if (isset($item['error'])) throw new RuntimeException((string)$item['error']);
             if (!is_array($item['vehicle'] ?? null) || ($item['vehicle']['serial_number'] ?? null) !== $sn) throw new RuntimeException('车辆数据与序列号不对应');
             $vehicle = xhPick($item['vehicle'], xhVehicleFields()); $vehicle['bind_site'] = $targetId;
+            if ($targetUser !== null) $vehicle['uid'] = $targetUser['uid'];
             xhCheckFields($vehicleColumns, $vehicle, 'vehicles');
             $existing = xhQuery($conn, 'SELECT id,bind_site FROM vehicles WHERE serial_number=? FOR UPDATE', [$sn]);
             if (count($existing) > 1) throw new RuntimeException('星河存在重复序列号');
@@ -193,6 +218,7 @@ function xdsPlan($conn, $targetId, $items) {
             $row['vehicle'] = $vehicle; $row['settings'] = $settings; $row['settings_exists'] = (bool)$oldSettings;
             $row['refs'] = $refs; $row['billing_key'] = $billingKey;
             $row['camera_count'] = count($refs);
+            if ($targetUser !== null) $row['target_uid'] = $targetUser['uid'];
             $row['reason'] = count($refs) ? '图传关联已核对' : '无关联图传记录';
             $plan['assets'] += $assets; $identities += $rowIdentities;
         } catch (mysqli_sql_exception $e) { throw $e; }
@@ -205,9 +231,9 @@ function xdsPublicPlan($plan) {
     $rows = []; $summary = ['create' => 0, 'update' => 0, 'bind' => 0, 'skip' => 0];
     foreach ($plan['rows'] as $row) {
         $summary[$row['action']]++;
-        $rows[] = xhPick($row, ['serial_number','name','source_venue_id','source_venue_name','camera_hint','camera_count','warnings','action','reason']);
+        $rows[] = xhPick($row, ['serial_number','name','source_venue_id','source_venue_name','camera_hint','camera_count','warnings','action','reason','target_uid']);
     }
-    return ['target' => $plan['target'], 'rows' => $rows, 'summary' => $summary];
+    return ['target' => $plan['target'], 'target_user' => $plan['target_user'], 'rows' => $rows, 'summary' => $summary];
 }
 function xdsPreviewToken($plan, $secret, $expires) { return $expires . '.' . hash_hmac('sha256', $expires . ':' . xdsHash($plan), $secret); }
 function xdsVerifyPreview($plan, $secret, $token) {

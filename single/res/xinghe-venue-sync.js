@@ -49,8 +49,10 @@
         pending.add(venueId); button.disabled = true; style();
         const dialog = document.createElement('dialog'); dialog.className = 'xh-sync-dialog';
         dialog.setAttribute('aria-label', '同步场地到星河');
-        dialog.innerHTML = `<h2>同步场地到星河</h2><p>同步场地资料、套餐、绑定设备、控制配置和关联摄像头图传。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。</p>
+        dialog.innerHTML = `<h2>同步场地到星河</h2><p>选择同步类型和目标专区。</p>
         <form><fieldset class="xh-fields" disabled>
+          <label class="xh-field"><span>同步类型</span><select name="sync_type" aria-describedby="xh-sync-description"><option value="full">场地、套餐及设备（完整同步）</option><option value="venue_only">仅同步场地</option></select></label>
+          <p id="xh-sync-description" class="xh-sync-description"></p>
           <div class="xh-mode"><label><input type="radio" name="zone_mode" value="existing" checked> 选择星河已有专区</label><label><input type="radio" name="zone_mode" value="new"> 新建星河专区</label></div>
           <section class="xh-existing"><label class="xh-field"><span>目标专区</span><select name="zone_id" required aria-label="星河已有专区"></select></label></section>
           <section class="xh-new" hidden>
@@ -68,6 +70,11 @@
         let busy = false, loaded = false;
         function message(text, error) { status.textContent = text; status.classList.toggle('xh-error', !!error); }
         function mode() {
+            const venueOnly = form.elements.sync_type.value === 'venue_only';
+            dialog.querySelector('.xh-sync-description').textContent = venueOnly
+                ? '仅同步场地资料、专区和语音房，邀请码沿用星河分配规则；设备、控制配置、图传、套餐及 RC 共享状态均不更改。'
+                : '同步场地资料、套餐、绑定设备、控制配置和关联摄像头图传。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。';
+            submit.textContent = venueOnly ? '确认仅同步场地' : '确认完整同步';
             const isNew = form.elements.zone_mode.value === 'new';
             dialog.querySelector('.xh-existing').hidden = isNew; dialog.querySelector('.xh-new').hidden = !isNew;
             select.disabled = isNew; select.required = !isNew;
@@ -119,6 +126,7 @@
             const data = await request({ action: 'list_zones', venue_id: Number(venueId) });
             if (!dialog.isConnected) return;
             if (!Array.isArray(data.zones)) throw new Error('请先覆盖新版星河端文件');
+            if (!Array.isArray(data.source_sync_types) || !data.source_sync_types.includes('venue_only')) throw new Error('请先更新 RC 的场地同步接口，当前接口尚不支持选择同步类型');
             for (const zone of data.zones) {
                 const option = document.createElement('option'); option.value = zone.zone_id;
                 option.textContent = zone.partition_name + '（ID: ' + zone.zone_id + (Number(zone.is_visible) === 0 ? '，隐藏' : '') + '）'; select.appendChild(option);
@@ -126,10 +134,11 @@
             if (data.current_zone_id != null && Array.from(select.options).some(o => o.value === String(data.current_zone_id))) select.value = String(data.current_zone_id);
             if (!data.zones.length) form.elements.zone_mode.value = 'new';
             fields.disabled = false; loaded = true; submit.disabled = false; mode();
-            message('同步后场地归入所选专区；套餐和设备配置随场地更新。同步成功的设备将自动在 RC 设为未共享。');
+            message('请选择同步类型，核对目标专区后确认。');
         } catch (error) { if (dialog.isConnected) message('读取专区失败：' + error.message + '\n请检查两端文件及配置，关闭后重试。', true); }
         form.addEventListener('submit', async event => {
             event.preventDefault(); if (busy || !loaded || !form.reportValidity()) return;
+            const syncType = form.elements.sync_type.value, venueOnly = syncType === 'venue_only';
             const selectedMode = form.elements.zone_mode.value;
             const zone = selectedMode === 'existing' ? { mode: selectedMode, zone_id: Number(select.value) } : {
                 mode: selectedMode, partition_name: form.elements.partition_name.value.trim(), zone_image: form.elements.zone_image.value.trim(),
@@ -137,9 +146,19 @@
             };
             if (selectedMode === 'new' && !zone.partition_name) { message('请输入新专区名称', true); return; }
             busy = true; fields.disabled = submit.disabled = cancel.disabled = true;
-            message('正在同步场地、套餐、设备及图传配置，请稍候…');
+            message(venueOnly ? '正在仅同步场地资料，请稍候…' : '正在同步场地、套餐、设备及图传配置，请稍候…');
             try {
-                const data = await request({ venue_id: Number(venueId), zone }); dialog.close();
+                const data = await request({ venue_id: Number(venueId), sync_type: syncType, zone });
+                if (data.sync_type !== syncType) throw new Error('接口返回的同步类型不一致，请核对两端部署文件');
+                dialog.close();
+                if (venueOnly) {
+                    let report = '仅场地同步成功\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id;
+                    const invite = data.invite_code_sync;
+                    if (invite && /^[0-9]{4}$/.test(String(invite.invite_code))) report += '\n星河邀请码：' + invite.invite_code + (invite.assignment === 'generated' ? '（新分配）' : '（保留现有）');
+                    if (data.restored_venue) report += '\n已按原映射恢复缺失的星河场地。';
+                    window.alert(report + '\n设备、控制配置、图传、套餐及 RC 共享状态均未更改。');
+                    return;
+                }
                 const missingCameras = Array.isArray(data.missing_camera_refs) ? data.missing_camera_refs : [];
                 const skippedDevices = Array.isArray(data.skipped_devices) ? data.skipped_devices : [];
                 const skippedPricing = Array.isArray(data.skipped_pricing_options) ? data.skipped_pricing_options : [];

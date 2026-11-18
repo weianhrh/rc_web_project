@@ -26,6 +26,9 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     $id = filter_var($input['venue_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     if (!$id) xhReply(400, '场地ID无效');
+    $syncType = $input['sync_type'] ?? 'full';
+    if (!in_array($syncType, ['full', 'venue_only'], true)) xhReply(400, '同步类型无效');
+    $venueOnly = $syncType === 'venue_only';
     $config = xhConfig();
     if (strtolower(parse_url($config['url'], PHP_URL_SCHEME) ?? '') !== 'https' || !parse_url($config['url'], PHP_URL_HOST)) {
         throw new RuntimeException('请配置星河接收接口的HTTPS地址 XINGHE_SYNC_URL');
@@ -42,10 +45,13 @@ try {
     if (!$admins) xhReply(1001, '登录已过期');
     if (!in_array((int)$admins[0]['role_id'], [1, 2], true)) xhReply(403, '仅平台管理员可同步');
     if (($input['action'] ?? '') === 'list_zones') {
-        xhReply(0, '星河专区列表', xhRemote($config, ['version' => 2, 'source' => 'RC', 'action' => 'list_zones', 'source_venue_id' => (int)$id]));
+        $zones = xhRemote($config, ['version' => 2, 'source' => 'RC', 'action' => 'list_zones', 'source_venue_id' => (int)$id]);
+        // Advertise only here: an older RC sender ignores sync_type and always syncs devices.
+        $zones['source_sync_types'] = ['full', 'venue_only'];
+        xhReply(0, '星河专区列表', $zones);
     }
-    xhTransactional($conn, ['venues', 'vehicles', 'vehicle_control_settings']);
-    xhTransactional($conn, ['PricingOptions', 'venue_invite_codes']);
+    xhTransactional($conn, ['venues', 'venue_invite_codes']);
+    if (!$venueOnly) xhTransactional($conn, ['vehicles', 'vehicle_control_settings', 'PricingOptions']);
     $conn->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     $conn->begin_transaction(MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
     $venues = xhQuery($conn, 'SELECT * FROM venues WHERE id=?', [$id]);
@@ -53,6 +59,17 @@ try {
     $venue = $venues[0];
     $inviteRows = xhQuery($conn, 'SELECT venue_id,invite_code,is_enabled FROM venue_invite_codes WHERE venue_id=?', [$id]);
     if (count($inviteRows) > 1) throw new RuntimeException('RC该场地存在多条邀请码记录，请先核对 venue_invite_codes');
+    if ($venueOnly) {
+        // Version 7 fails closed on old receivers; no device/package reads or RC migration hooks.
+        $payload = ['version' => 7, 'source' => 'RC', 'sync_type' => 'venue_only', 'source_venue_id' => (int)$id,
+            'venue' => xhPick($venue, array_merge(xhVenueFields(), ['venue_room_id'])),
+            'vehicles' => [], 'settings' => [], 'venue_invite_code' => $inviteRows ? $inviteRows[0] : null,
+            'zone' => $input['zone'] ?? ['mode' => 'keep']];
+        $conn->commit();
+        $data = xhRemote($config, $payload);
+        if (($data['sync_type'] ?? '') !== 'venue_only') throw new RuntimeException('星河未确认仅同步场地，请核对两端同步接口版本');
+        xhReply(0, '仅场地资料已同步到星河，设备及套餐未更改', $data);
+    }
     $pricing = xhQuery($conn, 'SELECT * FROM PricingOptions WHERE BindLocation=? ORDER BY ID', [(string)$id]);
     // Current projects bind by numeric venue ID. Do not match names (names need not be unique).
     $vehicles = xhQuery($conn, 'SELECT * FROM vehicles WHERE bind_site=? ORDER BY serial_number', [(string)$id]);
@@ -134,6 +151,7 @@ try {
         error_log('RC migration hook unavailable: ' . $markError->getMessage());
         $data['migration_warning'] = '星河同步已完成，但RC搬迁标识未保存。请补齐搬迁标识补丁文件及建表SQL，再点击“补标历史搬迁”。';
     }
+    $data['sync_type'] = 'full';
     xhReply(0, '场地、套餐、设备及图传配置已同步到星河', $data);
 } catch (Throwable $e) {
     if ($conn) { try { $conn->rollback(); } catch (Throwable $ignored) {} }

@@ -29,6 +29,12 @@ try {
     if ($input['action'] !== 'list_venues') {
         $targetId = filter_var($input['target_venue_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if (!$targetId) throw new RuntimeException('请选择星河已有场地');
+        $targetUid = xdsTargetUid($input['target_uid'] ?? null);
+        if ($targetUid !== null) {
+            // Old receivers reject v2 rather than silently ignoring a requested owner.
+            $payload['protocol'] = 'rc_selected_devices_v2';
+            $payload['target_uid'] = $targetUid;
+        }
         $requested = xdsParseList($input['devices_text'] ?? null);
         xhTransactional($conn, ['venues','vehicles','vehicle_control_settings','device_information']);
         $conn->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');

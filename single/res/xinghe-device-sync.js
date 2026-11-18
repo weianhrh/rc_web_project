@@ -115,6 +115,9 @@
         $('xds-preview-summary').textContent = '星河 ID ' + data.target.id + ' · ' + data.target.venue_name + ' ｜ ' + (completed
             ? '已新增 ' + data.counts.created_devices + ' 台，已更新 ' + data.counts.updated_devices + ' 台，跳过 ' + s.skip + ' 台'
             : '新增 ' + s.create + ' 台，更新 ' + s.update + ' 台，绑定并更新 ' + s.bind + ' 台，跳过 ' + s.skip + ' 台');
+        $('xds-preview-user').textContent = data.target_user
+            ? (completed ? '本次成功同步车辆已统一绑定：' : '本次可同步车辆将统一绑定：') + '星河 UID ' + data.target_user.uid + ' · ' + (data.target_user.nickname || '未设置昵称') + '。跳过车辆不改绑。'
+            : '未指定新 UID：已有星河车辆保留原绑定，新车按星河默认值处理。';
         $('xds-result-rows').replaceChildren();
         for (const row of data.rows) {
             const tr = node('tr'), device = node('td','xds-result-device'), action = node('td'), detail = node('td','xds-result-detail',row.reason || '');
@@ -128,17 +131,24 @@
     async function previewDevices() {
         if (busy || !operation || !$('xds-target').value) return;
         const version = epoch, target = Number($('xds-target').value), text = operation.devices.map(v => v.serial_number).join('\n');
+        const uid = $('xds-target-uid').value.trim();
+        if (uid && (!/^[1-9][0-9]*$/.test(uid) || uid.length > 10 || Number(uid) > 2147483647)) {
+            invalidatePreview();
+            status($('xds-modal-status'), '新 UID 请填写有效的正整数，或留空沿用原同步规则。', 'error');
+            $('xds-target-uid').focus(); return;
+        }
         invalidatePreview(); pending = new AbortController(); setBusy('preview');
-        status($('xds-modal-status'), '正在核对 RC 配置、星河车辆归属和关联图传…');
+        status($('xds-modal-status'), '正在核对 RC 配置、星河车辆归属、关联图传' + (uid ? '和绑定用户…' : '…'));
         try {
-            const data = await api({action:'preview',target_venue_id:target,devices_text:text}, pending.signal);
+            const data = await api({action:'preview',target_venue_id:target,devices_text:text,target_uid:uid || null}, pending.signal);
             if (version !== epoch) return;
+            if (uid && (!data.target_user || String(data.target_user.uid) !== uid)) throw new Error('接口尚未确认新 UID，请先更新 RC 和星河的同步文件，再重新预览。');
             renderResult(data);
             const eligible = data.summary.create + data.summary.update + data.summary.bind;
-            preview = eligible ? {target,text,data} : null;
+            preview = eligible ? {target,text,uid,data} : null;
             $('xds-confirm').hidden = !eligible;
             $('xds-confirm').textContent = '确认同步 ' + eligible + ' 台';
-            status($('xds-modal-status'), eligible ? '尚未写入数据。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。请核对目标场地和预览后确认。' : '没有可同步的设备，请查看跳过原因。',eligible ? '' : 'error');
+            status($('xds-modal-status'), eligible ? '尚未写入数据。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。请核对目标场地' + (uid ? '、绑定 UID' : '') + '和预览后确认。' : '没有可同步的设备，请查看跳过原因。',eligible ? '' : 'error');
         } catch (error) { if (version === epoch) status($('xds-modal-status'), error.message, 'error'); }
         finally { if (version === epoch) {pending = null; setBusy('');} }
     }
@@ -147,8 +157,9 @@
         const version = epoch, chosen = preview, onCompleted = operation.onCompleted;
         setBusy('sync'); status($('xds-modal-status'), '正在同步到星河，请稍候…');
         try {
-            const data = await api({action:'sync',target_venue_id:chosen.target,devices_text:chosen.text,preview_token:chosen.data.preview_token});
+            const data = await api({action:'sync',target_venue_id:chosen.target,devices_text:chosen.text,target_uid:chosen.uid || null,preview_token:chosen.data.preview_token});
             if (version !== epoch) return;
+            if (chosen.uid && (!data.target_user || String(data.target_user.uid) !== chosen.uid)) throw new Error('同步接口未返回预期的绑定 UID。请先在星河核对本批车辆绑定情况，并检查两端同步文件。');
             renderResult(data, true); $('xds-cancel').textContent = '关闭';
             const sharing = rcUnshareResult(data), migrationWarning = String(data.migration_warning || '');
             status($('xds-modal-status'), rcUnshareMessage(sharing) + (migrationWarning ? '\n搬迁标识提示：' + migrationWarning : ''), !sharing.complete || migrationWarning ? 'warning' : 'success');
@@ -164,11 +175,12 @@
     function createModal() {
         modal = node('dialog','xds-dialog'); modal.id = 'xds-dialog'; modal.setAttribute('aria-labelledby','xds-modal-title');
         // Static template only. All device/API values below are inserted with textContent.
-        modal.innerHTML = `<header class="xds-dialog-header"><div><h2 id="xds-modal-title">同步设备到星河</h2><p class="xds-muted">选择星河已有场地，核对后同步。</p></div><button id="xds-modal-close" type="button" class="xds-close" aria-label="关闭">×</button></header>
+        modal.innerHTML = `<header class="xds-dialog-header"><div><h2 id="xds-modal-title">同步设备到星河</h2><p class="xds-muted">选择星河已有场地，可为本批车辆指定新的绑定 UID。</p></div><button id="xds-modal-close" type="button" class="xds-close" aria-label="关闭">×</button></header>
         <div class="xds-dialog-main"><div class="xds-device-summary"><strong id="xds-operation-summary"></strong><details id="xds-operation-details"><summary>查看本次设备</summary><ul id="xds-operation-devices"></ul></details></div>
-        <fieldset id="xds-target-fields" disabled><div class="xds-target-fields"><label for="xds-target-search">搜索星河场地<input id="xds-target-search" type="search" placeholder="场地 ID / 名称" autocomplete="off"></label><label for="xds-target">目标场地<select id="xds-target"><option value="">请选择星河已有场地</option></select></label></div></fieldset>
+        <fieldset id="xds-target-fields" disabled><div class="xds-target-fields"><label for="xds-target-search">搜索星河场地<input id="xds-target-search" type="search" placeholder="场地 ID / 名称" autocomplete="off"></label><label for="xds-target">目标场地<select id="xds-target"><option value="">请选择星河已有场地</option></select></label></div>
+        <div class="xds-uid-field"><label for="xds-target-uid">绑定新 UID（选填）<input id="xds-target-uid" type="text" inputmode="numeric" maxlength="10" placeholder="填写星河用户 UID" autocomplete="off" aria-describedby="xds-uid-note"></label><p id="xds-uid-note" class="xds-target-note">填写后，本批成功同步车辆统一绑定该星河用户。留空时，已有星河车辆保留原绑定，新车按星河默认值处理。</p></div></fieldset>
         <p class="xds-target-note">同步成功的设备将自动在 RC 设为未共享。设备已属于星河其他场地时会跳过，跳过设备不更改共享状态；图传及控制参数从 RC 自动读取。</p><button id="xds-target-retry" type="button" class="xds-btn xds-target-retry" hidden>重新读取星河场地</button>
-        <section id="xds-preview-box" class="xds-preview-box" hidden><h3 id="xds-result-title">同步预览</h3><div class="xds-preview-summary" id="xds-preview-summary"></div><div class="xds-table-wrap"><table><thead><tr><th>设备</th><th>处理</th><th>说明</th></tr></thead><tbody id="xds-result-rows"></tbody></table></div></section>
+        <section id="xds-preview-box" class="xds-preview-box" hidden><h3 id="xds-result-title">同步预览</h3><div class="xds-preview-summary" id="xds-preview-summary"></div><div class="xds-preview-summary" id="xds-preview-user"></div><div class="xds-table-wrap"><table><thead><tr><th>设备</th><th>处理</th><th>说明</th></tr></thead><tbody id="xds-result-rows"></tbody></table></div></section>
         <div id="xds-modal-status" class="xds-status" role="status" aria-live="polite"></div></div>
         <footer class="xds-dialog-footer"><button id="xds-cancel" type="button" class="xds-btn">取消</button><button id="xds-preview" type="button" class="xds-btn xds-primary" disabled>预览同步</button><button id="xds-confirm" type="button" class="xds-btn xds-primary" hidden disabled>确认同步</button></footer>`;
         document.body.append(modal);
@@ -177,6 +189,7 @@
         modal.addEventListener('close',() => {epoch++; if (pending) pending.abort(); pending = null; busy = ''; operation = null; preview = null;});
         $('xds-target-search').addEventListener('input',renderTargets);
         $('xds-target').addEventListener('change',() => {invalidatePreview(); setBusy(''); status($('xds-modal-status'),'目标已选择，请预览同步。');});
+        $('xds-target-uid').addEventListener('input',() => {invalidatePreview(); setBusy(''); status($('xds-modal-status'),'绑定 UID 已修改，请重新预览同步。');});
         $('xds-target-retry').addEventListener('click',loadTargets);
         $('xds-preview').addEventListener('click',previewDevices); $('xds-confirm').addEventListener('click',syncDevices);
     }
@@ -195,7 +208,7 @@
         $('xds-operation-summary').textContent = list.length === 1 ? (list[0].name || '未命名设备') + ' · ' + list[0].serial_number : '本次已选 ' + list.length + ' 台 RC 设备';
         $('xds-operation-details').hidden = list.length === 1; $('xds-operation-details').open = false;
         $('xds-operation-devices').replaceChildren(...list.map(v => node('li','',(v.name || '未命名设备') + ' · ' + v.serial_number)));
-        $('xds-target-search').value = ''; $('xds-cancel').textContent = '取消'; invalidatePreview();
+        $('xds-target-search').value = ''; $('xds-target-uid').value = ''; $('xds-cancel').textContent = '取消'; invalidatePreview();
         modal.showModal(); loadTargets();
     }
     window.XingheDeviceSync = {open:openSync};
