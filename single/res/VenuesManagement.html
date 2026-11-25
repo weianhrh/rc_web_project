@@ -1561,7 +1561,190 @@ function setBanDescriptionTemplate(type) {
     });
 }
 
+// PNG and WebP can carry animation. Preserve all frames when the upload is evidence.
+async function isStaticBanImage(file, extension) {
+    if (extension === 'jpg' || extension === 'jpeg') return true;
+    const bytes = new Uint8Array(await file.slice(0, 65536).arrayBuffer());
+    const view = new DataView(bytes.buffer);
+    if (extension === 'webp') {
+        if (bytes.length < 21) return false;
+        const format = view.getUint32(12);
+        return format === 0x56503820 || format === 0x5650384c || // VP8 / VP8L
+            (format === 0x56503858 && (bytes[20] & 2) === 0); // VP8X without animation
+    }
+    // In PNG, acTL precedes the first IDAT. Leave uncertain or unusual headers intact.
+    for (let offset = 8; offset + 8 <= bytes.length;) {
+        const tag = view.getUint32(offset + 4);
+        if (tag === 0x6163544c) return false; // acTL
+        if (tag === 0x49444154) return true;  // IDAT
+        offset += 12 + view.getUint32(offset);
+    }
+    return false;
+}
+
+async function prepareBanMedia(file) {
+    const extension = file.name.split('.').pop().toLowerCase();
+    const imageLimit = 5 * 1024 * 1024;
+    if (extension === 'mp4') {
+        if (file.size > 50 * 1024 * 1024) throw new Error(file.name + ' 超过视频上限 50 MB');
+        return file;
+    }
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(extension)) throw new Error('请选择 JPG、PNG、WebP 图片或 MP4 视频');
+    let best = file;
+    if (await isStaticBanImage(file, extension)) {
+        const source = URL.createObjectURL(file);
+        const canvas = document.createElement('canvas');
+        try {
+            const image = new Image();
+            await new Promise((resolve, reject) => {
+                image.onload = resolve;
+                image.onerror = () => reject(new Error('无法读取图片：' + file.name));
+                image.src = source;
+            });
+            const context = canvas.getContext('2d');
+            // Try the clearest version first; stop reducing once the upload is small enough.
+            for (const [longEdge, quality] of [[1920, 0.86], [1600, 0.78], [1280, 0.72]]) {
+                const scale = Math.min(1, longEdge / Math.max(image.naturalWidth, image.naturalHeight));
+                canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+                context.imageSmoothingQuality = 'high';
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+                if (!blob) break;
+                // Browsers without a WebP encoder can return PNG instead.
+                const suffix = {'image/webp': 'webp', 'image/png': 'png'}[blob.type];
+                if (suffix && blob.size > 0 && blob.size < best.size) {
+                    best = new File([blob], file.name.replace(/\.[^.]+$/, '') + '.' + suffix, {type: blob.type, lastModified: file.lastModified});
+                }
+                if (best.size <= 200 * 1024) break;
+            }
+        } finally {
+            URL.revokeObjectURL(source);
+            canvas.width = canvas.height = 0;
+        }
+    }
+    if (best.size > imageLimit) throw new Error(file.name + ' 处理后仍超过图片上限 5 MB，请重新选图');
+    return best;
+}
+
+function initVenueBanForm(loadVenues) {
+    const modal = document.getElementById('banModal');
+    const form = document.getElementById('banForm');
+    const input = document.getElementById('banImage');
+    const preview = document.getElementById('banPreviewList');
+    const status = document.getElementById('banMediaStatus');
+    const submit = form.querySelector('.ban-submit-btn');
+    let selection = 0;
+    let pending = Promise.resolve([]);
+    let submitting = false;
+    const previewUrls = [];
+    const uploaded = new Map();
+
+    function clearPreviews() {
+        preview.replaceChildren();
+        for (const url of previewUrls) URL.revokeObjectURL(url);
+        previewUrls.length = 0;
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        input.value = '';
+        input.dispatchEvent(new Event('change'));
+    }
+    modal.querySelector('.modal-close').addEventListener('click', () => { if (!submitting) closeModal(); });
+    modal.addEventListener('click', event => { if (event.target === modal && !submitting) closeModal(); });
+
+    input.addEventListener('change', () => {
+        const batch = ++selection;
+        const originals = Array.from(input.files);
+        clearPreviews();
+        uploaded.clear();
+        submit.disabled = submitting;
+        status.textContent = originals.length ? '正在准备附件…' : '';
+        pending = (async () => {
+            if (originals.length > 3) throw new Error('最多只能上传 3 个文件，请重新选择');
+            const files = [];
+            for (const original of originals) {
+                if (batch !== selection) return null;
+                files.push(await prepareBanMedia(original));
+            }
+            if (batch !== selection) return null;
+            const sizes = [];
+            const formatSize = file => Math.max(1, Math.round(file.size / 1024)) + ' KB';
+            files.forEach((file, i) => {
+                const video = /\.mp4$/i.test(file.name);
+                const element = document.createElement(video ? 'video' : 'img');
+                if (video) element.controls = true;
+                else element.alt = originals[i].name;
+                const url = URL.createObjectURL(file);
+                previewUrls.push(url);
+                element.src = url;
+                preview.appendChild(element);
+                sizes.push(originals[i].name + '：' + (file === originals[i] ? formatSize(file) + '（原文件）' : formatSize(originals[i]) + ' → ' + formatSize(file)));
+            });
+            status.textContent = sizes.join('\n');
+            return files;
+        })().catch(error => {
+            if (batch === selection) {
+                status.textContent = error.message || '附件处理失败，请重新选择';
+                submit.disabled = true;
+            }
+            return null;
+        });
+    });
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (submitting || submit.disabled) return;
+        const reason = document.getElementById('banReason').value.trim();
+        if (!reason) { alert('请填写封禁描述'); return; }
+        const venueId = document.getElementById('banVenueId').value;
+        const duration = document.getElementById('banDuration').value;
+        submitting = true;
+        input.disabled = submit.disabled = true;
+        submit.textContent = '正在准备…';
+        let selectionFailed = false;
+        try {
+            const files = await pending;
+            if (files === null) { selectionFailed = true; return; }
+            const urls = [];
+            for (const file of files) {
+                submit.textContent = '上传附件 ' + (urls.length + 1) + '/' + files.length + '…';
+                if (!uploaded.has(file)) {
+                    const data = new FormData();
+                    data.append('file', file);
+                    const response = await fetch('https://open.rcwulian.cn/api/devMgr/upload_violation_image.php', {method: 'POST', body: data});
+                    const result = await response.json();
+                    if (!response.ok || result.code !== 0 || !result.data || !result.data.image_url) throw new Error(result.msg || '附件上传失败');
+                    uploaded.set(file, result.data.image_url);
+                }
+                urls.push(uploaded.get(file));
+            }
+            submit.textContent = '正在封禁…';
+            const response = await fetch('https://open.rcwulian.cn/api/devMgr/devMgtV2.php', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ban: true, id: 1, venue_id: venueId, banType: 'venue', ban_duration: parseInt(duration, 10), ban_reason: reason,
+                    image_url: urls[0] || null, image_url_2: urls[1] || null, image_url_3: urls[2] || null, image_urls: urls})
+            });
+            const result = await response.json();
+            if (!response.ok || result.code !== 0) throw new Error(result.msg || '封禁失败');
+            alert('封禁成功');
+            closeModal();
+            loadVenues();
+        } catch (error) {
+            alert('提交失败：' + error.message);
+        } finally {
+            submitting = false;
+            input.disabled = false;
+            submit.disabled = selectionFailed;
+            submit.textContent = '确认封禁';
+        }
+    });
+}
+
 function openBanModal(venueId) {
+    const fileInput = document.getElementById('banImage');
+    if (fileInput.disabled) return;
     document.getElementById('banVenueId').value = venueId;
 
     // 默认封禁时长：10分钟
@@ -1571,11 +1754,8 @@ function openBanModal(venueId) {
     setBanDescriptionTemplate(3);
 
     // 每次打开时清空已选图片/视频预览
-    const fileInput = document.getElementById('banImage');
-    const previewList = document.getElementById('banPreviewList');
-    
-    if (fileInput) fileInput.value = '';
-    if (previewList) previewList.innerHTML = '';
+    fileInput.value = '';
+    fileInput.dispatchEvent(new Event('change'));
 
     document.getElementById('banModal').style.display = 'block';
 }
@@ -2453,158 +2633,7 @@ allVenues = venues.sort((a, b) => {
                     setBanDescriptionTemplate(this.dataset.template);
                 });
             });
-            document.querySelector('.modal-close').addEventListener('click', () => {
-                document.getElementById('banModal').style.display = 'none';
-            });
-
-            window.addEventListener('click', function (event) {
-                const banModal = document.getElementById('banModal');
-                if (event.target === banModal) banModal.style.display = 'none';
-            });
-
-            // 图片/视频预览
-            // 图片/视频预览，最多3个
-            const banInput = document.getElementById('banImage');
-            const previewList = document.getElementById('banPreviewList');
-            
-            function renderBanPreviews(files) {
-                previewList.innerHTML = '';
-            
-                files.forEach(file => {
-                    const url = URL.createObjectURL(file);
-                    const isMp4 = file.type === 'video/mp4' || file.name.toLowerCase().endsWith('.mp4');
-            
-                    let el;
-                    if (isMp4) {
-                        el = document.createElement('video');
-                        el.controls = true;
-                        el.src = url;
-                    } else {
-                        el = document.createElement('img');
-                        el.src = url;
-                    }
-            
-                    previewList.appendChild(el);
-                });
-            }
-            
-            banInput.addEventListener('change', function () {
-                const files = Array.from(this.files || []);
-            
-                if (files.length > 3) {
-                    alert('最多只能上传3个文件');
-                    this.value = '';
-                    previewList.innerHTML = '';
-                    return;
-                }
-            
-                renderBanPreviews(files);
-            });
-            
-            async function uploadBanFile(file) {
-                const fd = new FormData();
-                fd.append('file', file);
-            
-                const upRes = await fetch('https://open.rcwulian.cn/api/devMgr/upload_violation_image.php', {
-                    method: 'POST',
-                    body: fd
-                });
-            
-                const upJson = await upRes.json();
-            
-                if (!upRes.ok || upJson.code !== 0) {
-                    throw new Error(upJson.msg || upRes.status);
-                }
-            
-                const imageUrl = upJson.data && upJson.data.image_url ? upJson.data.image_url : '';
-            
-                if (!imageUrl) {
-                    throw new Error('上传接口未返回 image_url');
-                }
-            
-                return imageUrl;
-            }
-            
-            // 提交封禁：先上传最多3个文件，再封禁
-            document.getElementById('banForm').addEventListener('submit', async function (e) {
-                e.preventDefault();
-            
-                const venueId = document.getElementById('banVenueId').value;
-                const duration = document.getElementById('banDuration').value;
-                const reason = document.getElementById('banReason').value;
-            
-                if (!reason.trim()) {
-                    alert('请填写封禁描述');
-                    return;
-                }
-            
-                const fileInput = document.getElementById('banImage');
-                const files = Array.from(fileInput.files || []);
-            
-                if (files.length > 3) {
-                    alert('最多只能上传3个文件');
-                    return;
-                }
-            
-                let imageUrls = [];
-            
-                if (files.length > 0) {
-                    try {
-                        for (const file of files) {
-                            const url = await uploadBanFile(file);
-                            imageUrls.push(url);
-                        }
-                    } catch (err) {
-                        alert('文件上传异常：' + err.message);
-                        return;
-                    }
-                }
-            
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', 'https://open.rcwulian.cn/api/devMgr/devMgtV2.php', true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-            
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState === 4) {
-                        if (xhr.status === 200) {
-                            try {
-                                const response = JSON.parse(xhr.responseText);
-                                if (response.code === 0) {
-                                    alert('封禁成功');
-                                    document.getElementById('banModal').style.display = 'none';
-                                    loadVenues();
-                                } else {
-                                    alert('封禁失败: ' + response.msg);
-                                }
-                            } catch (err) {
-                                console.error('响应解析失败:', err);
-                                alert('服务器响应格式错误');
-                            }
-                        } else {
-                            alert('请求失败，状态码: ' + xhr.status);
-                        }
-                    }
-                };
-            
-                const data = {
-                    ban: true,
-                    id: 1,
-                    venue_id: venueId,
-                    banType: 'venue',
-                    ban_duration: parseInt(duration, 10),
-                    ban_reason: reason.trim(),
-            
-                    // 兼容后端单字段
-                    image_url: imageUrls[0] || null,
-                    image_url_2: imageUrls[1] || null,
-                    image_url_3: imageUrls[2] || null,
-            
-                    // 也传数组，后端以后扩展更方便
-                    image_urls: imageUrls
-                };
-            
-                xhr.send(JSON.stringify(data));
-            });
+            initVenueBanForm(loadVenues);
         });
 
         function editVenue(venueId) {
@@ -2813,7 +2842,8 @@ allVenues = venues.sort((a, b) => {
             <!--</div>-->
             <div class="ban-form-group">
                 <label for="banImage">违规图片/视频（可选，最多3个）</label>
-                <input type="file" id="banImage" accept="image/*,video/mp4" multiple />
+                <input type="file" id="banImage" accept=".jpg,.jpeg,.png,.webp,.mp4" multiple />
+                <div id="banMediaStatus" role="status" style="white-space:pre-line;overflow-wrap:anywhere;font-size:13px"></div>
                 <div id="banPreviewList" class="ban-preview-list"></div>
             </div>
             <button type="submit" class="ban-submit-btn">确认封禁</button>
