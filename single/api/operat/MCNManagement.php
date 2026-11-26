@@ -53,11 +53,6 @@ function validate_payload(Database $database, $currentMcnId = 0) {
 
     $venueRows = venue_rows($database, $venueIds);
     if (count($venueRows) !== count($venueIds)) respond(1004, '包含不存在的场地');
-    foreach ($venueRows as $venueRow) {
-        if ((int)$venueRow['venue_uid'] <= 0) {
-            respond(1004, '场地' . $venueRow['id'] . '尚未绑定加盟商UID，不能加入MCN');
-        }
-    }
 
     $params = $venueIds;
     $sql = 'SELECT mv.venue_id, mo.mcn_name FROM mcn_venues mv

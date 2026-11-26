@@ -157,10 +157,9 @@
       $('venuePicker').innerHTML = state.venues.map(v => {
         const occupied = Number(v.mcn_id || 0) > 0 && Number(v.mcn_id) !== Number(currentMcnId || 0);
         const missingUid = Number(v.venue_uid || 0) <= 0;
-        const disabled = occupied || missingUid;
         const checked = selectedIds.includes(Number(v.id));
         const reason = occupied ? ` · ${escapeHtml(v.mcn_name)}` : (missingUid ? ' · 未绑定加盟商UID' : '');
-        return `<label class="venue-option ${disabled ? 'disabled' : ''}"><input type="checkbox" value="${v.id}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}><span>${escapeHtml(v.venue_name)}（${v.id}）${reason}</span></label>`;
+        return `<label class="venue-option ${occupied ? 'disabled' : ''}"><input type="checkbox" value="${v.id}" ${checked ? 'checked' : ''} ${occupied ? 'disabled' : ''}><span>${escapeHtml(v.venue_name)}（${v.id}）${reason}</span></label>`;
       }).join('');
       $('venuePicker').querySelectorAll('input').forEach(input => input.addEventListener('change', () => updateDefaultOptions()));
     }
