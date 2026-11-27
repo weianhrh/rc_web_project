@@ -72,8 +72,8 @@
         function mode() {
             const venueOnly = form.elements.sync_type.value === 'venue_only';
             dialog.querySelector('.xh-sync-description').textContent = venueOnly
-                ? '仅同步场地资料、专区和语音房，邀请码沿用星河分配规则；设备、控制配置、图传、套餐及 RC 共享状态均不更改。'
-                : '同步场地资料、套餐、绑定设备、控制配置和关联摄像头图传。同步成功的设备将自动在 RC 设为未共享，跳过设备不更改。';
+                ? '同步场地资料、专区和语音房，邀请码沿用星河分配规则。两边都没有套餐时添加默认模板，星河已有套餐保留。'
+                : '同步场地资料、RC 套餐、绑定设备、控制配置和关联摄像头图传。套餐按星河费率规则处理，两边都没有套餐时添加默认模板。同步成功的设备将自动在 RC 设为未共享。';
             submit.textContent = venueOnly ? '确认仅同步场地' : '确认完整同步';
             const isNew = form.elements.zone_mode.value === 'new';
             dialog.querySelector('.xh-existing').hidden = isNew; dialog.querySelector('.xh-new').hidden = !isNew;
@@ -156,15 +156,17 @@
                     const invite = data.invite_code_sync;
                     if (invite && /^[0-9]{4}$/.test(String(invite.invite_code))) report += '\n星河邀请码：' + invite.invite_code + (invite.assignment === 'generated' ? '（新分配）' : '（保留现有）');
                     if (data.restored_venue) report += '\n已按原映射恢复缺失的星河场地。';
-                    window.alert(report + '\n设备、控制配置、图传、套餐及 RC 共享状态均未更改。');
+                    if (data.seeded_pricing_options > 0) report += '\n已添加默认套餐：' + data.seeded_pricing_options + ' 档';
+                    window.alert(report);
                     return;
                 }
                 const missingCameras = Array.isArray(data.missing_camera_refs) ? data.missing_camera_refs : [];
                 const skippedDevices = Array.isArray(data.skipped_devices) ? data.skipped_devices : [];
                 const skippedPricing = Array.isArray(data.skipped_pricing_options) ? data.skipped_pricing_options : [];
+                const pricingReview = Array.isArray(data.pricing_options_needing_review) ? data.pricing_options_needing_review : [];
                 const skippedCameras = Array.isArray(data.skipped_camera_configurations) ? data.skipped_camera_configurations : [];
                 const sharing = venueRcUnshareReport(data);
-                let report = (!sharing.complete ? '星河已同步，但 RC 共享关闭未完成' : missingCameras.length || skippedDevices.length || skippedPricing.length || skippedCameras.length ? '同步完成（有保留或跳过项）' : '同步成功') + '\n' + sharing.message + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
+                let report = (!sharing.complete ? '星河已同步，但 RC 共享关闭未完成' : missingCameras.length || skippedDevices.length || skippedPricing.length || pricingReview.length || skippedCameras.length ? '同步完成（有保留或跳过项）' : '同步成功') + '\n' + sharing.message + '\n星河场地ID：' + data.xinghe_venue_id + '\n专区ID：' + data.zone_id + '\n场地套餐：' + data.pricing_options +
                     '\n新增设备：' + data.created_devices + '\n更新设备：' + data.updated_devices + '\n控制配置：' + data.configurations +
                     '\n摄像头图传：' + data.camera_configurations + '\n计费规则：' + (data.billing_rules || 0);
                 const invite = data.invite_code_sync;
@@ -175,6 +177,7 @@
                 }
                 if (data.restored_venue) report += '\n已按原映射恢复缺失的星河场地：' + data.xinghe_venue_id;
                 if (data.pricing_summary) report += '\n套餐处理：新增 ' + data.pricing_summary.created + ' / 更新 ' + data.pricing_summary.updated + ' / 复用 ' + data.pricing_summary.reused;
+                if (data.seeded_pricing_options > 0) report += '\n已添加默认套餐：' + data.seeded_pricing_options + ' 档';
                 if (data.camera_summary) report += '\n图传处理：新增 ' + data.camera_summary.created + ' / 复用 ' + data.camera_summary.reused;
                 if ((data.bound_unassigned_devices || []).length) report += '\n绑定原未绑定设备：' + data.bound_unassigned_devices.length + ' 台';
                 if (skippedDevices.length) {
@@ -185,6 +188,14 @@
                 if (skippedPricing.length) {
                     report += '\n\n跳过其他场地套餐：' + skippedPricing.length + ' 条（保留原套餐及归属）';
                     for (const item of skippedPricing.slice(0, 20)) report += '\n' + item.title + ' → 星河套餐 ' + item.target_pricing_id + ' / 场地 ' + item.existing_venue_id;
+                }
+                if (pricingReview.length) {
+                    report += '\n\n' + pricingReview.length + ' 条套餐已跳过，请核对以下原因。';
+                    for (const item of pricingReview.slice(0, 20)) {
+                        const label = item.side === 'target' ? '星河套餐 ' + item.target_pricing_id : 'RC 套餐 ' + item.source_pricing_id;
+                        report += '\n' + label + '（' + item.title + '）：' + (item.minutes ?? '空') + ' 分钟 / ' + (item.battery ?? '空') + ' 电池。' + (item.reason || '请核对套餐信息');
+                    }
+                    if (pricingReview.length > 20) report += '\n其余待核对套餐见接口响应。';
                 }
                 if (skippedCameras.length) {
                     report += '\n\n跳过冲突图传：' + skippedCameras.length + ' 条（保留星河记录，待核对）';

@@ -50,8 +50,8 @@ try {
         $zones['source_sync_types'] = ['full', 'venue_only'];
         xhReply(0, '星河专区列表', $zones);
     }
-    xhTransactional($conn, ['venues', 'venue_invite_codes']);
-    if (!$venueOnly) xhTransactional($conn, ['vehicles', 'vehicle_control_settings', 'PricingOptions']);
+    xhTransactional($conn, ['venues', 'venue_invite_codes', 'PricingOptions']);
+    if (!$venueOnly) xhTransactional($conn, ['vehicles', 'vehicle_control_settings']);
     $conn->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     $conn->begin_transaction(MYSQLI_TRANS_START_WITH_CONSISTENT_SNAPSHOT);
     $venues = xhQuery($conn, 'SELECT * FROM venues WHERE id=?', [$id]);
@@ -60,15 +60,17 @@ try {
     $inviteRows = xhQuery($conn, 'SELECT venue_id,invite_code,is_enabled FROM venue_invite_codes WHERE venue_id=?', [$id]);
     if (count($inviteRows) > 1) throw new RuntimeException('RC该场地存在多条邀请码记录，请先核对 venue_invite_codes');
     if ($venueOnly) {
-        // Version 7 fails closed on old receivers; no device/package reads or RC migration hooks.
+        // Only send availability; the venue-only protocol carries no package or device rows.
+        $availability = xhQuery($conn, 'SELECT EXISTS (SELECT 1 FROM PricingOptions WHERE BindLocation=?) AS has_pricing', [(string)$id]);
         $payload = ['version' => 7, 'source' => 'RC', 'sync_type' => 'venue_only', 'source_venue_id' => (int)$id,
             'venue' => xhPick($venue, array_merge(xhVenueFields(), ['venue_room_id'])),
-            'vehicles' => [], 'settings' => [], 'venue_invite_code' => $inviteRows ? $inviteRows[0] : null,
+            'vehicles' => [], 'settings' => [], 'has_source_pricing' => (bool)$availability[0]['has_pricing'],
+            'venue_invite_code' => $inviteRows ? $inviteRows[0] : null,
             'zone' => $input['zone'] ?? ['mode' => 'keep']];
         $conn->commit();
         $data = xhRemote($config, $payload);
         if (($data['sync_type'] ?? '') !== 'venue_only') throw new RuntimeException('星河未确认仅同步场地，请核对两端同步接口版本');
-        xhReply(0, '仅场地资料已同步到星河，设备及套餐未更改', $data);
+        xhReply(0, '场地资料已同步到星河', $data);
     }
     $pricing = xhQuery($conn, 'SELECT * FROM PricingOptions WHERE BindLocation=? ORDER BY ID', [(string)$id]);
     // Current projects bind by numeric venue ID. Do not match names (names need not be unique).

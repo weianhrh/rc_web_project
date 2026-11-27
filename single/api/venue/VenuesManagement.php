@@ -286,8 +286,13 @@ if ($method === 'POST') {
         
         // 自动生成场地id（当前最大id + 1） 
         $getMaxIdSql = "SELECT MAX(id) as max_id FROM venues"; 
-        $result = $database->query($getMaxIdSql); 
-        $maxId = $result ? $result[0]['max_id'] : 0; 
+        $result = $database->query($getMaxIdSql);
+        if (!$result) {
+            echo json_encode(['code' => 1, 'msg' => '读取场地编号失败', 'data' => []], JSON_UNESCAPED_UNICODE);
+            $database->close();
+            exit;
+        }
+        $maxId = (int)$result[0]['max_id'];
         $id = $maxId + 1; 
          // 新增场地默认房间ID：120000 + 主键id
         $venue_room_id = 120000 + intval($id);
@@ -327,27 +332,49 @@ if ($method === 'POST') {
             $is_claw_machine_venue,
             $venue_level
         ];
-   if ($database->query($insertSql, $params, true)) {
+        $conn = $database->getConnection();
+        $transactionStarted = false;
+        try {
+            require_once __DIR__ . '/../lib/venue_pricing_policy.php';
+            if (!$conn->begin_transaction()) {
+                throw new RuntimeException('无法开启场地创建事务');
+            }
+            $transactionStarted = true;
+            if ($database->query($insertSql, $params, true) !== 1) {
+                throw new RuntimeException('场地写入失败');
+            }
 
-    // ✅【新增】生成邀请码
-    $invite_code = genInviteCode($id);
+            $invite_code = genInviteCode($id);
+            if ($database->query(
+                "UPDATE venues SET invite_code = ? WHERE id = ? LIMIT 1",
+                [$invite_code, (string)$id],
+                true
+            ) === false) {
+                throw new RuntimeException('场地邀请码写入失败');
+            }
+            if ($database->query(
+                "INSERT INTO venue_invite_codes (venue_id, invite_code, is_enabled)
+                 VALUES (?, ?, 1)
+                 ON DUPLICATE KEY UPDATE invite_code = VALUES(invite_code), is_enabled = 1",
+                [(string)$id, $invite_code],
+                true
+            ) === false) {
+                throw new RuntimeException('场地邀请码关联失败');
+            }
 
-    // ✅【新增】写回 venues.invite_code（确保 venues 已加 invite_code 字段）
-    $database->query(
-        "UPDATE venues SET invite_code = ? WHERE id = ? LIMIT 1",
-        [$invite_code, (string)$id],
-        true
-    );
-
-    // ✅【新增】可选：同步写入 venue_invite_codes（你截图那张表）
-    // 如果你老板还要这张表继续用，就保留；不需要就删掉这段
-    $database->query(
-        "INSERT INTO venue_invite_codes (venue_id, invite_code, is_enabled)
-         VALUES (?, ?, 1)
-         ON DUPLICATE KEY UPDATE invite_code = VALUES(invite_code), is_enabled = 1",
-        [(string)$id, $invite_code],
-        true
-    );
+            venuePricingSeed($conn, $id);
+            if (!$conn->commit()) {
+                throw new RuntimeException('场地创建事务提交失败');
+            }
+        } catch (Throwable $e) {
+            if ($transactionStarted) {
+                $conn->rollback();
+            }
+            error_log('新建场地失败：' . $e->getMessage());
+            echo json_encode(['code' => 1, 'msg' => '场地及默认套餐创建失败，请查看后台日志', 'data' => []], JSON_UNESCAPED_UNICODE);
+            $database->close();
+            exit;
+        }
 
     $syncResult = null;
     
@@ -426,10 +453,7 @@ if ($method === 'POST') {
         'sync_overseas' => $syncResult
     ], JSON_UNESCAPED_UNICODE);
 
-} else {
-    echo json_encode(['code' => 1, 'msg' => '场地添加失败', 'data' => []], JSON_UNESCAPED_UNICODE);
-}
- 
+
         // 关闭数据库连接 
         $database->close(); 
         }
