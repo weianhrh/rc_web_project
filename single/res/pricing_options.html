@@ -437,11 +437,11 @@
             <h2>添加套餐</h2>
             <div class="pricing-item">
                 <div class="label">可驾驶时长（分钟）</div>
-                <input type="number" id="add-minutes" min="2" max="120" step="1" class="edit-input">
+                <input type="number" id="add-minutes" class="edit-input">
             </div>
             <div class="pricing-item">
-                <div class="label">套餐总电池数（电池）</div>
-                <input type="number" id="add-battery" min="1" step="1" class="edit-input" placeholder="正整数">
+                <div class="label">可驾驶时长的电池费用</div>
+                <input type="number" id="add-battery" class="edit-input" value="0.00">
             </div>
             <div class="pricing-item">
                 <div class="label">备注</div>
@@ -463,68 +463,40 @@
     <script>
     
   let currentUserRole = 0;
-    let rateMin = 5;
-    let rateMax = 10;
-    let discountThreshold = 50;
-    let discountRateMin = 3;
-    let pricingRequest = 0;
 
-    function decimalText(value) {
-        const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value));
-        if (!match) return null;
-        const whole = match[2].replace(/^0+/, '') || '0';
-        const fraction = (match[3] || '').replace(/0+$/, '');
-        const number = whole + (fraction ? '.' + fraction : '');
-        return number === '0' ? '0' : match[1] + number;
-    }
-
-    function pricingRateHint(minutes, battery) {
-        const maximum = minutes * rateMax;
-        const discounted = battery > discountThreshold;
-        const minimumRate = discounted ? discountRateMin : rateMin;
-        const floorMessage = `总电池数${discounted ? '超过' : '不超过'} ${discountThreshold} 时，电池数 ÷ 分钟数不能低于 ${minimumRate}。`;
-        let reason;
-        if (battery < minutes * minimumRate) {
-            reason = floorMessage;
-        } else if (battery > maximum) {
-            reason = `电池数 ÷ 分钟数不能超过 ${rateMax}。`;
-        } else if ((10 * battery) % minutes !== 0) {
-            reason = (discounted ? '' : floorMessage) + `${battery} ÷ ${minutes} 的结果超过一位小数。`;
-        } else {
-            return '';
+     // ✅ 统一资费费率配置，后面只改这里
+    const RATE_MIN = 0.8;
+    const RATE_MAX = 3;
+    
+    function calcPricingRate(battery, minutes) {
+        const b = Number(battery);
+        const m = Number(minutes);
+    
+        if (!Number.isFinite(b) || !Number.isFinite(m) || m <= 0) {
+            return NaN;
         }
-
-        // 在当前时长的合法整数价格中，给出输入值两侧最近的选择。
-        let lower = null;
-        let upper = null;
-        for (let price = 1; price <= maximum; price++) {
-            const candidateMinimum = price > discountThreshold ? discountRateMin : rateMin;
-            if (price < minutes * candidateMinimum || (10 * price) % minutes !== 0) continue;
-            if (price < battery) {
-                lower = price;
-            } else {
-                upper = price;
-                break;
-            }
+    
+        return Math.round((b / m) * 100) / 100;
+    }
+    
+    function isRateValidForCurrentUser(rate) {
+        // role_id = 1 管理员不限制
+        if (currentUserRole === 1) {
+            return true;
         }
-        const choices = [lower, upper].filter(price => price !== null);
-        return reason + (choices.length ? `${minutes} 分钟可填 ${choices.join(' 或 ')} 电池。` : '');
+    
+        return Number.isFinite(rate) && rate >= RATE_MIN && rate <= RATE_MAX;
     }
-
-    function pricingError(minutes, battery, samePrice) {
-        const whole = /^[1-9]\d{0,11}$/;
-        if (!whole.test(decimalText(minutes))) return '可驾驶时长必须为正整数。';
-        if (!whole.test(decimalText(battery))) return '套餐总电池数必须为正整数。';
-        if (samePrice) return '';
-        if (Number(minutes) < 2 || Number(minutes) > 120) return '可驾驶时长必须在 2 至 120 分钟之间。';
-        return pricingRateHint(Number(minutes), Number(battery));
+    
+    function getRateErrorText(rate) {
+        const currentRateText = Number.isFinite(rate) ? rate.toFixed(2) : '无效';
+        return `费率必须在 ${RATE_MIN} 元/分钟到 ${RATE_MAX} 元/分钟之间（当前费率：${currentRateText}），请重新输入。`;
     }
-
     fetch('https://open.rcwulian.cn/api/operat/get_current_user.php')
       .then(res => res.json())
       .then(data => {
         if (data.code === 0) {
-          currentUserRole = Number(data.data.role_id);
+          currentUserRole = data.data.role_id;
 
          if (currentUserRole === 1 || currentUserRole === 2){
             document.getElementById('venue-select-wrapper').style.display = 'block';
@@ -599,15 +571,15 @@ function setupVenueSelectAndLoad() {
             fetch('https://open.rcwulian.cn/api/operat/pricing_options.php',  {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'insert_default', venue_id: document.getElementById('venue_id').value })
+                body: JSON.stringify({  action: 'insert_default' })
             })
             .then(response => response.json()) 
             .then(data => {
                 if (data.code  === 0) {
-                    alert(data.msg);
+                    alert('默认套餐生成成功');
                     loadPricingData(); // 重新加载数据
                 } else {
-                    alert('生成失败：' + data.msg);
+                    alert('生成失败，请重试');
                 }
             })
             .catch(error => {
@@ -618,7 +590,6 @@ function setupVenueSelectAndLoad() {
 
         // 加载资费套餐数据
        function loadPricingData() {
-        const request = ++pricingRequest;
         let url = 'https://open.rcwulian.cn/api/operat/pricing_options.php';
          if (currentUserRole === 1 || currentUserRole === 2){
             const venue_id = document.getElementById('venue_id').value;
@@ -631,55 +602,37 @@ function setupVenueSelectAndLoad() {
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                if (request !== pricingRequest) return;
-                if (data.code !== 0 || !Array.isArray(data.data)) {
-                    pricingListContainer.textContent = data.msg || '加载套餐失败';
-                    return;
-                }
-                if (Number.isFinite(Number(data.rate_min)) && Number.isFinite(Number(data.rate_max)) && data.rate_min != null && data.rate_max != null) {
-                    rateMin = Number(data.rate_min);
-                    rateMax = Number(data.rate_max);
-                }
-                if (Number.isFinite(data.discount_threshold)) {
-                    discountThreshold = data.discount_threshold;
-                }
-                const serverDiscountMin = Number(data.discount_rate_min);
-                discountRateMin = Number.isFinite(serverDiscountMin) && serverDiscountMin > 0 ? serverDiscountMin : 3;
-                pricingListContainer.innerHTML = '';
+                pricingListContainer.innerHTML = ''; // 再清空一次，准备插入新数据
     
                 if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
                     data.data.forEach(pricing => {
                         const pricingItem = document.createElement('div');
                         pricingItem.classList.add('pricing-item');
     
-                        pricingItem.dataset.minutes = pricing.Minutes;
-                        pricingItem.dataset.battery = pricing.Battery;
-                        pricingItem.dataset.venue = pricing.BindLocation;
-                        pricingItem.dataset.title = pricing.Title || '';
-                        pricingItem.dataset.notes = pricing.Notes || '';
+                        const tag = pricing.Tag || '(福利)';
                         pricingItem.innerHTML = `
                             <div class="label">套餐名称</div>
                             <div class="value" id="title-${pricing.ID}">
-                                ${pricing.Minutes}分钟${Number(pricing.Battery)}电池
+                                ${pricing.Minutes}分钟${parseInt(pricing.Battery)}电池
                                 <select id="tag-select-${pricing.ID}" class="package-tag-select" disabled>
-                                    <option value="(福利)" ${(pricing.Title || '').includes("福利") ? "selected" : ""}>(福利)</option>
-                                    <option value="(推荐)" ${(pricing.Title || '').includes("推荐") ? "selected" : ""}>(推荐)</option>
-                                    <option value="(划算)" ${(pricing.Title || '').includes("划算") ? "selected" : ""}>(划算)</option>
-                                    <option value="(超值)" ${(pricing.Title || '').includes("超值") ? "selected" : ""}>(超值)</option>
+                                    <option value="(福利)" ${pricing.Title.includes("福利") ? "selected" : ""}>(福利)</option>
+                                    <option value="(推荐)" ${pricing.Title.includes("推荐") ? "selected" : ""}>(推荐)</option>
+                                    <option value="(划算)" ${pricing.Title.includes("划算") ? "selected" : ""}>(划算)</option>
+                                    <option value="(超值)" ${pricing.Title.includes("超值") ? "selected" : ""}>(超值)</option>
                                 </select>
                             </div>
     
                             <div class="label">可驾驶时长</div>
                             <div class="value" id="minutes-${pricing.ID}">${pricing.Minutes ? pricing.Minutes + '分钟' : '无'}</div>
     
-                            <div class="label">套餐总电池数（电池）</div>
+                            <div class="label">可驾驶时长的电池费用</div>
                             <div class="value" id="battery-${pricing.ID}">${pricing.Battery ? pricing.Battery : '无'}</div>
     
                             <div class="label">备注</div>
-                            <div class="value" id="notes-${pricing.ID}"></div>
+                            <div class="value" id="notes-${pricing.ID}">${pricing.Notes ? pricing.Notes : '无'}</div>
     
                             <div class="label">资费类型</div>
-                            <div class="value" id="pricingType-${pricing.ID}"></div>
+                            <div class="value" id="pricingType-${pricing.ID}">${pricing.PricingType}</div>
     
 <div class="pricing-actions">
   <button class="edit-btn" onclick="enableEdit(${pricing.ID})">修改套餐</button>
@@ -688,33 +641,58 @@ function setupVenueSelectAndLoad() {
 </div>
                         `;
     
-                        pricingItem.querySelector(`#notes-${pricing.ID}`).textContent = pricing.Notes || '无';
-                        pricingItem.querySelector(`#pricingType-${pricing.ID}`).textContent = pricing.PricingType || '';
-                        pricingItem.dataset.tag = pricingItem.querySelector('select').value;
                         pricingListContainer.appendChild(pricingItem);
                     });
                 } else {
-                    pricingListContainer.innerHTML = '<p>该场地暂无套餐数据。</p><button class="add-btn" onclick="generateDefaultPricingOption()">使用 8 号场地模板套餐</button>';
+                    pricingListContainer.innerHTML = '<p style="color:#999">该场地暂无套餐数据。</p>';
                 }
             })
             .catch(error => {
-                if (request !== pricingRequest) return;
                 console.error('数据加载失败:', error);
                 pricingListContainer.innerHTML = '<p style="color:red">加载失败，请检查网络</p>';
             });
     }
+        // 把「10分钟 / 10分鐘 / 10分 / 10min / 10 minutes」都变成「10」
+        function cleanMinutes(text) {
+            if (!text) return '';
+            text = String(text).trim();
+        
+            // 去掉结尾的 简体 / 繁体 单位
+            text = text.replace(/(分钟|分鐘)\s*$/i, '');
+            // 有些翻译可能只剩一个「分」
+            text = text.replace(/分\s*$/i, '');
+            // 英文各种写法：min / mins / minute / minutes
+            text = text.replace(/\s*(min|mins|minute|minutes)\.?$/i, '');
+        
+            return text.trim();
+        }
+        
+                // 使字段可编辑
+        // 使字段可编辑
         function enableEdit(id) {
-            const item = document.getElementById(`title-${id}`).closest('.pricing-item');
-            ['minutes', 'battery', 'notes'].forEach(field => {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'edit-input';
-                input.value = item.dataset[field];
-                const container = document.getElementById(`${field}-${id}`);
-                container.textContent = '';
-                container.appendChild(input);
+            const fields = [
+                { id: `minutes-${id}`, label: '可驾驶时长' },
+                { id: `battery-${id}`, label: '可驾驶时长的电池费用' },
+                { id: `notes-${id}`, label: '备注' }
+            ];
+        
+            fields.forEach(field => {
+                const valueElement = document.getElementById(field.id);
+                if (!valueElement) return;
+        
+                let text = (valueElement.textContent || '').trim();
+        
+                // 只对“可驾驶时长”这一项去掉单位
+                if (field.id === `minutes-${id}`) {
+                    text = cleanMinutes(text);
+                }
+        
+                // 防止引号打断 HTML
+                const safeValue = text.replace(/"/g, '&quot;');
+        
+                valueElement.innerHTML = `<input type="text" class="edit-input" value="${safeValue}">`;
             });
-
+        
             // 启用下拉框
             const tagSelect = document.getElementById(`tag-select-${id}`);
             if (tagSelect) tagSelect.disabled = false;
@@ -732,24 +710,56 @@ function setupVenueSelectAndLoad() {
 
         // 保存编辑内容
         function saveChanges(id) {
-            const item = document.getElementById(`title-${id}`).closest('.pricing-item');
-            const minutes = document.querySelector(`#minutes-${id} input`).value.trim();
-            const battery = document.querySelector(`#battery-${id} input`).value.trim();
-            const tag = document.getElementById(`tag-select-${id}`).value;
-            const samePrice = decimalText(minutes) === decimalText(item.dataset.minutes)
-                && decimalText(battery) === decimalText(item.dataset.battery);
-            const error = pricingError(minutes, battery, samePrice);
-            if (error) {
-                alert(error);
+            const batteryInput = document.getElementById(`battery-${id}`).querySelector('input'); 
+            const batteryValue = parseFloat(batteryInput.value); 
+            const numberRegex = /^\d+(\.\d+)?$/;
+            if (!batteryInput.value || !numberRegex.test(batteryInput.value) || isNaN(batteryValue)) {
+                alert('请输入纯数字格式的电池费用');
                 return;
             }
-            const keepTitle = samePrice && tag === item.dataset.tag && item.dataset.title;
+
+
+            if (isNaN(batteryValue) || batteryValue < 1) {
+                alert('套餐充值不能低于 1 元钱，请输入有效的金额。');
+                return;
+            }
+
+            const minutesInput = document.getElementById(`minutes-${id}`).querySelector('input'); 
+            const minutesValue = parseInt(minutesInput.value); 
+            // const rate = parseFloat((batteryValue / minutesValue).toFixed(2));
+            // console.log("saveChanges:",currentUserRole);
+            //  if (currentUserRole !== 1 && (isNaN(rate) || rate < 0.8 || rate > 2)) {
+            //     alert('费率必须在 0.8 元/分钟到 2 元/分钟之间，请重新输入。');
+            //     return;
+            // }
+            if (!numberRegex.test(minutesInput.value) || isNaN(minutesValue)) {
+                alert('请输入纯数字格式的可驾驶时长');
+                return;
+            }
+
+            if (minutesValue > 120) {
+                alert('可驾驶时长不能超过 120 分钟');
+                return;
+            }
+
+            const rate = calcPricingRate(batteryValue, minutesValue);
+            
+            if (!isRateValidForCurrentUser(rate)) {
+                alert(getRateErrorText(rate));
+                return;
+            }
+                            
+            const tagSelect = document.getElementById(`tag-select-${id}`); 
+            const selectedTag = tagSelect.value; 
+
+            const packageName = `${minutesValue}分钟${parseInt(batteryValue)}电池${selectedTag}`;
+
             const updatedData = {
-                id, venue_id: item.dataset.venue, minutes, battery,
-                original_minutes: item.dataset.minutes,
-                original_battery: item.dataset.battery,
-                notes: document.querySelector(`#notes-${id} input`).value,
-                packageName: keepTitle ? item.dataset.title : `${Number(minutes)}分钟${Number(battery)}电池${tag}`
+                id: id,
+                minutes: minutesValue,
+                battery: batteryValue,
+                notes: document.getElementById(`notes-${id}`).querySelector('input').value, 
+                packageName: packageName
             };
 
             // 发送保存请求到后台
@@ -780,8 +790,7 @@ function setupVenueSelectAndLoad() {
             if (confirm('确定要删除该套餐吗？')) {
                 const formData = new FormData();
                 formData.append('action',  'delete');
-                formData.append('id', id);
-                formData.append('venue_id', document.getElementById(`title-${id}`).closest('.pricing-item').dataset.venue);
+                formData.append('id',  id);
                 
 
                 fetch('https://open.rcwulian.cn/api/operat/pricing_options.php',  {
@@ -806,6 +815,7 @@ function setupVenueSelectAndLoad() {
 
         // 打开添加套餐模态框
         function openAddModal() {
+            alert("tips:套餐名称是通过 (可驾驶时长(分钟)+可驾驶时长的电池费用+套餐标签) 动态生成的哦.^_^");
             const modal = document.getElementById('add-modal'); 
             modal.style.display  = 'block';
         }
@@ -818,17 +828,43 @@ function setupVenueSelectAndLoad() {
 
         // 添加套餐
         function addPricingOption() {
-            const minutes = document.getElementById('add-minutes').value.trim();
-            const battery = document.getElementById('add-battery').value.trim();
-            const notes = document.getElementById('add-notes').value;
-            const tag = document.getElementById('add-tag').value;
-            const selectedVenueId = document.getElementById('venue_id').value;
-            const error = pricingError(minutes, battery, false);
-            if (error) {
-                alert(error);
+            const minutesInput = document.getElementById('add-minutes');
+            const batteryInput = document.getElementById('add-battery');
+            const notesInput = document.getElementById('add-notes');
+            const tagSelect = document.getElementById('add-tag');
+            const venueIdSelect = document.getElementById('venue_id');
+            const selectedVenueId = venueIdSelect ? venueIdSelect.value : null;
+
+
+
+            const minutes = parseInt(minutesInput.value);
+            const battery = parseFloat(batteryInput.value);
+            const notes = notesInput.value;
+            const tag = tagSelect.value;
+
+            const numberRegex = /^\d+(\.\d+)?$/;
+            if (!numberRegex.test(minutesInput.value) || !numberRegex.test(batteryInput.value)) {
+                alert('请输入纯数字格式的可驾驶时长和电池费用');
                 return;
             }
-            const packageName = `${Number(minutes)}分钟${Number(battery)}电池${tag}`;
+            if (isNaN(minutes) || isNaN(battery) || battery < 1) {
+                alert('请输入有效的可驾驶时长和电池费用，且电池费用不能低于 1 元。');
+                return;
+            }
+
+            if (minutes > 120) {
+                alert('可驾驶时长不能超过 120 分钟');
+                return;
+            }
+
+            const rate = calcPricingRate(battery, minutes);
+            
+            if (!isRateValidForCurrentUser(rate)) {
+                alert(getRateErrorText(rate));
+                return;
+            }
+            const packageName = `${minutes}分钟${parseInt(battery)}电池${tag}`;
+            
             const formData = new FormData();
             formData.append('venue_id', selectedVenueId);  // ✅ 添加这一行
             formData.append('action', 'add');

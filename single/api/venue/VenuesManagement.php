@@ -335,7 +335,6 @@ if ($method === 'POST') {
         $conn = $database->getConnection();
         $transactionStarted = false;
         try {
-            require_once __DIR__ . '/../lib/venue_pricing_policy.php';
             if (!$conn->begin_transaction()) {
                 throw new RuntimeException('无法开启场地创建事务');
             }
@@ -362,7 +361,6 @@ if ($method === 'POST') {
                 throw new RuntimeException('场地邀请码关联失败');
             }
 
-            venuePricingSeed($conn, $id);
             if (!$conn->commit()) {
                 throw new RuntimeException('场地创建事务提交失败');
             }
@@ -371,7 +369,7 @@ if ($method === 'POST') {
                 $conn->rollback();
             }
             error_log('新建场地失败：' . $e->getMessage());
-            echo json_encode(['code' => 1, 'msg' => '场地及默认套餐创建失败，请查看后台日志', 'data' => []], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['code' => 1, 'msg' => '场地创建失败，请查看后台日志', 'data' => []], JSON_UNESCAPED_UNICODE);
             $database->close();
             exit;
         }
