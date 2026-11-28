@@ -266,7 +266,7 @@
     $('banDuration').value = '30';
     $('banReason').value = record.item.reason || '违规封禁';
     $('banModal').hidden = false;
-    $('banReason').focus();
+    $('banTitle').focus({ preventScroll: true });
   }
   function closeBan() { if ($('confirmBan').disabled) return; $('banModal').hidden = true; selected = null; }
   $('banForm').addEventListener('submit', async event => {

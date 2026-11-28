@@ -930,20 +930,6 @@ user023968912_80039"></textarea>
           <div id="wifiHistoryBox" style="display:none;position:fixed;inset:0;z-index:10020;background:rgba(15,23,42,.52);align-items:center;justify-content:center;padding:20px;"></div>
         </div>
 <div class="cmd-group cmd-group-full">
-  <div class="cmd-group-title">电压回传地址变更</div>
-  <div class="tip-box">
-    该功能走 Zego 房间信令，给当前 room_id 发送：+VU#回传地址-；恢复默认发送：+VU#RESET-
-  </div>
-  <div class="row-1">
-    <label class="muted">电压回传地址</label>
-    <input id="cmd_voltage_upload_url" value="http://rcwulian.cn/app/dump/dump_post.php" />
-  </div>
-  <div class="actions">
-    <button class="edit-btn" type="button" data-send="voltage_url">发送电压回传地址</button>
-    <button class="edit-btn secondary" type="button" data-send="voltage_reset">恢复默认</button>
-  </div>
-</div>
-<div class="cmd-group cmd-group-full">
   <div class="cmd-group-title">摄像头 OTA 升级</div>
   <div class="row">
     <div class="row-1">
@@ -1048,7 +1034,6 @@ user023968912_80039"></textarea>
     const cOtaUrl = document.getElementById('cmd_ota_url');
     const cOtaForce = document.getElementById('cmd_ota_force');
     const cHardwareOtaUrl = document.getElementById('cmd_hardware_ota_url');
-    const cVoltageUploadUrl = document.getElementById('cmd_voltage_upload_url');
     const cCustomMessage = document.getElementById('cmd_custom_message');
     let currentControlRow = null;
     const reverseGroup = document.getElementById('excavatorReverseGroup');
@@ -1132,19 +1117,7 @@ function buildCommandText(type) {
           passwd: (cWifiPasswd.value || '').trim() || '88888888'
         }
       });
-case 'voltage_url': {
-  const url = (cVoltageUploadUrl.value || '').trim() || 'http://rcwulian.cn/app/dump/dump_post.php';
 
-  if (!/^https?:\/\//i.test(url)) {
-    showToast('电压回传地址必须以 http:// 或 https:// 开头');
-    return '';
-  }
-
-  return `+VU#${url}-`;
-}
-
-case 'voltage_reset':
-  return '+VU#RESET-';
     case 'ota':
       return JSON.stringify({
         type: 'ota_update',
@@ -1206,7 +1179,6 @@ function openControlModal(row) {
   cOtaUrl.value = 'http://120.79.154.209/models/cv181x/firmware_CIVTEK-1811CA-SC4336-APP_1.0.1_20260129185732.bin';
   cOtaForce.value = '0';
   cHardwareOtaUrl.value = 'https://rcwulian.cn/OTA/zxb.bin';
-  cVoltageUploadUrl.value = 'http://rcwulian.cn/app/dump/dump_post.php';
   cCustomMessage.value = '';
   refreshCaptureUploadUrl();
   document.getElementById('wifiHistoryBox').style.display = 'none';
@@ -1294,9 +1266,7 @@ const successTextMap = {
   capture: '抓图上传已发送',
   wifi: 'WIFI设置已发送',
   ota: '摄像头 OTA 升级已发送',
-  hardware_ota: '硬件 OTA 升级指令已发送',
-  voltage_url: '电压回传地址变更指令已发送',
-voltage_reset: '电压回传地址恢复默认指令已发送'
+  hardware_ota: '硬件 OTA 升级指令已发送'
 };
 
     const successText = isReverse

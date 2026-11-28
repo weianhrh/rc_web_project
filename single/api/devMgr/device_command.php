@@ -63,6 +63,52 @@ function build_query_with_to_user_ids(array $params, array $toUserIds): string {
     return $query;
 }
 
+function requestDeviceZego(string $action, array $payload, array $toUserIds = []): array {
+    global $appId, $serverSecret, $rtcApiUrl;
+    $timestamp = time();
+    $signatureNonce = generate_signature_nonce_hex16();
+    $signature = generate_signature_md5($appId, $signatureNonce, $serverSecret, $timestamp);
+
+    $params = [
+        'Action'           => $action,
+        'AppId'            => (string)$appId,
+        'SignatureNonce'   => $signatureNonce,
+        'Timestamp'        => (string)$timestamp,
+        'Signature'        => $signature,
+        'SignatureVersion' => '2.0',
+    ];
+    $params += $payload;
+
+    if (!empty($toUserIds)) {
+        $query = build_query_with_to_user_ids($params, $toUserIds);
+    } else {
+        $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    $url = rtrim($rtcApiUrl, '/') . '/?' . $query;
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 8,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+        CURLOPT_CUSTOMREQUEST  => 'GET',
+        CURLOPT_HTTPHEADER     => [
+            'Accept: application/json',
+        ],
+    ]);
+
+    $resp = curl_exec($ch);
+    $curlErr = curl_error($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    return [$resp, $curlErr, (int)$httpCode];
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_out(405, '仅支持 POST 请求');
 }
@@ -79,6 +125,26 @@ $fromUserId = trim((string)($_POST['from_user_id'] ?? 'server_bot_1'));
 $message = (string)($_POST['message'] ?? '');
 $toUserIds = parse_to_user_ids($_POST['to_user_ids'] ?? '');
 $commandType = trim((string)($_POST['command_type'] ?? ''));
+
+if ($commandType === 'mcn_voltage_platform') {
+    require_once __DIR__ . '/McnVoltagePlatform.php';
+    try {
+        $result = mcnVoltagePlatform($database, $adminUser, $sessionToken, $_POST,
+            $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '', 'requestDeviceZego');
+        json_out(200, $result);
+    } catch (Throwable $e) {
+        if (in_array($e->getCode(), [400, 403, 409, 502, 1001], true)) {
+            json_out($e->getCode(), $e->getMessage());
+        }
+        error_log('MCN voltage platform: ' . $e->getMessage());
+        json_out(500, '平台操作暂不可用，请稍后重试');
+    }
+}
+// 原始命令也必须遵守平台切换的账号、车辆归属与查流校验。
+if (in_array($commandType, ['voltage_url', 'voltage_reset'], true)
+    || (substr(ltrim($message), 0, 1) !== '{' && stripos($message, '+VU#') !== false)) {
+    json_out(403, '请使用 MCN 车辆调配中的「切换平台」操作');
+}
 
 // 反转快捷按钮复用现有 ZEGO 原始命令通道，发送前重新核对当前房间车型。
 if (strpos($commandType, 'reverse_') === 0) {
@@ -189,49 +255,11 @@ if (count($toUserIds) > 10) {
     json_out(400, 'ToUserId 最多支持 10 个');
 }
 
-$timestamp = time();
-$signatureNonce = generate_signature_nonce_hex16();
-$signature = generate_signature_md5($appId, $signatureNonce, $serverSecret, $timestamp);
-
-$params = [
-    'Action'           => 'SendCustomCommand',
-    'AppId'            => (string)$appId,
-    'SignatureNonce'   => $signatureNonce,
-    'Timestamp'        => (string)$timestamp,
-    'Signature'        => $signature,
-    'SignatureVersion' => '2.0',
-    'RoomId'           => $roomId,
-    'FromUserId'       => $fromUserId,
-    'MessageContent'   => $message,
-];
-
-if (!empty($toUserIds)) {
-    $query = build_query_with_to_user_ids($params, $toUserIds);
-} else {
-    $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
-}
-
-$url = rtrim($rtcApiUrl, '/') . '/?' . $query;
-
-$ch = curl_init();
-curl_setopt_array($ch, [
-    CURLOPT_URL            => $url,
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT        => 8,
-    CURLOPT_CONNECTTIMEOUT => 5,
-    CURLOPT_SSL_VERIFYPEER => true,
-    CURLOPT_FOLLOWLOCATION => true,
-    CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-    CURLOPT_CUSTOMREQUEST  => 'GET',
-    CURLOPT_HTTPHEADER     => [
-        'Accept: application/json',
-    ],
-]);
-
-$resp = curl_exec($ch);
-$curlErr = curl_error($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+[$resp, $curlErr, $httpCode] = requestDeviceZego('SendCustomCommand', [
+    'RoomId' => $roomId,
+    'FromUserId' => $fromUserId,
+    'MessageContent' => $message,
+], $toUserIds);
 
 if ($curlErr) {
     json_out(500, 'cURL错误: ' . $curlErr, [

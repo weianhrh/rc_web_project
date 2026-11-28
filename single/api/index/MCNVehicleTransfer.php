@@ -1,80 +1,9 @@
 <?php
 require_once __DIR__ . '/../Database.php';
+require_once __DIR__ . '/McnVehicleTransferState.php';
+require_once __DIR__ . '/../devMgr/McnVoltagePlatform.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
-
-function transferQuery($db, $sql, $params = [], $write = false) {
-    $result = $db->query($sql, $params, $write);
-    if ($result === false) throw new RuntimeException('Database operation failed');
-    return $result;
-}
-
-function transferState($db, $vehicles) {
-    if (!$vehicles) return ['bans' => [], 'orders' => [], 'reservations' => [], 'automation' => []];
-    $serials = array_column($vehicles, 'serial_number');
-    $sites = array_values(array_unique(array_column($vehicles, 'bind_site')));
-    $bans = transferQuery($db, 'SELECT serial_number, image_device_serial FROM device_bans
-        WHERE status = 1 AND (ban_end_time IS NULL OR ban_end_time > NOW())');
-    $orders = transferQuery($db, "SELECT DISTINCT serial_number FROM orders WHERE status = '正在驾驶'
-        AND serial_number IN (" . implode(',', array_fill(0, count($serials), '?')) . ')', $serials);
-    $reservations = transferQuery($db, "SELECT DISTINCT reservation_id FROM Reservations
-        WHERE order_status IN ('等待驾驶', '正在驾驶') AND reservation_id IN ("
-        . implode(',', array_fill(0, count($sites), '?')) . ')', $sites);
-    $automation = [];
-    foreach (transferQuery($db, 'SELECT vehicle_states FROM excavator_auto_run_locks') as $lock) {
-        $states = json_decode($lock['vehicle_states'], true);
-        if (!is_array($states)) throw new RuntimeException('Invalid automation lock');
-        foreach ($states as $state) $automation[(int)($state['id'] ?? 0)] = true;
-    }
-    return ['bans' => $bans,
-        'orders' => array_fill_keys(array_column($orders, 'serial_number'), true),
-        'reservations' => array_fill_keys(array_column($reservations, 'reservation_id'), true),
-        'automation' => $automation];
-}
-
-function transferReason($redis, $vehicle, $state) {
-    $serial = $vehicle['serial_number'];
-    if ((int)$vehicle['is_banned'] === 1) return '设备违规封禁中';
-    $images = array_values(array_filter([
-        trim((string)$vehicle['image_device_serial']),
-        trim((string)$vehicle['bk_image_device_serial'])
-    ], function ($value) { return $value !== ''; }));
-    foreach ($state['bans'] as $ban) {
-        if ($ban['serial_number'] === $serial || in_array((string)$ban['image_device_serial'], $images, true)) {
-            return '设备存在未解除的违规封禁';
-        }
-    }
-    $redis->select(1);
-    $ban = $redis->get('device_ban:' . $serial);
-    if ($ban !== false) {
-        $data = json_decode($ban, true);
-        if (!is_array($data) || empty($data['ban_end_time'])
-            || strtotime($data['ban_end_time']) === false
-            || strtotime($data['ban_end_time']) > time()) return '设备封禁尚未解除';
-    }
-    $redis->select(14);
-    foreach ($images as $image) {
-        if ($redis->exists('device_violation:' . $image)
-            || $redis->exists('device_violation:' . $image . '_predicted')) {
-            return '设备存在待处理违规，请先完成审核';
-        }
-    }
-    if ((int)$vehicle['Reservation_lock'] !== 0
-        || (int)$vehicle['driver_id'] > 0
-        || in_array($vehicle['status'], ['占有', '占用'], true)
-        || $vehicle['vehicle_status'] === '开始围观') return '设备正在使用或预约锁定';
-    $redis->select(12);
-    if ($redis->exists($serial)) return '设备存在当前驾驶占用';
-    if (isset($state['orders'][$serial])) {
-        return '设备存在未结束的驾驶订单';
-    }
-    if (isset($state['reservations'][$vehicle['bind_site']])) {
-        return '原场地有未结束的预约，请待预约结束后调配';
-    }
-    // Even expired automation locks must be released before moving their vehicles.
-    if (isset($state['automation'][(int)$vehicle['id']])) return '设备自动运行锁尚未释放';
-    return '';
-}
 
 $db = new Database();
 $transaction = false;
@@ -115,20 +44,36 @@ try {
          WHERE mv.mcn_id = ? AND mv.status = 1 ORDER BY v.id' . ($transaction ? ' FOR UPDATE' : ''),
         [(int)$user['mcn_id']]);
     if (!$venues) throw new RuntimeException('当前机构没有有效管理场地', 403);
+    if ($method === 'GET' && ($_GET['view'] ?? '') === 'platform_logs') {
+        $logs = transferQuery($db,
+            'SELECT id, vehicle_name, serial_number, venue_name, operator_name, operator_admin_id,
+                    target, created_at
+             FROM mcn_vehicle_platform_logs
+             WHERE mcn_id = ? ORDER BY id DESC LIMIT 50', [(int)$user['mcn_id']]);
+        foreach ($logs as $i => $log) {
+            $logs[$i]['platform_label'] = mcnVoltagePlatformLabel($log['target']);
+        }
+        echo json_encode(['code' => 0, 'msg' => 'ok', 'data' => ['logs' => $logs]], JSON_UNESCAPED_UNICODE);
+        return;
+    }
     $venueMap = [];
     foreach ($venues as $venue) $venueMap[(int)$venue['id']] = $venue;
-    $redis = new Redis();
-    if (!$redis->connect('127.0.0.1', 6379, 1.5)) throw new RuntimeException('Redis unavailable');
-    $redis->setOption(Redis::OPT_READ_TIMEOUT, 2);
+    $redis = transferOpenRedis();
     if ($method === 'GET') {
         $ids = array_map('strval', array_keys($venueMap));
         $vehicles = transferQuery($db,
             'SELECT v.id, v.serial_number, v.name, v.bind_site, v.status, v.vehicle_status, v.sharing_status,
              v.is_banned, v.driver_id, v.Reservation_lock, v.image_device_serial, v.bk_image_device_serial,
+             v.image_transmission_type, di.id AS device_id, di.room_id AS primary_room_id,
              wifi.wifi_essid AS last_wifi_name, wifi.created_at AS last_wifi_at,
+             platform.target AS last_platform_target, platform.created_at AS last_platform_at,
              COALESCE(NULLIF(di.room_id, \'\'), NULLIF(v.image_device_serial, \'\')) AS room_id
              FROM vehicles v
              LEFT JOIN device_information di ON CAST(di.id AS CHAR) = v.image_device_serial
+             LEFT JOIN mcn_vehicle_platform_logs platform ON platform.id = (
+                 SELECT p.id FROM mcn_vehicle_platform_logs p
+                 WHERE p.mcn_id = ? AND p.vehicle_id = v.id ORDER BY p.id DESC LIMIT 1
+             )
              LEFT JOIN camera_wifi_send_records wifi ON wifi.id = (
                  SELECT w.id FROM camera_wifi_send_records w
                  WHERE w.room_id = COALESCE(NULLIF(di.room_id, \'\'), NULLIF(v.image_device_serial, \'\'))
@@ -136,7 +81,7 @@ try {
                  ORDER BY w.id DESC LIMIT 1
              )
              WHERE v.bind_site IN (' . implode(',', array_fill(0, count($ids), '?')) . ')
-             ORDER BY v.bind_site, v.id DESC', $ids);
+             ORDER BY v.bind_site, v.id DESC', array_merge([(int)$user['mcn_id']], $ids));
         $rows = [];
         $state = transferState($db, $vehicles);
         foreach ($vehicles as $vehicle) {
@@ -149,6 +94,10 @@ try {
                 'status' => $vehicle['status'], 'sharing_status' => $vehicle['sharing_status'],
                 'last_wifi_name' => $vehicle['last_wifi_name'], 'last_wifi_at' => $vehicle['last_wifi_at'],
                 'room_id' => $vehicle['room_id'],
+                'last_platform_label' => $vehicle['last_platform_target'] === null
+                    ? null : mcnVoltagePlatformLabel($vehicle['last_platform_target']),
+                'last_platform_at' => $vehicle['last_platform_at'],
+                'can_switch_platform' => mcnVoltageRoom($vehicle) !== null,
                 'can_transfer' => $reason === '', 'blocked_reason' => $reason
             ];
         }

@@ -52,7 +52,7 @@ header('Cache-Control: no-store');
 <audio id="alertSound" src="/res/001.mp3" preload="none"></audio>
 <div id="banModal" class="ai-modal" hidden>
   <form id="banForm" class="ai-dialog" aria-labelledby="banTitle">
-    <h2 id="banTitle">封禁设备</h2>
+    <h2 id="banTitle" tabindex="-1">封禁设备</h2>
     <p id="banTarget"></p>
     <label for="banDuration">封禁时长</label>
     <select id="banDuration"><option value="30">30分钟</option><option value="60">1小时</option></select>
@@ -64,7 +64,7 @@ header('Cache-Control: no-store');
 <div id="imageModal" class="ai-modal" hidden><button type="button" class="ai-image-close" id="closeImage">关闭</button><img id="modalImage" class="ai-preview" alt="放大截图"></div>
 <script src="/review/assets/platform.js?v=20261113-media3"></script>
 <script src="/review/assets/stats-collapse.js?v=20261113-1"></script>
-<script src="/review/assets/combined-ai.js?v=20261113-checkin-live1"></script>
+<script src="/review/assets/combined-ai.js?v=20261127-focus1"></script>
 <script src="/review/assets/rc-checkin.js?v=20261113-live1"></script>
 </body>
 </html>
